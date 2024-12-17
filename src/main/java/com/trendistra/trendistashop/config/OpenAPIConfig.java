@@ -5,6 +5,7 @@ import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -24,6 +25,9 @@ public class OpenAPIConfig {
                         .contact(new Contact()
                                 .name("Loc Nguyen")
                                 .email("locnguyen4.0@gmail.com")))
+                .addServersItem(new Server()
+                        .url("http://localhost:5000/")
+                        .description("TRENDISTA API Server"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
                         .addSecuritySchemes("bearerAuth",

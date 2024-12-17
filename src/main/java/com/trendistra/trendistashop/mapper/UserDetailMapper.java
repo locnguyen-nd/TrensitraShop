@@ -1,15 +1,16 @@
 package com.trendistra.trendistashop.mapper;
 
-import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.UserDetailDTO;
-import com.trendistra.trendistashop.entities.auth.RoleEntity;
-import com.trendistra.trendistashop.entities.auth.UserEntity;
+import com.trendistra.trendistashop.entities.user.RoleEntity;
+import com.trendistra.trendistashop.entities.user.UserEntity;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class UserDetailMapper {
@@ -19,7 +20,12 @@ public class UserDetailMapper {
     }
     public UserDetailDTO convertToDto(UserEntity userEntity) {
         UserDetailDTO userDTO = modelMapper.map(userEntity, UserDetailDTO.class);
-        userDTO.setAuthorityList(userEntity.getRoles());
+        userDTO.setAuthorityList(
+                userEntity.getRoles()
+                        .stream()
+                        .map(roleEntity -> roleEntity.getId())
+                        .collect(Collectors.toSet()));
+        userDTO.setAddressList(userEntity.getAddressList());
         return userDTO;
     }
     public UserEntity convertToEntity(UserDetailDTO userDTO) {

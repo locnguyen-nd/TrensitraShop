@@ -4,7 +4,7 @@ import com.trendistra.trendistashop.config.JWTTokenHelper;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
-import com.trendistra.trendistashop.entities.auth.UserEntity;
+import com.trendistra.trendistashop.entities.user.UserEntity;
 import com.trendistra.trendistashop.enums.ProviderEnum;
 import com.trendistra.trendistashop.exceptions.AuthenticationFailedException;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerErrorException;
 
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthenticationService implements IAuthenticationService {
@@ -42,6 +43,7 @@ public class AuthenticationService implements IAuthenticationService {
     @Autowired
     private AuthorizationService authorizationService;
     public Optional<UserEntity> getUser(String userName) {
+
         return userDetailRepository.findByEmail(userName);
     }
 
@@ -72,6 +74,10 @@ public class AuthenticationService implements IAuthenticationService {
                         .lastName(user.getLastName())
                         .email(user.getEmail())
                         .phoneNumber(user.getPhoneNumber())
+                        .authorityList(user
+                                .getAuthorities()
+                                .stream()
+                                .collect(Collectors.toSet()))
                         .token(token)
                         .build();
                 return loginResponse;

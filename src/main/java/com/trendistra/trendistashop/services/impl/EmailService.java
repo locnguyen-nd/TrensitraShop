@@ -1,6 +1,6 @@
 package com.trendistra.trendistashop.services.impl;
 
-import com.trendistra.trendistashop.entities.auth.UserEntity;
+import com.trendistra.trendistashop.entities.user.UserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;

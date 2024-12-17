@@ -1,8 +1,10 @@
 package com.trendistra.trendistashop.controllers.user;
 
-import com.trendistra.trendistashop.dto.response.LoginResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trendistra.trendistashop.dto.request.UserUpdateDTO;
 import com.trendistra.trendistashop.dto.response.UserDetailDTO;
-import com.trendistra.trendistashop.entities.auth.UserEntity;
+import com.trendistra.trendistashop.entities.user.UserEntity;
 import com.trendistra.trendistashop.mapper.UserDetailMapper;
 import com.trendistra.trendistashop.services.ICustomUserService;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,12 +15,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.security.Principal;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -73,12 +79,29 @@ public class UserController {
             @ApiResponse( responseCode = "404", description = "User Not Found."),
             @ApiResponse(responseCode = "201", description = "Successfully update user.")
     })
-    @PutMapping("/{userId}")
-    public ResponseEntity<UserEntity> updateUser(@Valid @PathVariable UUID userId , @RequestBody UserDetailDTO userDetailDTO) {
-        UserEntity user = iCustomUserService.updateUser(userId , userDetailDTO);
-        return new ResponseEntity<>(user, HttpStatus.CREATED);
+    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateUser(@Valid
+                                        @RequestPart(value = "profile") String updateDTOJson,
+                                        @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        UserUpdateDTO updateDTO = objectMapper.readValue(updateDTOJson, UserUpdateDTO.class);
+        try {
+            if ((updateDTO == null) && (avatarFile == null || avatarFile.isEmpty())) {
+                return ResponseEntity.badRequest().body("Không có dữ liệu để cập nhật");
+            }
+            UserDetailDTO updateUser = iCustomUserService.updateUser( updateDTO, avatarFile);
+            return ResponseEntity.ok(updateUser);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi cập nhật: " + e.getMessage());
+        }
     }
-
+    @PostMapping("/{userId}/roles")
+    public ResponseEntity<UserDetailDTO> assignRoles(
+            @PathVariable UUID userId,
+            @RequestBody Set<UUID> roleIds
+    ) {
+        return ResponseEntity.ok(iCustomUserService.assignRolesToUser(userId, roleIds));
+    }
     @ApiResponses({
             @ApiResponse( responseCode = "403", description = "Unauthorized access - Admin privileges required."),
             @ApiResponse( responseCode = "404", description = "User Not Found."),

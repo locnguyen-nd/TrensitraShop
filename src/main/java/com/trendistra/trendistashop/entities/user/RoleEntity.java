@@ -1,4 +1,4 @@
-package com.trendistra.trendistashop.entities.auth;
+package com.trendistra.trendistashop.entities.user;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

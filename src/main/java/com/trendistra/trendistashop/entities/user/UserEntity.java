@@ -1,21 +1,15 @@
-package com.trendistra.trendistashop.entities.auth;
+package com.trendistra.trendistashop.entities.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.enums.ProviderEnum;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Entity class đại diện cho bảng "User" trong cơ sở dữ liệu.
@@ -59,6 +53,9 @@ public class UserEntity extends BaseEntity implements UserDetails {
     private ProviderEnum provider;
     private String verificationCode;
     private boolean enabled = false;
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
+    @ToString.Exclude
+    private List<Address> addressList;
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinTable(
             name = "auth_user_authority",

@@ -3,7 +3,7 @@ package com.trendistra.trendistashop.services;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
-import com.trendistra.trendistashop.entities.auth.UserEntity;
+import com.trendistra.trendistashop.entities.user.UserEntity;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.Optional;

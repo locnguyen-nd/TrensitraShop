@@ -1,12 +1,9 @@
 package com.trendistra.trendistashop.config;
 
-import com.trendistra.trendistashop.entities.auth.PermissionEntity;
+import com.trendistra.trendistashop.entities.user.PermissionEntity;
 import com.trendistra.trendistashop.repositories.auth.PermissionRepository;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,6 +13,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
@@ -44,6 +42,13 @@ public class WebSecurityConfig {
             "/swagger-ui/**",
             "/swagger-resources/**",
             "/api/v1/auth/**",
+            "/api/v1/categories/**",
+            "/api/v1/colors/**",
+            "/api/v1/discounts/**",
+            "/api/v1/products/**",
+            "/api/v1/sizes/**",
+            "/api/v1/role/**",
+            "/api/v1/permissions/**",
     };
     /**
      * Cấu hình bảo mật cho ứng dụng, xác định cách thức xử lý các yêu cầu HTTP.
@@ -60,15 +65,20 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         List<PermissionEntity> permissionEntities = permissionRepository.findAll();
         http
+                .csrf(AbstractHttpConfigurer :: disable)
                 .authenticationManager(authenticationManager())
                 // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
                 .authorizeHttpRequests(auth -> {
                     permissionEntities.forEach(permissionEntity -> {
                         try {
                             HttpMethod httpMethod = HttpMethod.valueOf(permissionEntity.getMethod());
+                            System.out.println(httpMethod);
                             String fullUrl = prefix + permissionEntity.getEndPoint();
+                            System.out.println(fullUrl);
+                            System.out.println(permissionEntity.getName());
                             auth.requestMatchers(httpMethod, fullUrl)
-                                    .hasAuthority(permissionEntity.getName());
+                                    .hasAuthority("USER");
+                            System.out.println("Role" + getRoleInPermission(permissionEntity.getName()));
                         } catch (IllegalArgumentException e) {
                             // Ghi log nếu method không hợp lệ
                             System.err.println("Invalid HTTP method: " + permissionEntity.getMethod());
@@ -80,6 +90,13 @@ public class WebSecurityConfig {
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .addFilterBefore(new JWTAuthenticationFilter(jwtTokenHelper, userDetailsService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+    private String getRoleInPermission(String name) {
+        int spaceIndex = name.indexOf(" ");
+        if (spaceIndex != -1) {
+            return name.substring(0, spaceIndex);
+        }
+        return name;
     }
 
     /**

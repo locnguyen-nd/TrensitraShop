@@ -4,7 +4,7 @@ import com.trendistra.trendistashop.dto.request.LoginRequest;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
-import com.trendistra.trendistashop.entities.auth.UserEntity;
+import com.trendistra.trendistashop.entities.user.UserEntity;
 import com.trendistra.trendistashop.services.IAuthenticationService;
 import com.trendistra.trendistashop.services.impl.CustomUserService;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,7 +38,7 @@ public class AuthController {
         this.iAuthenticationService = iAuthenticationService;
     }
     @Autowired
-    private CustomUserService customUserService;
+    private UserDetailsService userDetailsService;
     @Autowired
     private JWTTokenHelper jwtTokenHelper;
     /**
@@ -74,7 +75,7 @@ public class AuthController {
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> map)  {
         String email = map.get("email");
         String code = map.get("code");
-        UserEntity user = (UserEntity) customUserService.loadUserByUsername(email);
+        UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(email);
         if (null != user && user.getVerificationCode().equals(code)) {
             iAuthenticationService.verifyUser(email);
             return new ResponseEntity<>(HttpStatus.OK);

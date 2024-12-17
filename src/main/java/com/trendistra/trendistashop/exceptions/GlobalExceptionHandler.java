@@ -4,6 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -71,6 +73,19 @@ public class GlobalExceptionHandler {
         errorDetails.put("error", "Data Access Exception");
         errorDetails.put("message", authenticationFailedException .getMessage());
         return new ResponseEntity<>(errorDetails, HttpStatus.UNAUTHORIZED);
+    }
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<String> handleMaxSizeException(MaxUploadSizeExceededException exc) {
+        return ResponseEntity
+                .status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body("File is too large. Maximum size is 10MB.");
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<String> handleMultipartException(MultipartException exc) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body("Error processing file upload.");
     }
 }
 

@@ -1,5 +1,5 @@
 package com.trendistra.trendistashop.specifications;
-import com.trendistra.trendistashop.entities.auth.UserEntity;
+import com.trendistra.trendistashop.entities.user.UserEntity;
 import org.springframework.data.jpa.domain.Specification;
 
 public class UserSpecification {

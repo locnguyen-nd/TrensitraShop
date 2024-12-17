@@ -6,15 +6,18 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="TrendistaShop" />
         <module name="TrendistraShop" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="TrendistaShop" target="17" />
       <module name="TrendistraShop" target="17" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="TrendistaShop" options="-parameters" />
       <module name="TrendistraShop" options="-parameters" />
     </option>
   </component>
