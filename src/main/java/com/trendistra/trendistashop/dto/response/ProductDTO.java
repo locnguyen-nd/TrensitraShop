@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.dto.response;
 
 import com.trendistra.trendistashop.entities.product.ProductImage;
 import com.trendistra.trendistashop.entities.product.ProductVariant;
+import com.trendistra.trendistashop.enums.ProductTagEnum;
 import jakarta.persistence.Column;
 import jakarta.persistence.Lob;
 import jakarta.validation.constraints.*;
@@ -36,7 +37,7 @@ public class ProductDTO {
     @DecimalMin(value = "0.0", message = "Price must be non-negative")
     private BigDecimal price;
     private Boolean isFreeShip;
-    private Boolean isNewArrival;
+    private ProductTagEnum tag;
     private Integer views;
     private Integer ratingAverage;
     private Integer ratingTotal;

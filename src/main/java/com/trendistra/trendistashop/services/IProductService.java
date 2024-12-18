@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.services;
 
 import com.trendistra.trendistashop.dto.request.ProductRequestDTO;
 import com.trendistra.trendistashop.dto.response.ProductDTO;
+import com.trendistra.trendistashop.enums.ProductTagEnum;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +18,7 @@ public interface IProductService {
     @Transactional
     public ProductDTO createProductWithImages(ProductRequestDTO productDto, List<MultipartFile> files) throws IOException;
     public ProductDTO getProductById(UUID id);
+    public List<ProductDTO> getProductByTag(String tag);
     Page<ProductDTO> filterProduct(UUID categoryId, UUID genderId, UUID colorId ,  UUID sizeId, Double minPrice, Double maxPrice, PageRequest pageRequest);
 
     @Transactional

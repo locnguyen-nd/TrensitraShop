@@ -47,7 +47,7 @@ public class CategoryService {
         Category category = new Category();
         // Upload ảnh
         if (imageFile != null && !imageFile.isEmpty()) {
-            String imageUrl = cloudinaryService.uploadFile(imageFile, null, "categories");
+            String imageUrl = cloudinaryService.uploadFile(imageFile, null, "CATEGORIES");
             category.setImageUrl(imageUrl);
         }
         // Thiết lập các trường
@@ -85,7 +85,7 @@ public class CategoryService {
 
         // Upload ảnh mới
         if (imageFile != null && !imageFile.isEmpty()) {
-            String imageUrl = cloudinaryService.uploadFile(imageFile, null, "categories");
+            String imageUrl = cloudinaryService.uploadFile(imageFile, null, "CATEGORIES");
             existingCategory.setImageUrl(imageUrl);
         }
 

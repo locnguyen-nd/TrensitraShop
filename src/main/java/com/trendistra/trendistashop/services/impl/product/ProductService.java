@@ -6,6 +6,7 @@ import com.trendistra.trendistashop.dto.response.ProductImageDTO;
 import com.trendistra.trendistashop.dto.response.VariantDTO;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.product.*;
+import com.trendistra.trendistashop.enums.ProductTagEnum;
 import com.trendistra.trendistashop.enums.SizeEnum;
 import com.trendistra.trendistashop.helper.GenerateCodeProduct;
 import com.trendistra.trendistashop.helper.GenerateSlug;
@@ -74,7 +75,7 @@ public class ProductService implements IProductService {
                 .originPrice(productDto.getOriginPrice())
                 .price(productDto.getPrice())
                 .isFreeShip(productDto.getIsFreeShip())
-                .isNewArrival(productDto.getIsNewArrival())
+                .tag(productDto.getTag())
                 .summary(productDto.getSummary())
                 .description(productDto.getDescription())
                 .views(0)
@@ -113,6 +114,13 @@ public class ProductService implements IProductService {
         product.incrementView();
         return mapToProductDto(product);
     }
+
+    @Override
+    public List<ProductDTO> getProductByTag(String tag) {
+        List<Product> products = productRepository.findProductsByTag(ProductTagEnum.valueOf(tag));
+        return products.stream().map(this::mapToProductDto).collect(Collectors.toList());
+    }
+
 
     public Product getProductByIdEntity(UUID id) {
         Product product = productRepository.findById(id)
@@ -214,7 +222,7 @@ public class ProductService implements IProductService {
                 .originPrice(product.getOriginPrice())
                 .price(product.getPrice())
                 .isFreeShip(product.getIsFreeShip())
-                .isNewArrival(product.getIsNewArrival())
+                .tag(product.getTag())
                 .views(product.getViews())
                 .ratingAverage(product.getRatingAverage())
                 .ratingTotal(product.getRatingTotal())

@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.entities.product;
 
 import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.entities.category.Category;
+import com.trendistra.trendistashop.enums.ProductTagEnum;
 import com.trendistra.trendistashop.enums.SizeEnum;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -43,7 +44,9 @@ public class Product extends BaseEntity {
     private Integer ratingTotal;
     private String featuredImage;
     private Integer unitsSold ;
-    private Boolean isNewArrival;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProductTagEnum tag;
     @ElementCollection(targetClass = SizeEnum.class)
     @Enumerated(EnumType.STRING) // Lưu enum dưới dạng chuỗi (S, M, L, ...)
     @CollectionTable(name = "product_sizes", joinColumns = @JoinColumn(name = "product_id"))

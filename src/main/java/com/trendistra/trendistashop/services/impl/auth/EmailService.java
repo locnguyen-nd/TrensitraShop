@@ -1,4 +1,4 @@
-package com.trendistra.trendistashop.services.impl;
+package com.trendistra.trendistashop.services.impl.auth;
 
 import com.trendistra.trendistashop.entities.user.UserEntity;
 import org.springframework.beans.factory.annotation.Autowired;

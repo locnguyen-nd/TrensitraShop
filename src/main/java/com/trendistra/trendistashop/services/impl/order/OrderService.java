@@ -13,18 +13,14 @@ import com.trendistra.trendistashop.exceptions.OrderCancelException;
 import com.trendistra.trendistashop.exceptions.OrderCreationException;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.repositories.order.OrderRepository;
-import com.trendistra.trendistashop.services.impl.AuthenticationService;
 import com.trendistra.trendistashop.services.impl.product.ProductService;
 import jakarta.transaction.Transactional;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.BadPaddingException;
 import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;

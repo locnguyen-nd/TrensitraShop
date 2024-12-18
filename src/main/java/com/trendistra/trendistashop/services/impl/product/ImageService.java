@@ -85,7 +85,7 @@ public class ImageService {
         // Generate unique filename based on product and color
         String filename = generateUniqueFilename(product, color, file);
         // Upload to Cloudinary
-        String uploadResult = cloudinaryService.uploadFile(file, filename, "products");
+        String uploadResult = cloudinaryService.uploadFile(file, filename, "PRODUCTS");
         // Create and save image entity
         ProductImage image = ProductImage.builder()
                 .product(product)

@@ -1,4 +1,4 @@
-package com.trendistra.trendistashop.services.impl;
+package com.trendistra.trendistashop.services.impl.auth;
 
 import com.trendistra.trendistashop.dto.request.UserUpdateDTO;
 import com.trendistra.trendistashop.dto.response.UserDetailDTO;
@@ -69,7 +69,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         }
         UserEntity user = optionalUser.get();
         if (avatarFile != null && !avatarFile.isEmpty()) {
-            String imageUrl = cloudinaryService.uploadFile(avatarFile, null , "avatar");
+            String imageUrl = cloudinaryService.uploadFile(avatarFile, null , "AVATAR");
             user.setAvatar(imageUrl);
         }
          user.setFirstName(userUpdateDTO.getFirstName());

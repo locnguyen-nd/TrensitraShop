@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.dto.request;
 
 import com.trendistra.trendistashop.dto.response.*;
+import com.trendistra.trendistashop.enums.ProductTagEnum;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,7 +33,7 @@ public class ProductRequestDTO {
     @DecimalMin(value = "0.0", message = "Price must be non-negative")
     private BigDecimal price;
     private Boolean isFreeShip;
-    private Boolean isNewArrival;
+    private ProductTagEnum tag;
     @NotNull(message = "Category ID is required")
     private UUID categoryId;
     private List<UUID> discountIds;

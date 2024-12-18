@@ -49,6 +49,7 @@ public class WebSecurityConfig {
             "/api/v1/sizes/**",
             "/api/v1/role/**",
             "/api/v1/permissions/**",
+            "/api/v1/home/**"
     };
     /**
      * Cấu hình bảo mật cho ứng dụng, xác định cách thức xử lý các yêu cầu HTTP.

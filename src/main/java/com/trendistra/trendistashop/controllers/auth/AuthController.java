@@ -6,7 +6,6 @@ import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
 import com.trendistra.trendistashop.entities.user.UserEntity;
 import com.trendistra.trendistashop.services.IAuthenticationService;
-import com.trendistra.trendistashop.services.impl.CustomUserService;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

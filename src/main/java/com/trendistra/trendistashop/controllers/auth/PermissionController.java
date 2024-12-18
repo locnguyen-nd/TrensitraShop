@@ -1,7 +1,7 @@
 package com.trendistra.trendistashop.controllers.auth;
 
 import com.trendistra.trendistashop.dto.response.PermissionDTO;
-import com.trendistra.trendistashop.services.impl.PermissionService;
+import com.trendistra.trendistashop.services.impl.auth.PermissionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

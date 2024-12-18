@@ -48,6 +48,11 @@ public class ProductController {
         List<ProductDTO> products = productService.getAllProduct();
         return ResponseEntity.ok(products);
     }
+    @GetMapping("/tag/{tag}")
+    public ResponseEntity<List<ProductDTO>> getProductsByTag(@PathVariable String tag) {
+        List<ProductDTO> products = productService.getProductByTag(tag);
+        return ResponseEntity.ok(products);
+    }
 
     @GetMapping("/search")
     public Page<ProductDTO> getAllProductsWithFilter(
@@ -59,7 +64,7 @@ public class ProductController {
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(value = "updateAt") String sortBy,
+            @RequestParam(value = "price") String sortBy,// price // updateAt
             @RequestParam(defaultValue = "true") boolean ascending
     ) {
         PageRequest pageRequest = createPageRequest(page, size, sortBy , ascending);

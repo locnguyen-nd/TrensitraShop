@@ -1,4 +1,4 @@
-package com.trendistra.trendistashop.services.impl;
+package com.trendistra.trendistashop.services.impl.auth;
 
 import com.trendistra.trendistashop.config.JWTTokenHelper;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
