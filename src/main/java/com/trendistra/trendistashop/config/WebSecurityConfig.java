@@ -75,14 +75,14 @@ public class WebSecurityConfig {
                             HttpMethod httpMethod = HttpMethod.valueOf(permissionEntity.getMethod());
                             System.out.println(httpMethod);
                             String fullUrl = prefix + permissionEntity.getEndPoint();
-                            System.out.println(fullUrl);
-                            System.out.println(permissionEntity.getName());
+//                            System.out.println(fullUrl);
+//                            System.out.println(permissionEntity.getName());
                             auth.requestMatchers(httpMethod, fullUrl)
                                     .hasAuthority("USER");
-                            System.out.println("Role" + getRoleInPermission(permissionEntity.getName()));
+//                            System.out.println("Role" + getRoleInPermission(permissionEntity.getName()));
                         } catch (IllegalArgumentException e) {
                             // Ghi log nếu method không hợp lệ
-                            System.err.println("Invalid HTTP method: " + permissionEntity.getMethod());
+//                            System.err.println("Invalid HTTP method: " + permissionEntity.getMethod());
                         }
                     });
                     // Các request khác cần xác thực

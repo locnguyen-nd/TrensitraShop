@@ -228,6 +228,7 @@ public class ProductService implements IProductService {
                 .ratingTotal(product.getRatingTotal())
                 .unitsSold(product.getUnitsSold())
                 .categoryId(product.getCategory().getId())
+                .categoryName(product.getCategory().getName())
                 .discountIds(product.getCategory().getDiscounts().stream()
                         .filter(Discount::getIsActive)
                         .map(Discount::getId)
@@ -240,14 +241,6 @@ public class ProductService implements IProductService {
                 .build();
     }
 
-    private boolean isSizeValid(String size) {
-        try {
-            SizeEnum.valueOf(size); // Thử chuyển chuỗi thành enum
-            return true; // Hợp lệ
-        } catch (IllegalArgumentException e) {
-            return false; // Không hợp lệ
-        }
-    }
 
     private ProductImageDTO covertImageToDTO(ProductImage productImage) {
         return ProductImageDTO.builder()

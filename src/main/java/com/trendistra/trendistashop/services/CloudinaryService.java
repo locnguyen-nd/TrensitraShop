@@ -31,8 +31,8 @@ public class CloudinaryService {
             String uniqueFileName;
             if(fileName == null) {
                 // Sinh tên file duy nhất
-                 uniqueFileName = UUID.randomUUID() + "_" +
-                        (originalFilename != null ? originalFilename : "file");
+                 uniqueFileName = folder + "_" +
+                        (originalFilename != null ? originalFilename.substring(0, originalFilename.lastIndexOf(".")) : ".jpg");
             } else {
                 uniqueFileName = fileName.substring(0, fileName.lastIndexOf("."));
             }
@@ -51,7 +51,6 @@ public class CloudinaryService {
 
             // Log kết quả upload
             logger.info("Upload successful. Response: {}", uploadResult);
-
             // Trả về URL an toàn
             return uploadResult.get("secure_url").toString();
         } catch (IOException e) {

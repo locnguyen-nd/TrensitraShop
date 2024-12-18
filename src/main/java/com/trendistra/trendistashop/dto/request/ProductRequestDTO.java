@@ -38,6 +38,7 @@ public class ProductRequestDTO {
     private UUID categoryId;
     private List<UUID> discountIds;
     private List<VariantRequestDTO> variants;
-    private Map<UUID, List<String>> colorImageMapping;  // Mỗi màu đi kèm danh sách tên file
+    // Mỗi màu đi kèm danh sách tên file
+    private Map<UUID, List<String>> colorImageMapping;
 
 }

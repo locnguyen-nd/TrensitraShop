@@ -103,10 +103,9 @@ public class ImageService {
                 ? originalFilename.substring(originalFilename.lastIndexOf("."))
                 : ".jpg";
 
-        return String.format("%s_%s_%s%s",
+        return String.format("%s_%s_%s",
                 product.getName().replaceAll("\\s+", "_"),
                 color.getName().replaceAll("\\s+", "_"),
-                UUID.randomUUID(),
                 fileExtension
         );
     }

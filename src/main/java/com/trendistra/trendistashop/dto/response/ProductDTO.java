@@ -36,7 +36,6 @@ public class ProductDTO {
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", message = "Price must be non-negative")
     private BigDecimal price;
-    private Boolean isFreeShip;
     private ProductTagEnum tag;
     private Integer views;
     private Integer ratingAverage;
@@ -44,6 +43,8 @@ public class ProductDTO {
     private Integer unitsSold;
     @NotNull(message = "Category ID is required")
     private UUID categoryId;
+    private String categoryName;
+    private Boolean isFreeShip;
     @NotNull(message = "Summary ID is required")
     private String summary;
     @NotNull(message = "Description ID is required")
