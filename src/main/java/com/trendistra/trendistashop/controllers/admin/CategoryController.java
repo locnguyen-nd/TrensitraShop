@@ -4,6 +4,7 @@ import com.trendistra.trendistashop.dto.response.CategoryDTO;
 import com.trendistra.trendistashop.dto.response.GenderDTO;
 import com.trendistra.trendistashop.entities.category.Gender;
 import com.trendistra.trendistashop.services.impl.category.CategoryService;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,11 @@ public class CategoryController {
     ) throws IOException {
         CategoryDTO createdCategory = categoryService.createCategory(categoryDTO, imageFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
+    }
+    @PostMapping("/gender")
+    public ResponseEntity<GenderDTO> createGender(@RequestBody GenderDTO genderDTO) {
+        GenderDTO genderDTO1 = categoryService.createGender(genderDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(genderDTO1);
     }
 
     @PutMapping("/{id}")
