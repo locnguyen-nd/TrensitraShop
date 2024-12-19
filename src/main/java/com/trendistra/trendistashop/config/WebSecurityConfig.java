@@ -69,12 +69,13 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         List<PermissionEntity> permissionEntities = permissionRepository.findAll();
         http
-                .csrf(AbstractHttpConfigurer :: disable)
+                .csrf(csrf -> csrf.ignoringRequestMatchers(publicApis))
                 .authenticationManager(authenticationManager())
                 // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
                 .authorizeHttpRequests(auth -> {
                     permissionEntities.forEach(permissionEntity -> {
                         try {
+                            auth.requestMatchers(publicApis).permitAll(); // bỏ qua các url public
                             HttpMethod httpMethod = HttpMethod.valueOf(permissionEntity.getMethod());
                             System.out.println(httpMethod);
                             String fullUrl = prefix + permissionEntity.getEndPoint();
