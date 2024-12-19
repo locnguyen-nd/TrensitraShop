@@ -44,15 +44,15 @@ public class WebSecurityConfig {
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-resources/**",
-            "/api/v1/auth/**",
-            "/api/v1/categories/**",
-            "/api/v1/colors/**",
-            "/api/v1/discounts/**",
-            "/api/v1/products/**",
-            "/api/v1/sizes/**",
-            "/api/v1/role/**",
-            "/api/v1/permissions/**",
-            "/api/v1/home/**"
+            "/auth/**",
+            "/categories/**",
+            "/colors/**",
+            "/discounts/**",
+            "/products/**",
+            "/sizes/**",
+            "/role/**",
+            "/permissions/**",
+            "/home/**"
     };
     /**
      * Cấu hình bảo mật cho ứng dụng, xác định cách thức xử lý các yêu cầu HTTP.
