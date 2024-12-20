@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serializable;
 import java.util.*;
 
 /**
@@ -49,6 +50,7 @@ public class UserEntity extends BaseEntity implements UserDetails {
     @Column(name = "avatar")
     private String avatar;
     @Enumerated(EnumType.STRING)
+
     @Column(nullable = false)
     private ProviderEnum provider;
     private String verificationCode;
@@ -59,28 +61,39 @@ public class UserEntity extends BaseEntity implements UserDetails {
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinTable(
             name = "auth_user_authority",
-            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
-            inverseJoinColumns = @JoinColumn(name = "roles_id", referencedColumnName = "id")
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "roles_id")
     )
-    private Set<RoleEntity> roles ;
+    private List<RoleEntity> roles ;
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
+    public Collection<? extends  GrantedAuthority> getAuthorities() {
         String prefixRole = "ROLE_";
-        Set<GrantedAuthority> authorities = new HashSet<>();
+        List<GrantedAuthority> authorities = new ArrayList<>();
         // Add roles as authorities
-        for (RoleEntity role : this.roles) {
+        for (RoleEntity role : roles) {
             if (role.getName() != null) {
                 authorities.add(new SimpleGrantedAuthority(prefixRole + role.getName().toUpperCase()));
+//                System.out.println("Added role: " + prefixRole + role.getName().toUpperCase());
             }
-            // Add permissions for each role
-            if (role.getPermissions() != null) {
-                for (PermissionEntity permission : role.getPermissions()) {
-                    if (permission.getName() != null) {
-                        authorities.add(new SimpleGrantedAuthority(permission.getName()));
+            if (roles != null) {
+                // Add permissions for each role
+                if (role.getPermissions() != null) {
+                    for (PermissionEntity permission : role.getPermissions()) {
+                        if (permission.getName() != null) {
+                            authorities.add(new SimpleGrantedAuthority(permission.getName()));
+//                            System.out.println("Added permission: " + permission.getName());
+                        } else {
+                            System.out.println("Permission name is null for permission: " + permission);
+                        }
                     }
+                } else {
+                    System.out.println("Role permissions are null for role: " + role.getName());
                 }
+            }else {
+                System.out.println("Role permissions are null for role: " + role.getName());
             }
         }
+        System.out.println("User authorities: " + authorities);
         return authorities;
     }
 

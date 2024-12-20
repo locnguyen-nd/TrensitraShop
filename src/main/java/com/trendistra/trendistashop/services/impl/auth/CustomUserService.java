@@ -44,6 +44,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         if(user.isEmpty()){
             throw new UsernameNotFoundException("User Not Found with userName "+username);
         }
+//        System.out.println(user.get().getAuthorities().stream().collect(Collectors.toList()));
         return user.get();
     }
     @Override
@@ -81,7 +82,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
     @Transactional
     public UserDetailDTO assignRolesToUser(UUID userId, Set<UUID> roleIds) {
         Optional<UserEntity> user = userDetailRepository.findById(userId);
-        Set<RoleEntity> uniqueRoles = new HashSet<>(user.get().getRoles());
+        List<RoleEntity> uniqueRoles = new ArrayList<>(user.get().getRoles());
         roleIds.stream()
                 .map(roleId -> roleRepository.findById(roleId)
                         .orElseThrow(() -> new EntityNotFoundException("Role not found: " + roleId)))

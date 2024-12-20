@@ -6,10 +6,7 @@ import com.trendistra.trendistashop.entities.user.UserEntity;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -33,7 +30,7 @@ public class UserDetailMapper {
 
         // Handle fields like roles if necessary
         if (userDTO.getAuthorityList() != null) {
-            Set<RoleEntity> roles = new HashSet<>();
+            List<RoleEntity> roles = new ArrayList<>();
             for (Object role : (Set<?>) userDTO.getAuthorityList()) {
                 if (role instanceof RoleEntity) {
                     roles.add((RoleEntity) role);
