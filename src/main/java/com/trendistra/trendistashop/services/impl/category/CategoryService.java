@@ -6,6 +6,7 @@ import com.trendistra.trendistashop.dto.response.GenderDTO;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.category.Gender;
 import com.trendistra.trendistashop.entities.product.Discount;
+import com.trendistra.trendistashop.exceptions.DataAccessException;
 import com.trendistra.trendistashop.helper.GenerateSlug;
 import com.trendistra.trendistashop.repositories.category.CategoryRepository;
 import com.trendistra.trendistashop.repositories.category.GenderRepository;
@@ -40,6 +41,17 @@ public class CategoryService {
                         gender.getName()
                 )).collect(Collectors.toList());
     }
+    public GenderDTO createGender(GenderDTO genderDTO){
+        Boolean existsByName = genderRepository.existsByName(genderDTO.getName());
+        if(existsByName) {
+            throw new DataAccessException("Tên này đã tồn tại");
+        }
+        Gender gender = Gender.builder()
+                .name(genderDTO.getName())
+                .build();
+        return convertGenderDTO(genderRepository.save(gender));
+    }
+
 
     // Tạo mới category
     @Transactional
@@ -156,7 +168,7 @@ public class CategoryService {
     private String extractPublicIdFromUrl(String url) {
         String[] parts = url.split("/");
         String filename = parts[parts.length - 1];
-        return "categories/" + filename.split("\\.")[0];
+        return "CATEGORIES/" + filename.split("\\.")[0];
     }
 
     // Chuyển đổi giữa Entity và DTO

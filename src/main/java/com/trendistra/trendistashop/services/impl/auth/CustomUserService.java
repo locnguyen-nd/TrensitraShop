@@ -44,7 +44,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         if(user.isEmpty()){
             throw new UsernameNotFoundException("User Not Found with userName "+username);
         }
-        System.out.println(user.get().getAuthorities().stream().collect(Collectors.toList()));
+//        System.out.println(user.get().getAuthorities().stream().collect(Collectors.toList()));
         return user.get();
     }
     @Override

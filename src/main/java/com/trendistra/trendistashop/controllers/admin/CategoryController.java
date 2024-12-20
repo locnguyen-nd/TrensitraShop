@@ -1,12 +1,15 @@
 package com.trendistra.trendistashop.controllers.admin;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trendistra.trendistashop.dto.response.CategoryDTO;
 import com.trendistra.trendistashop.dto.response.GenderDTO;
 import com.trendistra.trendistashop.entities.category.Gender;
 import com.trendistra.trendistashop.services.impl.category.CategoryService;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,13 +26,20 @@ public class CategoryController {
     @Autowired
     private CategoryService categoryService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CategoryDTO> createCategory(
-            @ModelAttribute CategoryDTO categoryDTO,
+            @RequestPart("categoryDTO") String categoryDTOJson,
             @RequestParam(required = false) MultipartFile imageFile
     ) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        CategoryDTO categoryDTO = objectMapper.readValue(categoryDTOJson, CategoryDTO.class);
         CategoryDTO createdCategory = categoryService.createCategory(categoryDTO, imageFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
+    }
+    @PostMapping("/gender")
+    public ResponseEntity<GenderDTO> createGender(@RequestBody GenderDTO genderDTO) {
+        GenderDTO genderDTO1 = categoryService.createGender(genderDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(genderDTO1);
     }
 
     @PutMapping("/{id}")

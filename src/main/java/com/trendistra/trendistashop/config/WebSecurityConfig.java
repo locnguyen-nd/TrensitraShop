@@ -21,6 +21,9 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -69,7 +72,7 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         Map<String, Map<String, List<String>>> permissionMappings = permissionService.loadPermissions();
         http
-                .csrf(AbstractHttpConfigurer :: disable)
+                .csrf(csrf -> csrf.ignoringRequestMatchers(publicApis))
                 .authenticationManager(authenticationManager())
                 // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
                 .authorizeHttpRequests(auth -> {
@@ -127,6 +130,17 @@ public class WebSecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("*")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
+            }
+        };
     }
 
 }
