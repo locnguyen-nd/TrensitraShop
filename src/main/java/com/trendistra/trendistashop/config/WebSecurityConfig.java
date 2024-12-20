@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.config;
 
 import com.trendistra.trendistashop.entities.user.PermissionEntity;
 import com.trendistra.trendistashop.repositories.auth.PermissionRepository;
+import com.trendistra.trendistashop.services.impl.auth.PermissionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Configuration
 @EnableWebSecurity
@@ -28,7 +31,7 @@ public class WebSecurityConfig {
     @Autowired
     private UserDetailsService userDetailsService;
     @Autowired
-    private PermissionRepository permissionRepository;
+    private PermissionService permissionService;
     @Autowired
     private JWTTokenHelper jwtTokenHelper;
     @Value("${api.prefix}")
@@ -64,28 +67,21 @@ public class WebSecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        List<PermissionEntity> permissionEntities = permissionRepository.findAll();
+        Map<String, Map<String, List<String>>> permissionMappings = permissionService.loadPermissions();
         http
                 .csrf(AbstractHttpConfigurer :: disable)
                 .authenticationManager(authenticationManager())
                 // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
                 .authorizeHttpRequests(auth -> {
-                    permissionEntities.forEach(permissionEntity -> {
-                        try {
-                            HttpMethod httpMethod = HttpMethod.valueOf(permissionEntity.getMethod());
-                            System.out.println(httpMethod);
-                            String fullUrl = prefix + permissionEntity.getEndPoint();
-//                            System.out.println(fullUrl);
-//                            System.out.println(permissionEntity.getName());
-                            auth.requestMatchers(httpMethod, fullUrl)
-                                    .hasAuthority("USER");
-//                            System.out.println("Role" + getRoleInPermission(permissionEntity.getName()));
-                        } catch (IllegalArgumentException e) {
-                            // Ghi log nếu method không hợp lệ
-//                            System.err.println("Invalid HTTP method: " + permissionEntity.getMethod());
-                        }
+                    auth.requestMatchers(publicApis);
+                    permissionMappings.forEach((endPoint , methodMap) -> {
+                       methodMap.forEach((httpMethod, permissions) -> {
+                           String fullUrl = prefix + endPoint;
+//                           System.out.println("Configuring access for URL: " + fullUrl + " with method: " + httpMethod + " and permissions: " + permissions);
+                           auth.requestMatchers(HttpMethod.valueOf(httpMethod), fullUrl)
+                                   .hasAnyAuthority(permissions.toArray(new  String[0]));
+                       });
                     });
-                    // Các request khác cần xác thực
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))

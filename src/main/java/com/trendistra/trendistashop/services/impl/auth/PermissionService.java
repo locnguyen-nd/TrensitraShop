@@ -8,8 +8,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -97,5 +96,14 @@ public class PermissionService {
         // Delete the permission
         permissionRepository.delete(permission);
     }
-
+    public Map<String, Map<String, List<String>>> loadPermissions(){
+        List<PermissionEntity> permission = permissionRepository.findAll();
+        Map<String, Map<String, List<String>>> permissionMap = new HashMap<>();
+        for (PermissionEntity permission1 : permission) {
+            permissionMap.computeIfAbsent(permission1.getEndPoint(), k-> new HashMap<>())
+                    .computeIfAbsent(permission1.getMethod(), k-> new ArrayList<>())
+                    .add(permission1.getName());
+        }
+        return permissionMap;
+    }
 }

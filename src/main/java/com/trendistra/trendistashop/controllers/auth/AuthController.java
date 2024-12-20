@@ -104,7 +104,7 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Error Login With Google.",
                     content = @Content)
     })
-    @GetMapping("/login/google")
+    @GetMapping("/google/success")
     public void createAccountWithGoogle (@AuthenticationPrincipal OAuth2User oAuth2User, HttpServletResponse response) throws IOException {
         String userName = oAuth2User.getAttribute("email");
         Optional<UserEntity> user = iAuthenticationService.getUser(userName);

@@ -13,7 +13,7 @@ public interface IAuthorizationService {
      *
      * @return Một tập hợp (Set) các RoleEntity đại diện cho các quyền của người dùng.
      */
-    Set<RoleEntity> getUserRole();
+    List<RoleEntity> getUserRole();
     RoleDTO createRole(RoleDTO roleDTO);
     RoleDTO getRoleById(UUID roleId);
     RoleDTO getRoleByName (String name);
@@ -22,7 +22,7 @@ public interface IAuthorizationService {
     void deleteRole(UUID roleId);
     RoleDTO addPermissionsToRole(UUID roleId, Set<UUID> permissionIds);
     RoleDTO removePermissionsFromRole(UUID roleId, Set<UUID> permissionIds);
-    Set<PermissionEntity> getRolePermissions(UUID roleId);
+    List<PermissionEntity> getRolePermissions(UUID roleId);
     boolean hasPermission(UUID roleId, UUID permissionIds);
 
 }

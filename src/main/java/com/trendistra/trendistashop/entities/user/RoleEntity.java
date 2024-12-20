@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,13 +23,13 @@ public class RoleEntity {
     @Column(unique = true, nullable = false)
     private String name;
     private String description;
-    @ManyToMany(mappedBy = "roles")
-    private Set<UserEntity> users ;
+    @ManyToMany(mappedBy = "roles", fetch = FetchType.EAGER)
+    private List<UserEntity> users ;
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "role_permissions",
             joinColumns = @JoinColumn(name = "role_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
-    private Set<PermissionEntity> permissions ;
+    private List<PermissionEntity> permissions ;
 }
