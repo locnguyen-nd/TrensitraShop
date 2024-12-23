@@ -31,7 +31,7 @@ public class UserDetailMapper {
         // Handle fields like roles if necessary
         if (userDTO.getAuthorityList() != null) {
             List<RoleEntity> roles = new ArrayList<>();
-            for (Object role : (Set<?>) userDTO.getAuthorityList()) {
+            for (Object role :  userDTO.getAuthorityList()) {
                 if (role instanceof RoleEntity) {
                     roles.add((RoleEntity) role);
                 }

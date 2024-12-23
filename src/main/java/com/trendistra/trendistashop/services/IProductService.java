@@ -14,12 +14,18 @@ import java.util.List;
 import java.util.UUID;
 
 public interface IProductService {
-    public List<ProductDTO> getAllProduct();
+    Page<ProductDTO> getAllProduct(Pageable pageable);
+    Page<ProductDTO> searchWithName(String name,Pageable pageable);
     @Transactional
     public ProductDTO createProductWithImages(ProductRequestDTO productDto, List<MultipartFile> files) throws IOException;
     public ProductDTO getProductById(UUID id);
-    public List<ProductDTO> getProductByTag(String tag);
-    Page<ProductDTO> filterProduct(UUID categoryId, UUID genderId, UUID colorId ,  UUID sizeId, Double minPrice, Double maxPrice, PageRequest pageRequest);
+
+
+    Page<ProductDTO> getProductByTag(String tag, Pageable pageable);
+
+    ProductDTO getProductBySlug(String slug);
+
+    Page<ProductDTO> filterProduct(UUID categoryId, UUID genderId, UUID colorId , UUID sizeId, Double minPrice, Double maxPrice, PageRequest pageRequest);
 
     @Transactional
     public ProductDTO updateProduct(UUID id, ProductDTO productDto);

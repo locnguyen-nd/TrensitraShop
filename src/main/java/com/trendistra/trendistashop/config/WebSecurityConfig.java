@@ -26,7 +26,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+
 
 @Configuration
 @EnableWebSecurity
@@ -72,7 +72,7 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         Map<String, Map<String, List<String>>> permissionMappings = permissionService.loadPermissions();
         http
-                .csrf(csrf -> csrf.ignoringRequestMatchers(publicApis))
+                .csrf(AbstractHttpConfigurer :: disable)
                 .authenticationManager(authenticationManager())
                 // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
                 .authorizeHttpRequests(auth -> {
@@ -131,16 +131,16 @@ public class WebSecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("*")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
-            }
-        };
-    }
+//    @Bean
+//    public WebMvcConfigurer corsConfigurer() {
+//        return new WebMvcConfigurer() {
+//            @Override
+//            public void addCorsMappings(CorsRegistry registry) {
+//                registry.addMapping("/**")
+//                        .allowedOrigins("*")
+//                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
+//            }
+//        };
+//    }
 
 }

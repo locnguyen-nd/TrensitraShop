@@ -32,7 +32,6 @@ public class SizeService {
     // Update a Size
     public Size updateSize(UUID id, Size updatedSize) {
         Size existingSize = getSizeById(id);
-        existingSize.setName(updatedSize.getName());
         existingSize.setValue(updatedSize.getValue());
         return sizeRepository.save(existingSize);
     }

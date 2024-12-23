@@ -27,7 +27,6 @@ public class Order extends BaseEntity {
     private UserEntity user;
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "address_id", nullable = false)
-    @JsonIgnore
     private Address address;
     @Column(nullable = false)
     private BigDecimal totalAmount;
@@ -36,16 +35,16 @@ public class Order extends BaseEntity {
     private OrderStatus orderStatus;
     @Column(nullable = false)
     private String paymentMethod;
-    @Column(nullable = true)
     private String shipmentTrackingNumber; // Số theo dõi lô hàng
-    @Column(nullable = true)
     @Temporal(TemporalType.TIMESTAMP)
     private Date expectedDeliveryDate; // ngày giao dự kiến
     @OneToMany(fetch = FetchType.LAZY , mappedBy = "order", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<OrderItem> orderItems;
     private Double discount;
     @OneToOne(fetch = FetchType.LAZY, mappedBy = "order", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private Payment payment;
 
 }

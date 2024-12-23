@@ -37,6 +37,7 @@ public class ProductDTO {
     @DecimalMin(value = "0.0", message = "Price must be non-negative")
     private BigDecimal price;
     private ProductTagEnum tag;
+    private Integer availableQuantities;
     private Integer views;
     private Integer ratingAverage;
     private Integer ratingTotal;
@@ -49,7 +50,7 @@ public class ProductDTO {
     private String summary;
     @NotNull(message = "Description ID is required")
     private String description;
-    private List<UUID> discountIds;
+    private BigDecimal discountValue;
     private List<ProductImageDTO> productImages;
     private List<VariantDTO> productVariants;
 }

@@ -44,17 +44,44 @@ public class ProductController {
     }
     // Read All Products
     @GetMapping
-    public ResponseEntity<List<ProductDTO>> getAllProducts() {
-        List<ProductDTO> products = productService.getAllProduct();
+    public ResponseEntity<Page<ProductDTO>> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "30") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductDTO> products = productService.getAllProduct(pageable);
+        return ResponseEntity.ok(products);
+    }
+    @GetMapping("search")
+    public ResponseEntity<Page<ProductDTO>> getProductsByName(
+            @RequestParam(required = false) String name,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "30") int size
+
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductDTO> products = productService.searchWithName(name, pageable);
         return ResponseEntity.ok(products);
     }
     @GetMapping("/tag/{tag}")
-    public ResponseEntity<List<ProductDTO>> getProductsByTag(@PathVariable String tag) {
-        List<ProductDTO> products = productService.getProductByTag(tag);
+    public ResponseEntity<Page<ProductDTO>> getProductsByTag(
+            @PathVariable String tag,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductDTO> products = productService.getProductByTag(tag, pageable);
         return ResponseEntity.ok(products);
     }
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity <ProductDTO> getProductsBySlug(
+            @PathVariable String slug
+    ) {
+        ProductDTO product = productService.getProductBySlug(slug);
+        return ResponseEntity.ok(product);
+    }
 
-    @GetMapping("/search")
+    @GetMapping("/filter")
     public Page<ProductDTO> getAllProductsWithFilter(
             @RequestParam() UUID categoryId,
             @RequestParam(required = false) UUID colorId,
@@ -63,9 +90,9 @@ public class ProductController {
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(value = "price") String sortBy,// price // updateAt
-            @RequestParam(defaultValue = "true") boolean ascending
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "price") String sortBy,// price // updateAt
+            @RequestParam(defaultValue = "false") boolean ascending
     ) {
         PageRequest pageRequest = createPageRequest(page, size, sortBy , ascending);
         Page<ProductDTO>products =   productService.filterProduct(categoryId, genderId, colorId, sizeId, minPrice, maxPrice, pageRequest);

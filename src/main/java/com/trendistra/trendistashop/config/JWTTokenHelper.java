@@ -97,7 +97,7 @@ public class JWTTokenHelper {
             return false;
         }
         try {
-            final String userName = getUserNameFromToken(token);
+            final String userName = getUserNameFromToken(token).toLowerCase();
             // Kiểm tra các điều kiện: không null, khớp với userDetails và token chưa hết hạn thì true
             return userName != null
                     && userName.equals(userDetails.getUsername())

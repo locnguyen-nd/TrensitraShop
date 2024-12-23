@@ -21,12 +21,11 @@ public class OrderDetailDTO {
     private UUID id;
     private Date orderDate;
     @JsonProperty("address")
-    private Address address;
+    private AddressDTO address;
     private BigDecimal totalAmount;
     private OrderStatus orderStatus;
     private String shipmentNumber;
     private Date expectedDeliveryDate;
     @JsonProperty("orderItems")
     private List<OrderItemDetail> orderItemList;
-
 }

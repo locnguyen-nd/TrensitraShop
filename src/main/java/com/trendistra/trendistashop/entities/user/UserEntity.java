@@ -50,7 +50,6 @@ public class UserEntity extends BaseEntity implements UserDetails {
     @Column(name = "avatar")
     private String avatar;
     @Enumerated(EnumType.STRING)
-
     @Column(nullable = false)
     private ProviderEnum provider;
     private String verificationCode;
@@ -104,6 +103,6 @@ public class UserEntity extends BaseEntity implements UserDetails {
 
     @Override
     public String getUsername() {
-        return this.email;
+        return this.email.toLowerCase();
     }
 }

@@ -33,7 +33,7 @@ public class VariantService {
                     .orElseThrow(() -> new ResourceNotFoundEx("Color not found"));
             Size size = sizeRepository.findById(variantRequest.getSizeId())
                     .orElseThrow(() -> new ResourceNotFoundEx("Size not found"));
-            String codeName = product.getCode() + "-" + color.getName() + "-" + size.getName();
+            String codeName = product.getCode() + "-" + color.getName() + "-" + size.getValue();
             ProductVariant variant = ProductVariant.builder()
                     .product(product)
                     .color(color)

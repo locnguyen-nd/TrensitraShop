@@ -22,8 +22,8 @@ public class Color extends BaseEntity {
     @GeneratedValue
     private UUID id ;
     private String name ;
+    private String code;
     private String value;
     @OneToMany(mappedBy = "color", cascade = CascadeType.ALL)
     private List<ProductImage> productImages; // Danh sách các hinh anh liên quan
-
 }

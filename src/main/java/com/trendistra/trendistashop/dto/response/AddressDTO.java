@@ -5,17 +5,19 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
 import java.util.UUID;
-
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
-public class GenderDTO {
-    private UUID id ;
+public class AddressDTO {
+    private UUID id;
     private String name;
-    private String slug;
-    private String imageUrl;
+    private String city;
+    private String district;
+    private String ward;
+    private String specAddress;
+    private String phoneNumber;
+    private Boolean isDefaultAddress;
 
 }

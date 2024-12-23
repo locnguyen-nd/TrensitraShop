@@ -13,6 +13,6 @@ public class CategoryDTO {
     private String description;
     private String imageUrl;
     private UUID parentId;
-    private GenderDTO genderDTO;
-    private List<DiscountDTO> discounts;
+    private GenderDTO gender;
+    private List<CategoryDTO> items;
 }
