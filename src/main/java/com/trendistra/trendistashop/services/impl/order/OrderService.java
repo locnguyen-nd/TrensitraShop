@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.services.impl.order;
 
 import com.trendistra.trendistashop.dto.request.OrderItemRequest;
 import com.trendistra.trendistashop.dto.request.OrderRequest;
+import com.trendistra.trendistashop.dto.response.AddressDTO;
 import com.trendistra.trendistashop.dto.response.OrderDetailDTO;
 import com.trendistra.trendistashop.dto.response.OrderItemDetail;
 import com.trendistra.trendistashop.entities.product.Product;
@@ -15,6 +16,7 @@ import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.repositories.order.OrderRepository;
 import com.trendistra.trendistashop.services.impl.product.ProductService;
 import jakarta.transaction.Transactional;
+import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +36,8 @@ public class OrderService {
     private  OrderRepository orderRepository;
     @Autowired
     private ProductService productService;
+    @Autowired
+    private ModelMapper modelMapper;
 
     @Transactional
     public Order createOrder (OrderRequest orderRequest, Principal principal) throws OrderCreationException {
@@ -118,7 +122,7 @@ public class OrderService {
                                     .orderStatus(order.getOrderStatus())
                                     .shipmentNumber(order.getShipmentTrackingNumber())
                                     .orderItemList(getItemDetails(order.getOrderItems()))
-                                    .address(order.getAddress())
+                                    .address(modelMapper.map(order.getAddress(), AddressDTO.class))
                                     .totalAmount(order.getTotalAmount())
                                     .expectedDeliveryDate(order.getExpectedDeliveryDate())
                                     .build();
