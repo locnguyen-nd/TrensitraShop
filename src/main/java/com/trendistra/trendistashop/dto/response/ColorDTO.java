@@ -14,5 +14,6 @@ import java.util.UUID;
 public class ColorDTO {
     private UUID id;
     private String name;
+    private String code;
     private String value;
 }

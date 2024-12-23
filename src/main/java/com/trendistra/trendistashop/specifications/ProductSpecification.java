@@ -5,11 +5,24 @@ import com.trendistra.trendistashop.entities.product.Product;
 import com.trendistra.trendistashop.entities.product.ProductVariant;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.UUID;
 
 public class ProductSpecification {
+    public static Specification<Product> hasName(String name) {
+        return (root, query, criteriaBuilder) -> {
+            if(name == null || name.trim().isEmpty()) {
+                return criteriaBuilder.conjunction();
+            }
+            // Attempt an exact match first
+            Predicate exactMatchPredicate = criteriaBuilder.equal(criteriaBuilder.lower(root.get("name")), name.toLowerCase());
+            // Then, allow partial matches (like search)
+            Predicate partialMatchPredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), "%" + name.toLowerCase() + "%");
+        return criteriaBuilder.or(exactMatchPredicate,partialMatchPredicate);
+        };
+    }
     public static Specification<Product> hasCategoryId(UUID categoryId) {
         return (root, query, criteriaBuilder) -> {
             if (categoryId == null) {

@@ -37,8 +37,8 @@ public class CategoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
     }
     @PostMapping("/gender")
-    public ResponseEntity<GenderDTO> createGender(@RequestBody GenderDTO genderDTO) {
-        GenderDTO genderDTO1 = categoryService.createGender(genderDTO);
+    public ResponseEntity<GenderDTO> createGender(@RequestBody GenderDTO genderDTO, MultipartFile images) throws IOException {
+        GenderDTO genderDTO1 = categoryService.createGender(genderDTO, images);
         return ResponseEntity.status(HttpStatus.CREATED).body(genderDTO1);
     }
 

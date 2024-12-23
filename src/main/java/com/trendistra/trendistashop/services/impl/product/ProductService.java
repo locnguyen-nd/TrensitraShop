@@ -6,16 +6,18 @@ import com.trendistra.trendistashop.dto.response.ProductImageDTO;
 import com.trendistra.trendistashop.dto.response.VariantDTO;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.product.*;
+import com.trendistra.trendistashop.enums.DiscountType;
 import com.trendistra.trendistashop.enums.ProductTagEnum;
-import com.trendistra.trendistashop.enums.SizeEnum;
+import com.trendistra.trendistashop.exceptions.InvalidParameterException;
+import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.helper.GenerateCodeProduct;
 import com.trendistra.trendistashop.helper.GenerateSlug;
 import com.trendistra.trendistashop.repositories.category.CategoryRepository;
-import com.trendistra.trendistashop.repositories.product.ColorRepository;
 import com.trendistra.trendistashop.repositories.product.DiscountRepository;
 import com.trendistra.trendistashop.repositories.product.ProductRepository;
 import com.trendistra.trendistashop.services.IProductService;
 import jakarta.transaction.Transactional;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,9 +25,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
+
 import static com.trendistra.trendistashop.specifications.ProductSpecification.*;
 
 @Service
@@ -46,12 +51,29 @@ public class ProductService implements IProductService {
 
     private GenerateSlug generateSlug;
     private GenerateCodeProduct generateCodeProduct;
+    @Autowired
+    private ModelMapper modelMapper;
+
     @Override
-    public List<ProductDTO> getAllProduct() {
-        return productRepository.findAll().stream()
-                .map(this::mapToProductDto)
-                .collect(Collectors.toList());
+    public Page<ProductDTO> getAllProduct(Pageable pageable) {
+        Page<Product> productPage = productRepository.findAll(pageable);
+        return productPage.map(this::mapToProductDto);
     }
+
+    @Override
+    public Page<ProductDTO> searchWithName(String name, Pageable pageable) {
+        if (name == null) {
+            throw new InvalidParameterException("You don't trying search with name and slug empty !");
+        }
+        Specification<Product> specification = Specification
+                .where(hasName(name));
+        Page<Product> productPage = productRepository.findAll(specification, pageable);
+        if (productPage.isEmpty()) {
+            throw new ResourceNotFoundEx(String.format("Don't find any product with %s ", name));
+        }
+        return productPage.map(this::mapToProductDto);
+    }
+
     @Override
     @Transactional
     public ProductDTO createProductWithImages(ProductRequestDTO productDto, List<MultipartFile> files) throws IOException {
@@ -115,28 +137,38 @@ public class ProductService implements IProductService {
         return mapToProductDto(product);
     }
 
+
     @Override
-    public List<ProductDTO> getProductByTag(String tag) {
-        List<Product> products = productRepository.findProductsByTag(ProductTagEnum.valueOf(tag));
-        return products.stream().map(this::mapToProductDto).collect(Collectors.toList());
+    public Page<ProductDTO> getProductByTag(String tag, Pageable pageable) {
+        String tagEnum = tag.toUpperCase();
+        Page<Product> productPage = productRepository.findProductsByTag(ProductTagEnum.valueOf(tagEnum), pageable);
+        return productPage.map(this::mapToProductDto);
+    }
+
+    @Override
+    public ProductDTO getProductBySlug(String slug) {
+        Product product = productRepository.findProductsBySlug(slug);
+        return mapToProductDto(product);
     }
 
 
     public Product getProductByIdEntity(UUID id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
-        return product ;
+        return product;
     }
+
     @Override
     public Page<ProductDTO> filterProduct(UUID categoryId, UUID genderId, UUID colorId,
                                           UUID sizeId, Double minPrice, Double maxPrice, PageRequest pageRequest) {
         // kiểm tra xem category có parent không , nếu có thì lấy chính nó còn không thì getAll
         Optional<Category> category = categoryRepository.findById(categoryId);
         UUID parentId = null;
-        if(category.get().getParent() == null) {
+        if (category.get().getParent() == null) {
             parentId = categoryId;
-            categoryId = null ;
-        };
+            categoryId = null;
+        }
+        ;
         Specification<Product> productSpecification = Specification
                 .where(hasCategoryId(categoryId)) // tìm kiếm scopr nhỏ
                 .and(hasParentCategoryId(parentId)) //  tìm kiếm lớn
@@ -163,11 +195,6 @@ public class ProductService implements IProductService {
                 .orElseThrow(() -> new RuntimeException("Category not found"));
 
 
-        // Update discounts
-        List<Discount> discounts = productDto.getDiscountIds() != null
-                ? discountRepository.findAllById(productDto.getDiscountIds())
-                : List.of();
-
         // Update product details
         existingProduct.setName(productDto.getName());
         existingProduct.setCode(productDto.getCode());
@@ -177,8 +204,6 @@ public class ProductService implements IProductService {
         existingProduct.setPrice(productDto.getPrice());
         existingProduct.setIsFreeShip(productDto.getIsFreeShip());
         existingProduct.setCategory(category);
-        existingProduct.setDiscounts(discounts);
-
         // Save updated product
         Product updatedProduct = productRepository.save(existingProduct);
 
@@ -208,6 +233,52 @@ public class ProductService implements IProductService {
         productRepository.save(product);
     }
 
+    private BigDecimal getFinalPriceAfterDiscount(UUID productId) {
+        Product product = productRepository.findById(productId).orElseThrow(() ->
+                new ResourceNotFoundEx("Product not found"));
+        BigDecimal finalPrice;
+        BigDecimal discountValue;
+        if (product == null) {
+            return discountValue = BigDecimal.ZERO;
+        }
+        BigDecimal basePrice = product.getOriginPrice();
+        Category category = product.getCategory();
+        if (product.getCategory() == null) return discountValue = BigDecimal.ZERO;
+        List<UUID> productDiscountsId = product.getDiscounts().stream().map(discount -> discount.getId()).collect(Collectors.toList());
+        if (productDiscountsId == null || productDiscountsId.isEmpty()) {
+            finalPrice = basePrice;
+            return discountValue = BigDecimal.ZERO;
+        }
+        List<Discount> discounts = discountRepository.findAllById(productDiscountsId);
+        if (discounts == null || discounts.isEmpty()) {
+            finalPrice = basePrice;
+            return discountValue = BigDecimal.ZERO;
+        }
+        ;
+        Discount highesDiscount = discounts.stream().max(Comparator.comparing(Discount::getDiscountValue)).get();
+        if (highesDiscount.getDiscountType().equals(DiscountType.PERCENT)) { // nếu giảm giá theo % thì
+            finalPrice = basePrice.multiply((BigDecimal.valueOf(100)
+                    .subtract(highesDiscount.getDiscountValue()))
+                    .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP));
+            discountValue = highesDiscount.getDiscountValue();
+        } else {
+            finalPrice = basePrice.subtract(highesDiscount.getDiscountValue());
+            discountValue = highesDiscount.getDiscountValue().divide(basePrice, 4, BigDecimal.ROUND_HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+        }
+        if (highesDiscount.getMaxDiscountValue() != null) {
+            if (basePrice.subtract(finalPrice).compareTo(highesDiscount.getMaxDiscountValue()) > 0) {
+                finalPrice = basePrice.subtract(highesDiscount.getMaxDiscountValue());
+            }
+        }
+        if (finalPrice.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        product.setPrice(finalPrice);
+        productRepository.save(product);
+        return discountValue;
+    }
+
     // Helper method to map Product to ProductDto
     private ProductDTO mapToProductDto(Product product) {
         return ProductDTO.builder()
@@ -222,6 +293,10 @@ public class ProductService implements IProductService {
                 .originPrice(product.getOriginPrice())
                 .price(product.getPrice())
                 .isFreeShip(product.getIsFreeShip())
+                .availableQuantities(product.getProductVariants().stream()
+                        .mapToInt(ProductVariant::getStockQuantity) // Lấy số lượng từ từng productVariant
+                        .sum() // Tính tổng
+                )
                 .tag(product.getTag())
                 .views(product.getViews())
                 .ratingAverage(product.getRatingAverage())
@@ -229,15 +304,12 @@ public class ProductService implements IProductService {
                 .unitsSold(product.getUnitsSold())
                 .categoryId(product.getCategory().getId())
                 .categoryName(product.getCategory().getName())
-                .discountIds(product.getCategory().getDiscounts().stream()
-                        .filter(Discount::getIsActive)
-                        .map(Discount::getId)
-                        .collect(Collectors.toList()))
+                .discountValue(getFinalPriceAfterDiscount(product.getId()))
                 .productImages(product.getImages().stream()
                         .map(productImage -> covertImageToDTO(productImage))
                         .toList())
                 .productVariants(product.getProductVariants().stream().map(
-                        productVariant ->convertVariantDTO(productVariant)).toList())
+                        productVariant -> convertVariantDTO(productVariant)).toList())
                 .build();
     }
 
@@ -251,12 +323,14 @@ public class ProductService implements IProductService {
                 .colorId(productImage.getColor().getId())
                 .build();
     }
-    private VariantDTO convertVariantDTO (ProductVariant productVariant) {
+
+    private VariantDTO convertVariantDTO(ProductVariant productVariant) {
         return VariantDTO.builder()
                 .id(productVariant.getId())
                 .codeVariant(productVariant.getCodeVariant())
                 .colorCode(productVariant.getColor().getValue())
                 .colorId(productVariant.getColor().getId())
+                .sizeId(productVariant.getSize().getId())
                 .sizeName(productVariant.getSize().getValue())
                 .stockQuantity(productVariant.getStockQuantity())
                 .build();

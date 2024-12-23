@@ -5,6 +5,7 @@ import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.product.Discount;
 import com.trendistra.trendistashop.entities.product.Product;
 import com.trendistra.trendistashop.enums.DiscountType;
+import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.repositories.category.CategoryRepository;
 import com.trendistra.trendistashop.repositories.product.DiscountRepository;
 import com.trendistra.trendistashop.repositories.product.ProductRepository;
@@ -65,7 +66,7 @@ public class DiscountService {
             discount.setFrame(imageUrl);
         }
         Discount createDiscount = discountRepository.save(discount);
-        System.out.println(categoryTds.size());
+//        System.out.println(categoryTds.size());
         // For Categories
         if (categoryTds != null && !categoryTds.isEmpty()) {
             List<Category> categories = categoryRepository.findAllById(categoryTds);
@@ -158,6 +159,7 @@ public class DiscountService {
         discount.setIsActive(status);
         discountRepository.save(discount);
     }
+
     public DiscountDTO applyDiscountToOrder(UUID discountId, BigDecimal orderTotal) {
         Discount discountOptional = discountRepository.findById(discountId).orElseThrow(
                 () -> new RuntimeException("Discount not found"));

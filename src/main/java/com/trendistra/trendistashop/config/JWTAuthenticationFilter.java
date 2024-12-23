@@ -1,6 +1,5 @@
 package com.trendistra.trendistashop.config;
 
-import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,7 +50,8 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             if ( null != authToken) {
                 String userName = jwtTokenHelper.getUserNameFromToken(authToken); // get userName with token
                 if (null != userName) {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(userName); // get userDetail
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(userName);// get userDetail
+//                    System.out.println(userDetails.getUsername());
                     if (jwtTokenHelper.validateToken(authToken, userDetails)) { // check token validate ==> pass
                         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                         authenticationToken.setDetails(new WebAuthenticationDetails(request));

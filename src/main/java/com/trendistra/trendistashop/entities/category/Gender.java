@@ -22,6 +22,8 @@ public class Gender {
     private UUID id;
     @Column(nullable = false)
     private String name;
+    private String slug;
+    private String imageUrl;
     @OneToMany(mappedBy = "gender", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonProperty("categories")
     private List<Category> categories; // Danh sách các danh mục liên quan
