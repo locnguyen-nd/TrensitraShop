@@ -31,10 +31,10 @@ public class DiscountController {
     // Create
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DiscountDTO> createDiscount(
-            @RequestPart("discountDto") String discountDtoJson,
-            @RequestParam(required = false) List<UUID> categoryIds,
-            @RequestParam(required = false) List<UUID> productIds,
-            @RequestParam(required = false) MultipartFile imageFile
+            @RequestPart("discount") String discountDtoJson,
+            @RequestParam(value = "categoryIds",required = false) List<UUID> categoryIds,
+            @RequestParam(value = "productIds", required = false) List<UUID> productIds,
+            @RequestParam(value = "image", required = false) MultipartFile imageFile
     ) throws IOException {
         // Parse JSON string to DTO
         ObjectMapper objectMapper = new ObjectMapper();
@@ -74,13 +74,17 @@ public class DiscountController {
     }
 
     // Update
-    @PutMapping("/{id}")
-    public ResponseEntity<DiscountDTO> updateDiscount(
-            @PathVariable UUID id,
-            @RequestBody DiscountDTO discountDto
-    ) {
-        DiscountDTO updatedDiscount = discountService.updateDiscount(id, discountDto);
-        return ResponseEntity.ok(updatedDiscount);
+    @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public ResponseEntity<DiscountDTO> updateDiscount(@PathVariable("id") UUID id,
+                                                      @RequestPart("discount") String discountDto,
+                                                      @RequestParam(value = "categoryIds", required = false) List<UUID> categoryIds,
+                                                      @RequestParam(value = "productIds", required = false) List<UUID> productIds,
+                                                      @RequestParam(value = "image", required = false) MultipartFile imageFile) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        DiscountDTO discount = objectMapper.readValue(discountDto, DiscountDTO.class);
+        return new ResponseEntity<>(discountService.updateDiscount(id, discount, categoryIds, productIds, imageFile), HttpStatus.OK);
     }
 
     // Delete

@@ -1,12 +1,10 @@
 package com.trendistra.trendistashop.entities.user;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.trendistra.trendistashop.enums.PaymentStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -14,7 +12,8 @@ import java.util.UUID;
 
 @Table(name = "payment")
 @Entity
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -24,7 +23,9 @@ public class Payment {
     private UUID id;
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id",nullable = false)
-    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @JsonBackReference("order-payment")
     private Order order;
     @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = false)

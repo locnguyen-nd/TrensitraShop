@@ -28,7 +28,7 @@ public class CategoryController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CategoryDTO> createCategory(
-            @RequestPart("categoryDTO") String categoryDTOJson,
+            @RequestPart("category") String categoryDTOJson,
             @RequestParam(required = false) MultipartFile imageFile
     ) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -36,9 +36,14 @@ public class CategoryController {
         CategoryDTO createdCategory = categoryService.createCategory(categoryDTO, imageFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
     }
-    @PostMapping("/gender")
-    public ResponseEntity<GenderDTO> createGender(@RequestBody GenderDTO genderDTO, MultipartFile images) throws IOException {
-        GenderDTO genderDTO1 = categoryService.createGender(genderDTO, images);
+    @PostMapping(value = "/gender", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<GenderDTO> createGender(
+            @RequestPart ("gender") String genderDTO,
+            @RequestParam MultipartFile images
+    ) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        GenderDTO genderDtoMap = objectMapper.readValue(genderDTO, GenderDTO.class);
+        GenderDTO genderDTO1 = categoryService.createGender(genderDtoMap, images);
         return ResponseEntity.status(HttpStatus.CREATED).body(genderDTO1);
     }
 

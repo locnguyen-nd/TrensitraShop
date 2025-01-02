@@ -1,5 +1,6 @@
 package com.trendistra.trendistashop.dto.request;
 
+import com.trendistra.trendistashop.dto.response.CartItemDTO;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,8 +22,7 @@ public class OrderRequest {
     @NotBlank(message = "Address not empty")
     private UUID addressId;
     @NotBlank(message = "Item not empty")
-    private List<OrderItemRequest> orderItems;
-    @NotBlank(message = "Don't have amount")
+    private List<CartItemDTO> orderItems;
     private BigDecimal totalAmount;
     private Double discount;
     private String paymentMethod;

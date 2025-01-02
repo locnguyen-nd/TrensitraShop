@@ -44,6 +44,8 @@ public class ProductService implements IProductService {
     @Autowired
     private DiscountRepository discountRepository;
     @Autowired
+    private DiscountService discountService;
+    @Autowired
     private ImageService imageService;
 
     @Autowired
@@ -234,48 +236,7 @@ public class ProductService implements IProductService {
     }
 
     private BigDecimal getFinalPriceAfterDiscount(UUID productId) {
-        Product product = productRepository.findById(productId).orElseThrow(() ->
-                new ResourceNotFoundEx("Product not found"));
-        BigDecimal finalPrice;
-        BigDecimal discountValue;
-        if (product == null) {
-            return discountValue = BigDecimal.ZERO;
-        }
-        BigDecimal basePrice = product.getOriginPrice();
-        Category category = product.getCategory();
-        if (product.getCategory() == null) return discountValue = BigDecimal.ZERO;
-        List<UUID> productDiscountsId = product.getDiscounts().stream().map(discount -> discount.getId()).collect(Collectors.toList());
-        if (productDiscountsId == null || productDiscountsId.isEmpty()) {
-            finalPrice = basePrice;
-            return discountValue = BigDecimal.ZERO;
-        }
-        List<Discount> discounts = discountRepository.findAllById(productDiscountsId);
-        if (discounts == null || discounts.isEmpty()) {
-            finalPrice = basePrice;
-            return discountValue = BigDecimal.ZERO;
-        }
-        ;
-        Discount highesDiscount = discounts.stream().max(Comparator.comparing(Discount::getDiscountValue)).get();
-        if (highesDiscount.getDiscountType().equals(DiscountType.PERCENT)) { // nếu giảm giá theo % thì
-            finalPrice = basePrice.multiply((BigDecimal.valueOf(100)
-                    .subtract(highesDiscount.getDiscountValue()))
-                    .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP));
-            discountValue = highesDiscount.getDiscountValue();
-        } else {
-            finalPrice = basePrice.subtract(highesDiscount.getDiscountValue());
-            discountValue = highesDiscount.getDiscountValue().divide(basePrice, 4, BigDecimal.ROUND_HALF_UP)
-                    .multiply(BigDecimal.valueOf(100));
-        }
-        if (highesDiscount.getMaxDiscountValue() != null) {
-            if (basePrice.subtract(finalPrice).compareTo(highesDiscount.getMaxDiscountValue()) > 0) {
-                finalPrice = basePrice.subtract(highesDiscount.getMaxDiscountValue());
-            }
-        }
-        if (finalPrice.compareTo(BigDecimal.ZERO) < 0) {
-            return BigDecimal.ZERO;
-        }
-        product.setPrice(finalPrice);
-        productRepository.save(product);
+        BigDecimal discountValue = discountService.calculateFinalPriceAndUpdateProduct(productId);
         return discountValue;
     }
 
@@ -290,6 +251,7 @@ public class ProductService implements IProductService {
                 .summary(product.getSummary())
                 .description(product.getDescription())
                 .status(product.getStatus())
+                .discountValue(getFinalPriceAfterDiscount(product.getId()))
                 .originPrice(product.getOriginPrice())
                 .price(product.getPrice())
                 .isFreeShip(product.getIsFreeShip())
@@ -304,7 +266,6 @@ public class ProductService implements IProductService {
                 .unitsSold(product.getUnitsSold())
                 .categoryId(product.getCategory().getId())
                 .categoryName(product.getCategory().getName())
-                .discountValue(getFinalPriceAfterDiscount(product.getId()))
                 .productImages(product.getImages().stream()
                         .map(productImage -> covertImageToDTO(productImage))
                         .toList())

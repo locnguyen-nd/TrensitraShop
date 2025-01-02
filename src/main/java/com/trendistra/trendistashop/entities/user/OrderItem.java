@@ -1,5 +1,6 @@
 package com.trendistra.trendistashop.entities.user;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.trendistra.trendistashop.entities.product.Product;
 import com.trendistra.trendistashop.entities.product.ProductVariant;
@@ -21,12 +22,11 @@ public class OrderItem {
     private UUID id;
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id", nullable = false)
-    @JsonIgnore
     private Product product;
     private UUID productVariantId;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
-    @JsonIgnore
+    @JoinColumn(name = "order_id")
+    @JsonBackReference("order-items")
     private Order order;
     @Column(nullable = false)
     private Integer quantity;

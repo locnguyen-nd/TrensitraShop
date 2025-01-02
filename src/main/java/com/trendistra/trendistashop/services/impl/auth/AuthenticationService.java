@@ -4,6 +4,7 @@ import com.trendistra.trendistashop.config.JWTTokenHelper;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
+import com.trendistra.trendistashop.entities.user.Cart;
 import com.trendistra.trendistashop.entities.user.UserEntity;
 import com.trendistra.trendistashop.enums.ProviderEnum;
 import com.trendistra.trendistashop.exceptions.AuthenticationFailedException;
@@ -11,7 +12,9 @@ import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.exceptions.UnauthorizedException;
 import com.trendistra.trendistashop.helper.VerificationCodeGenerator;
 import com.trendistra.trendistashop.repositories.auth.UserDetailRepository;
+import com.trendistra.trendistashop.repositories.order.CartRepository;
 import com.trendistra.trendistashop.services.IAuthenticationService;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +27,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerErrorException;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -42,6 +47,9 @@ public class AuthenticationService implements IAuthenticationService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private AuthorizationService authorizationService;
+    @Autowired
+    private CartRepository cartRepository;
+
     public Optional<UserEntity> getUser(String userName) {
 
         return userDetailRepository.findByEmail(userName);
@@ -74,10 +82,6 @@ public class AuthenticationService implements IAuthenticationService {
                         .lastName(user.getLastName())
                         .email(user.getEmail())
                         .phoneNumber(user.getPhoneNumber())
-                        .authorityList(user
-                                .getAuthorities()
-                                .stream()
-                                .collect(Collectors.toSet()))
                         .token(token)
                         .build();
                 return loginResponse;
@@ -141,6 +145,7 @@ public class AuthenticationService implements IAuthenticationService {
      * @param userName Email của người dùng cần xác minh.
      * @throws ResourceNotFoundEx Nếu không tìm thấy người dùng với email được cung cấp.
      */
+    @Transactional
     @Override
     public void verifyUser(String userName) {
         Optional<UserEntity> userOptional = userDetailRepository.findByEmail(userName);
@@ -148,12 +153,28 @@ public class AuthenticationService implements IAuthenticationService {
             log.warn("Không tìm thấy người dùng với email: {}", userName);
             throw new ResourceNotFoundEx("User not found with email: " + userName);
         }
+
         UserEntity user = userOptional.get();
+
+        // Kiểm tra nếu user đã được kích hoạt
+        if (user.isEnabled()) {
+            log.info("Tài khoản với email {} đã được kích hoạt trước đó", userName);
+            return;
+        }
+        // Khởi tạo cart nếu chưa có
+        if (user.getUserCart() == null) {
+            Cart newCart = new Cart();
+            newCart.setUser(user);
+            newCart.setCartItems(new ArrayList<>());
+            newCart.setCartTotal(BigDecimal.ZERO);
+            user.setUserCart(newCart);
+        }
+
         user.setEnabled(true);
-        userDetailRepository.save(user);
+        userDetailRepository.save(user); // Chỉ save một lần
+
         log.info("Tài khoản với email {} đã được kích hoạt thành công", userName);
     }
-
     @Override
     public UserEntity createUserWithGoogle(OAuth2User oAuth2User) {
         try{
@@ -168,6 +189,13 @@ public class AuthenticationService implements IAuthenticationService {
                     .enabled(true)
                     .roles(authorizationService.getUserRole())
                     .build();
+            if (user.getUserCart() == null) {
+                Cart newCart = new Cart();
+                newCart.setUser(user);
+                newCart.setCartItems(new ArrayList<>());
+                newCart.setCartTotal(BigDecimal.ZERO);
+                user.setUserCart(newCart);
+            }
             userDetailRepository.save(user);
             return  user;
         } catch (Exception e) {

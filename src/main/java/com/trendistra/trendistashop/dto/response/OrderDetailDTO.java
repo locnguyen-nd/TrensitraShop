@@ -27,5 +27,5 @@ public class OrderDetailDTO {
     private String shipmentNumber;
     private Date expectedDeliveryDate;
     @JsonProperty("orderItems")
-    private List<OrderItemDetail> orderItemList;
+    private List<OrderItemDTO> orderItemList;
 }

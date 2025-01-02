@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.entities.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.enums.ProviderEnum;
 import jakarta.persistence.*;
@@ -8,6 +9,7 @@ import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.yaml.snakeyaml.DumperOptions;
 
 import java.io.Serializable;
 import java.util.*;
@@ -57,6 +59,14 @@ public class UserEntity extends BaseEntity implements UserDetails {
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
     @ToString.Exclude
     private List<Address> addressList;
+
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "user")
+    @JsonManagedReference("user-orders")
+    private List<Order> orders = new ArrayList<>();
+    @OneToOne(cascade = CascadeType.ALL,mappedBy = "user")
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    private Cart userCart = new Cart() ;
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinTable(
             name = "auth_user_authority",

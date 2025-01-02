@@ -32,4 +32,11 @@ public class RoleEntity {
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
     private List<PermissionEntity> permissions ;
+    @Override
+    public String toString() {
+        return "RoleEntity(id=" + id.toString() +
+                ", name=" + name +
+                ", usersCount=" + (users != null ? users.size() : 0) + ")";
+    }
+
 }
