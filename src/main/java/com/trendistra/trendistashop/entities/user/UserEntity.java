@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.yaml.snakeyaml.DumperOptions;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -55,6 +56,7 @@ public class UserEntity extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private ProviderEnum provider;
     private String verificationCode;
+    private LocalDateTime codeExpiry;
     private boolean enabled = false;
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
     @ToString.Exclude

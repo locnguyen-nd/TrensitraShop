@@ -22,12 +22,15 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerErrorException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -69,11 +72,15 @@ public class AuthenticationService implements IAuthenticationService {
         try {
             Authentication authentication = new UsernamePasswordAuthenticationToken(userName, password);
             Authentication authenticationResponse = this.authenticationManager.authenticate(authentication);
-            if(authenticationResponse.isAuthenticated()) {
+            if (authenticationResponse.isAuthenticated()) {
                 UserEntity user = (UserEntity) authenticationResponse.getPrincipal();
-                if (!user.isEnabled()) {
-                    log.warn("Tài khoản chưa xác thực: {}", userName);
-                    throw new UnauthorizedException("Tài khoản chưa xác thực");
+                // nếu người dùng chưa xác thực, mã hết hạn thì gửi lại
+                if (!user.isEnabled() && user.getVerificationCode() == null && user.getCodeExpiry() == null) {
+                    String code = VerificationCodeGenerator.generateCode();
+                    user.setVerificationCode(code);
+                    user.setCodeExpiry(LocalDateTime.now().plusMinutes(10));
+                    userDetailRepository.save(user);
+                    emailService.sendMail(user);
                 }
                 String token = jwtTokenHelper.generateToken(userName);
                 LoginResponse loginResponse = LoginResponse.builder()
@@ -82,6 +89,7 @@ public class AuthenticationService implements IAuthenticationService {
                         .lastName(user.getLastName())
                         .email(user.getEmail())
                         .phoneNumber(user.getPhoneNumber())
+                        .isEnabled(user.isEnabled())
                         .token(token)
                         .build();
                 return loginResponse;
@@ -95,6 +103,7 @@ public class AuthenticationService implements IAuthenticationService {
         log.error("Xác thực thất bại không rõ lý do cho tài khoản: {}", userName);
         throw new AuthenticationFailedException("Đăng nhập không thành công");
     }
+
     /**
      * Tạo tài khoản người dùng mới và gửi sđt xác minh.
      *
@@ -105,7 +114,7 @@ public class AuthenticationService implements IAuthenticationService {
     @Override
     public RegisterResponse createUser(RegisterRequest request) {
         Optional<UserEntity> userExisting = userDetailRepository.findByEmail(request.getEmail());
-        if(userExisting.isPresent()){
+        if (userExisting.isPresent()) {
             log.warn("Tài khoản đã tồn tại với email: {}", request.getEmail());
             throw new UnauthorizedException("Tài khoản đã tồn tại");
         }
@@ -119,6 +128,7 @@ public class AuthenticationService implements IAuthenticationService {
                     .phoneNumber(request.getPhoneNumber())
                     .password(passwordEncoder.encode(request.getPassword()))
                     .verificationCode(code)
+                    .codeExpiry(LocalDateTime.now().plusMinutes(10))
                     .provider(ProviderEnum.MANUAL)
                     .enabled(false)
                     .roles(authorizationService.getUserRole())
@@ -139,6 +149,7 @@ public class AuthenticationService implements IAuthenticationService {
             throw new ServerErrorException(e.getMessage(), e.getCause());
         }
     }
+
     /**
      * Kích hoạt tài khoản người dùng bằng cách xác minh email.
      *
@@ -147,20 +158,23 @@ public class AuthenticationService implements IAuthenticationService {
      */
     @Transactional
     @Override
-    public void verifyUser(String userName) {
-        Optional<UserEntity> userOptional = userDetailRepository.findByEmail(userName);
-        if (userOptional.isEmpty()) {
-            log.warn("Không tìm thấy người dùng với email: {}", userName);
-            throw new ResourceNotFoundEx("User not found with email: " + userName);
+    public void verifyUser(String userName, String code) {
+        UserEntity user = userDetailRepository.findByEmail(userName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (user.getVerificationCode() == null || !user.getVerificationCode().equals(code)) {
+            throw new IllegalArgumentException("Invalid verification code.");
         }
 
-        UserEntity user = userOptional.get();
-
+        if (user.getCodeExpiry().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Verification code has expired.");
+        }
         // Kiểm tra nếu user đã được kích hoạt
         if (user.isEnabled()) {
             log.info("Tài khoản với email {} đã được kích hoạt trước đó", userName);
             return;
         }
+        user.setEnabled(true);
         // Khởi tạo cart nếu chưa có
         if (user.getUserCart() == null) {
             Cart newCart = new Cart();
@@ -169,18 +183,19 @@ public class AuthenticationService implements IAuthenticationService {
             newCart.setCartTotal(BigDecimal.ZERO);
             user.setUserCart(newCart);
         }
-
-        user.setEnabled(true);
+        user.setVerificationCode(null);
+        user.setCodeExpiry(null);
         userDetailRepository.save(user); // Chỉ save một lần
-
         log.info("Tài khoản với email {} đã được kích hoạt thành công", userName);
     }
+
     @Override
     public UserEntity createUserWithGoogle(OAuth2User oAuth2User) {
-        try{
+        try {
             String firstName = oAuth2User.getAttribute("given_name");
             String lastName = oAuth2User.getAttribute("family_name");
             String email = oAuth2User.getAttribute("email");
+            System.out.println(email);
             UserEntity user = UserEntity.builder()
                     .firstName(firstName)
                     .lastName(lastName)
@@ -196,8 +211,7 @@ public class AuthenticationService implements IAuthenticationService {
                 newCart.setCartTotal(BigDecimal.ZERO);
                 user.setUserCart(newCart);
             }
-            userDetailRepository.save(user);
-            return  user;
+            return userDetailRepository.save(user);
         } catch (Exception e) {
             log.error("Error creating account");
             throw new ServerErrorException(e.getMessage(), e.getCause());

@@ -1,7 +1,6 @@
 package com.trendistra.trendistashop.config;
 
-import com.trendistra.trendistashop.entities.user.PermissionEntity;
-import com.trendistra.trendistashop.repositories.auth.PermissionRepository;
+
 import com.trendistra.trendistashop.services.impl.auth.PermissionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,11 +18,20 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.security.web.firewall.HttpFirewall;
+import org.springframework.security.web.firewall.StrictHttpFirewall;
+import org.springframework.security.web.savedrequest.NullRequestCache;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -72,7 +80,8 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         Map<String, Map<String, List<String>>> permissionMappings = permissionService.loadPermissions();
         http
-                .csrf(AbstractHttpConfigurer :: disable)
+                .csrf(csrf -> csrf.disable())
+//                .requestCache(cache -> cache.disable())
                 .authenticationManager(authenticationManager())
                 // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
                 .authorizeHttpRequests(auth -> {
@@ -80,23 +89,23 @@ public class WebSecurityConfig {
                     permissionMappings.forEach((endPoint , methodMap) -> {
                        methodMap.forEach((httpMethod, permissions) -> {
                            String fullUrl = prefix + endPoint;
-//                           System.out.println("Configuring access for URL: " + fullUrl + " with method: " + httpMethod + " and permissions: " + permissions);
+//                         System.out.println("Configuring access for URL: " + fullUrl + " with method: " + httpMethod + " and permissions: " + permissions);
                            auth.requestMatchers(HttpMethod.valueOf(httpMethod), fullUrl)
                                    .hasAnyAuthority(permissions.toArray(new  String[0]));
                        });
                     });
+                    auth.requestMatchers("/oauth2/success").permitAll();
                     auth.anyRequest().authenticated();
                 })
+                .logout((logout) -> {
+                    logout.logoutUrl("/api/v1/auth/logout")
+                            .logoutSuccessHandler(((request, response, authentication) -> {
+                            }));
+                })
+                .oauth2Login((oauth2login) -> oauth2login.defaultSuccessUrl("/oauth2/success"))
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .addFilterBefore(new JWTAuthenticationFilter(jwtTokenHelper, userDetailsService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
-    }
-    private String getRoleInPermission(String name) {
-        int spaceIndex = name.indexOf(" ");
-        if (spaceIndex != -1) {
-            return name.substring(0, spaceIndex);
-        }
-        return name;
     }
 
     /**
@@ -131,16 +140,16 @@ public class WebSecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
-//    @Bean
-//    public WebMvcConfigurer corsConfigurer() {
-//        return new WebMvcConfigurer() {
-//            @Override
-//            public void addCorsMappings(CorsRegistry registry) {
-//                registry.addMapping("/**")
-//                        .allowedOrigins("*")
-//                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
-//            }
-//        };
-//    }
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
 
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }

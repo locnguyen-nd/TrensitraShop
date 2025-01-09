@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,13 +22,19 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RegisterRequest {
     private String firstName;
+
     private String lastName;
-    @NotEmpty(message = "Số điện thoại không để trống ")
-    private  String phoneNumber;
+
+    @NotEmpty(message = "Số điện thoại không được để trống")
+    @Size(min = 10, max = 15, message = "Số điện thoại phải có từ 10 đến 15 ký tự")
+    private String phoneNumber;
+
     @NotEmpty(message = "Email không được để trống")
     @Email(message = "Email không đúng định dạng")
     private String email;
+
     @NotEmpty(message = "Password không được để trống")
+    @Size(min = 8, message = "Password phải có ít nhất 8 ký tự")
     private CharSequence password;
 
 }

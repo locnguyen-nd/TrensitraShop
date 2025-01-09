@@ -35,7 +35,7 @@ public interface IAuthenticationService {
      *
      * @param userName tên đăng nhập của người dùng cần xác minh.
      */
-    void verifyUser(String userName) ;
+    void verifyUser(String userName, String code) ;
     public UserEntity createUserWithGoogle(OAuth2User oAuth2User);
 
     Optional<UserEntity> getUser(String userName);

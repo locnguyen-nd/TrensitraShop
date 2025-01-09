@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-container
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Nguyenloc2002
+      MYSQL_DATABASE: trendista_database
+      MYSQL_PASSWORD: Nguyenloc2002
+    ports:
+      - "3308:3306"  # ánh xạ cổng 3306 của MySQL với máy chủ local
+    volumes:
+      - mysql_data:/var/lib/mysql  # lưu trữ dữ liệu MySQL
+
+  spring-boot-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spring-boot-app
+    restart: always
+    ports:
+      - "5000:5000"  # ánh xạ cổng 5000 của Spring Boot với máy chủ local
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/trendista_database  # sử dụng tên dịch vụ MySQL trong docker-compose
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Nguyenloc2002
+    depends_on:
+      - mysql  # đảm bảo MySQL khởi động trước
+    entrypoint: ["java", "-jar", "/app/TrendistaShop.jar"]
+
+volumes:
+  mysql_data:

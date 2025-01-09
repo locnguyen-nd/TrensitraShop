@@ -74,9 +74,9 @@ public class AuthController {
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> map)  {
         String email = map.get("email");
         String code = map.get("code");
-        UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(email);
-        if (null != user && user.getVerificationCode().equals(code)) {
-            iAuthenticationService.verifyUser(email);
+
+        if (email != null && code != null) {
+            iAuthenticationService.verifyUser(email, code);
             return new ResponseEntity<>(HttpStatus.OK);
         }
         return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -98,21 +98,6 @@ public class AuthController {
         LoginResponse userInfo = iAuthenticationService.authenticateUser(request.getEmail(), request.getPassword());
         return new ResponseEntity<>(userInfo, userInfo != null ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
     }
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Login successfully .",
-                    content = {@Content(mediaType = "application/json", schema = @Schema(example = "{ \"email\": \"user@example.com\" }"))}),
-            @ApiResponse(responseCode = "400", description = "Error Login With Google.",
-                    content = @Content)
-    })
-    @GetMapping("/google/success")
-    public void createAccountWithGoogle (@AuthenticationPrincipal OAuth2User oAuth2User, HttpServletResponse response) throws IOException {
-        String userName = oAuth2User.getAttribute("email");
-        Optional<UserEntity> user = iAuthenticationService.getUser(userName);
-        if(user.isEmpty()) {
-            user = Optional.ofNullable(iAuthenticationService.createUserWithGoogle(oAuth2User));
-        }
-        String token = jwtTokenHelper.generateToken(user.get().getUsername());
-        response.sendRedirect("http://localhost:3000/oauth2/callback?token="+token);
-    }
+
 
 }

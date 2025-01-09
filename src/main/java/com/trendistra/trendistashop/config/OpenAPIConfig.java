@@ -26,7 +26,7 @@ public class OpenAPIConfig {
                                 .name("Loc Nguyen")
                                 .email("locnguyen4.0@gmail.com")))
                 .addServersItem(new Server()
-                        .url("https://trendista.up.railway.app/")
+                        .url("http://localhost:5000/")
                         .description("TRENDISTA API Server"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
