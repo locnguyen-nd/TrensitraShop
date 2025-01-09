@@ -14,6 +14,10 @@ Trước khi bắt đầu, bạn cần cài đặt các công cụ sau trên má
 ### 2. Build và chạy ứng dụng với Docker Compose
 Sau khi clone xong, bạn có thể build và chạy ứng dụng với Docker Compose. Dự án đã được cấu hình sẵn với Docker Compose, vì vậy bạn chỉ cần chạy lệnh sau:
 ```
+mvn clean package
+```
+- Để build file Jar cho project 
+```
 docker-compose up --build
 ```
 Lệnh trên sẽ thực hiện các công việc sau:
