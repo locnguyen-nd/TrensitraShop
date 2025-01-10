@@ -1,9 +1,12 @@
 package com.trendistra.trendistashop.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,6 +15,10 @@ import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Bộ lọc xác thực JWT, kiểm tra tính hợp lệ của JWT trong yêu cầu và thiết lập thông tin xác thực cho người dùng.
@@ -19,10 +26,11 @@ import java.io.IOException;
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
     private final JWTTokenHelper jwtTokenHelper;
+    private  ObjectMapper objectMapper;
     /**
      * Khởi tạo bộ lọc xác thực JWT với JWTTokenHelper và UserDetailsService.
      *
-     * @param jwtTokenHelper Giúp tạo và kiểm tra JWT token.
+     * @param jwtTokenHelper     Giúp tạo và kiểm tra JWT token.
      * @param userDetailsService Dịch vụ lấy thông tin người dùng từ cơ sở dữ liệu.
      */
     public JWTAuthenticationFilter(JWTTokenHelper jwtTokenHelper, UserDetailsService userDetailsService) {
@@ -45,9 +53,20 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+        SecurityContextHolder.clearContext();
         try {
             String authToken = jwtTokenHelper.getToken(request); // lấy token
             if ( null != authToken) {
+                if (jwtTokenHelper.isTokenBlacklisted(authToken)) {
+                    ErrorResponse errorResponse = ErrorResponse.builder()
+                                    .code(HttpStatus.UNAUTHORIZED.value())
+                                    .message("Token has been invalidated")
+                                     .build();
+                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                    response.setContentType("application/json");
+                    response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+                    return;
+                }
                 String userName = jwtTokenHelper.getUserNameFromToken(authToken); // get userName with token
                 if (null != userName) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(userName);// get userDetail
@@ -59,10 +78,17 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
                     }
                 }
             }
-            filterChain.doFilter(request, response);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            SecurityContextHolder.clearContext();
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                    .code(HttpStatus.UNAUTHORIZED.value())
+                    .message("Authentication  failed")
+                    .build();
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setContentType("application/json");
+            response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+            return;
         }
+        filterChain.doFilter(request, response);
     }
-
 }

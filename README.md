@@ -14,18 +14,35 @@ Trước khi bắt đầu, bạn cần cài đặt các công cụ sau trên má
 ### 2. Build và chạy ứng dụng với Docker Compose
 Sau khi clone xong, bạn có thể build và chạy ứng dụng với Docker Compose. Dự án đã được cấu hình sẵn với Docker Compose, vì vậy bạn chỉ cần chạy lệnh sau:
 ```
-mvn clean package
+mvn clean package -DskipTests
 ```
-- Để build file Jar cho project 
+- Để build file Jar cho project
 ```
 docker-compose up --build
 ```
+- Để build docker container/image
+
+Nếu backup database thì các bước sau
+- B1 Copy file backup vào container mysql
+```
+docker cp backup.sql mysql-container:/backup.sql
+```
+- B2 Truy cập container
+```
+docker exec -it mysql-container bash
+```
+- B3 Restore dữ liệu vào docker
+```
+mysql -u root -pNguyenloc2002 trendista_database < /backup.sql
+```
+
 Lệnh trên sẽ thực hiện các công việc sau:
 
 - Tải về các image cần thiết (MySQL, Spring Boot).
 - Tạo và khởi động các container cho MySQL và Spring Boot.
-MySQL sẽ chạy trên cổng 3308, và ứng dụng Spring Boot sẽ chạy trên cổng 5000.
+- Backup database cho docker container 
+  MySQL sẽ chạy trên cổng 3308, và ứng dụng Spring Boot sẽ chạy trên cổng 8080.
 ### 3. Truy cập ứng dụng
-   - MySQL sẽ chạy trên cổng 3308 của máy chủ local (localhost:3308).
-   - Spring Boot sẽ chạy trên cổng 5000 của máy chủ local (localhost:5000).
-   - Truy cập link to API Swagger(http://localhost:5000/swagger-ui/index.html)
+- MySQL sẽ chạy trên cổng 3308 của máy chủ local (localhost:3308).
+- Spring Boot sẽ chạy trên cổng 8080 của máy chủ local (localhost:8080).
+- Truy cập link to API Swagger(http://localhost:8080/swagger-ui/index.html)

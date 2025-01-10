@@ -11,17 +11,20 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -74,12 +77,17 @@ public class AuthController {
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> map)  {
         String email = map.get("email");
         String code = map.get("code");
-
         if (email != null && code != null) {
             iAuthenticationService.verifyUser(email, code);
-            return new ResponseEntity<>(HttpStatus.OK);
+            return ResponseEntity.ok().body(Map.of(
+                    "message", "Verify successful",
+                    "status", HttpStatus.OK
+            ));
         }
-        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        return ResponseEntity.ok().body(Map.of(
+                "message", "Verify error",
+                "status", HttpStatus.BAD_REQUEST
+        ));
     }
     /**
      * Đăng nhập người dùng và trả về một JWT token.
@@ -99,5 +107,40 @@ public class AuthController {
         return new ResponseEntity<>(userInfo, userInfo != null ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout (HttpServletRequest request) {
+        String token = jwtTokenHelper.getToken(request);
+        if(token != null) {
+            try {
+                    iAuthenticationService.logout(token);
+                    return ResponseEntity.ok().body(Map.of(
+                            "message", "Logout successful",
+                            "status", HttpServletResponse.SC_OK
+                    ));
+            } catch (Exception ex) {
+                return ResponseEntity.status(HttpServletResponse.SC_BAD_REQUEST).body(Map.of(
+                        "message", "Logout error",
+                        "status", HttpServletResponse.SC_BAD_REQUEST
+                ));
+            }
+        }
+        return ResponseEntity.badRequest().body(Map.of(
+                "message", "No token found",
+                "status", HttpStatus.BAD_REQUEST
+        ));
+    }
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken (@RequestHeader("Refresh-Token") String refreshToken) {
+        String newToken = iAuthenticationService.refreshToken(refreshToken);
+        if (newToken != null) {
+            return ResponseEntity.ok().body(Map.of(
+                    "token", newToken,
+                    "status", HttpStatus.OK
+            ));
+        }
+        return ResponseEntity.badRequest().body(Map.of(
+                "message", "No token found",
+                "status", HttpStatus.BAD_REQUEST
+        ));    }
 
 }

@@ -5,11 +5,16 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import java.security.Key;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * JWTTokenHelper là một lớp hỗ trợ quản lý các thao tác liên quan đến JWT (JSON Web Token),
@@ -27,6 +32,7 @@ import java.util.Date;
 
  */
 @Component
+@Slf4j
 public class JWTTokenHelper {
     @Value("${jwt.auth.app}")
     private String appName;
@@ -34,8 +40,12 @@ public class JWTTokenHelper {
     private String secretKey; // key
     @Value("${jwt.auth.expires_in}")
     private int expiresIn;// thời gian sống
+    @Value("${jwt.auth.refresh_token.expires_in}")
+    private int refreshTokenExpiresIn; // Thời gian sống của refresh token (nên dài hơn access token)
     private String header = "Authorization";// Header mặc định chứa token
     private String startAuthHeader = "Bearer ";// Prefix mặc định của token trong header
+    private Set<String> backListedToken = Collections.synchronizedSet(new HashSet<>()); // các token đã logout
+
     /**
      * Sinh JWT token cho người dùng.
      *
@@ -84,6 +94,12 @@ public class JWTTokenHelper {
         }
         return authHeader;
     }
+    /**
+     * Kiểm tra xem token có trong blacklist không
+     */
+    public boolean isTokenBlacklisted(String token) {
+        return backListedToken.contains(token);
+    }
 
     /**
      * Kiểm tra tính hợp lệ của token.
@@ -93,7 +109,8 @@ public class JWTTokenHelper {
      * @return true nếu token hợp lệ, ngược lại false.
      */
     public Boolean validateToken(String token, UserDetails userDetails) {
-        if (token == null || userDetails == null) {
+        if (token == null || userDetails == null || isTokenBlacklisted(token)) {
+            log.warn("Token cannot validate because token null or token has logout");
             return false;
         }
         try {
@@ -103,6 +120,7 @@ public class JWTTokenHelper {
                     && userName.equals(userDetails.getUsername())
                     && !isTokenExpired(token);
         } catch (Exception e) {
+            log.warn("userName null hoặc không khớp với useDetail" + e);
             return false;
         }
     }
@@ -115,6 +133,7 @@ public class JWTTokenHelper {
      */
     private boolean isTokenExpired(String token) {
         if (token == null || token.isEmpty()) {
+            log.warn("Token đã hết hạn");
             return true; // Nếu token null hoặc rỗng, coi như đã hết hạn
         }
         Date expireDate = getExpireDateToken(token);
@@ -183,5 +202,68 @@ public class JWTTokenHelper {
             claims = null;
         }
         return claims;
+    }
+
+    /**
+     * Tạo refresh token cho người dùng.
+     *
+     * @param userName Tên người dùng
+     * @return Refresh token
+     */
+    public String generateRefreshToken(String userName) {
+        return Jwts.builder()
+                .issuer(appName)
+                .subject(userName)
+                .issuedAt(new Date())
+                .expiration(new Date(new Date().getTime() + refreshTokenExpiresIn * 1000L))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    /**
+     * Xử lý logout bằng cách thêm token vào blacklist
+     */
+    public void logout(String token) {
+        if (token != null && !token.isEmpty()) {
+            backListedToken.add(token);
+        }
+        log.info("logout with token" + token);
+    }
+
+    /**
+     * Tạo token mới từ refresh token
+     *
+     * @param refreshToken Refresh token hiện tại
+     * @return Token mới hoặc null nếu refresh token không hợp lệ
+     */
+    public String refreshToken(String refreshToken) {
+        try {
+            Claims claims = getAllClaimsFromToken(refreshToken);
+            String userName = claims.getSubject();
+
+            // Kiểm tra xem refresh token có hợp lệ không
+            if (userName != null && !isTokenExpired(refreshToken)) {
+                log.info("refresh Token done !");
+                return generateRefreshToken(userName);
+            }
+        } catch (Exception e) {
+            // Log lỗi nếu cần
+            log.warn("lỗi refresh token");
+        }
+        return null;
+    }
+
+    // Thêm phương thức định kỳ xóa các token hết hạn khỏi blacklist
+    @Scheduled(fixedRate = 24 * 60 * 60 * 1000) // Chạy mỗi 24 giờ
+    public void cleanupBlacklist() {
+        backListedToken.removeIf(token -> {
+            try {
+                log.info("Xóa blacklist token done !");
+                return isTokenExpired(token);
+            } catch (Exception e) {
+                log.warn("Xóa blacklist token fail !");
+                return true;
+            }
+        });
     }
 }

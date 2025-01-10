@@ -14,6 +14,8 @@ import com.trendistra.trendistashop.helper.VerificationCodeGenerator;
 import com.trendistra.trendistashop.repositories.auth.UserDetailRepository;
 import com.trendistra.trendistashop.repositories.order.CartRepository;
 import com.trendistra.trendistashop.services.IAuthenticationService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,14 +27,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerErrorException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -50,8 +52,7 @@ public class AuthenticationService implements IAuthenticationService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private AuthorizationService authorizationService;
-    @Autowired
-    private CartRepository cartRepository;
+    private final Set<String> blacklistedTokens = new HashSet<>();
 
     public Optional<UserEntity> getUser(String userName) {
 
@@ -188,7 +189,31 @@ public class AuthenticationService implements IAuthenticationService {
         userDetailRepository.save(user); // Chỉ save một lần
         log.info("Tài khoản với email {} đã được kích hoạt thành công", userName);
     }
-
+    @Override
+    public void logout(String token) {
+        if (token != null) {
+            try {
+                jwtTokenHelper.logout(token);
+                log.info("logout success !");
+            } catch (Exception e) {
+                throw new ServerErrorException(e.getMessage(), e.getCause());
+            }
+        }
+    }
+    @Override
+    public String refreshToken(String refreshToken) {
+        if(refreshToken != null) {
+            try {
+               String newToken = jwtTokenHelper.refreshToken(refreshToken);
+               log.info("Refresh token success !");
+               return newToken;
+            } catch (Exception e) {
+                log.error("Refresh token err");
+                throw new ServerErrorException(e.getMessage(), e.getCause());
+            }
+        }
+        return  null;
+    }
     @Override
     public UserEntity createUserWithGoogle(OAuth2User oAuth2User) {
         try {

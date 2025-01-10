@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.config;
 
 
 import com.trendistra.trendistashop.services.impl.auth.PermissionService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -13,20 +14,12 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.firewall.HttpFirewall;
-import org.springframework.security.web.firewall.StrictHttpFirewall;
-import org.springframework.security.web.savedrequest.NullRequestCache;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -97,10 +90,18 @@ public class WebSecurityConfig {
                     auth.requestMatchers("/oauth2/success").permitAll();
                     auth.anyRequest().authenticated();
                 })
-                .logout((logout) -> {
-                    logout.logoutUrl("/api/v1/auth/logout")
-                            .logoutSuccessHandler(((request, response, authentication) -> {
-                            }));
+                .logout(logout -> {
+                    logout
+                            .logoutUrl("/api/v1/auth/logout")
+                            .addLogoutHandler((request, response, authentication) -> {
+                                // Lấy token từ request và thêm vào blacklist
+                                String token = jwtTokenHelper.getToken(request);
+                                jwtTokenHelper.logout(token);
+                            })
+                            .logoutSuccessHandler((request, response, authentication) -> {
+                                response.setStatus(HttpServletResponse.SC_OK);
+                                response.getWriter().write("Logged out successfully");
+                            });
                 })
                 .oauth2Login((oauth2login) -> oauth2login.defaultSuccessUrl("/oauth2/success"))
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
