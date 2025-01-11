@@ -18,23 +18,9 @@ mvn clean package -DskipTests
 ```
 - Để build file Jar cho project
 ```
-docker-compose up --build
+docker-compose up -d --build
 ```
 - Để build docker container/image
-
-Nếu backup database thì các bước sau
-- B1 Copy file backup vào container mysql
-```
-docker cp backup.sql mysql-container:/backup.sql
-```
-- B2 Truy cập container
-```
-docker exec -it mysql-container bash
-```
-- B3 Restore dữ liệu vào docker
-```
-mysql -u root -pNguyenloc2002 trendista_database < /backup.sql
-```
 
 Lệnh trên sẽ thực hiện các công việc sau:
 
