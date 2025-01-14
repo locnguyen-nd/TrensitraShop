@@ -21,7 +21,7 @@ public interface IProductService {
     public ProductDTO getProductById(UUID id);
 
 
-    Page<ProductDTO> getProductByTag(String tag, Pageable pageable);
+    Page<ProductDTO> getProductByTag(String genderSlug , String tag, Pageable pageable);
 
     ProductDTO getProductBySlug(String slug);
 

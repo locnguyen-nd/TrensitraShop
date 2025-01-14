@@ -68,6 +68,11 @@ public class CategoryController {
         CategoryDTO category = categoryService.getCategoryById(id);
         return ResponseEntity.ok(category);
     }
+    @GetMapping("/{slug}")
+    public ResponseEntity<CategoryDTO> getCategoryBySlug(@PathVariable String slug){
+        CategoryDTO category = categoryService.getCategoryBySlug(slug);
+        return ResponseEntity.ok(category);
+    }
     @GetMapping("/parent/{id}")
     public ResponseEntity<List<CategoryDTO>> getAllByParent(@PathVariable UUID id) {
         List<CategoryDTO> categories = categoryService.getAllCategoriesByParenId(id);

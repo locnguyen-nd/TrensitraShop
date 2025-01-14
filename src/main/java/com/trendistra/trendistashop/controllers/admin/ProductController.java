@@ -63,14 +63,15 @@ public class ProductController {
         Page<ProductDTO> products = productService.searchWithName(name, pageable);
         return ResponseEntity.ok(products);
     }
-    @GetMapping("/tag/{tag}")
+    @GetMapping("/tag")
     public ResponseEntity<Page<ProductDTO>> getProductsByTag(
-            @PathVariable String tag,
+            @RequestParam String tag,
+            @RequestParam String genderSlug,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ProductDTO> products = productService.getProductByTag(tag, pageable);
+        Page<ProductDTO> products = productService.getProductByTag(genderSlug, tag, pageable);
         return ResponseEntity.ok(products);
     }
     @GetMapping("/slug/{slug}")

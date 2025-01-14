@@ -23,7 +23,7 @@ public class ProductSpecification {
         return criteriaBuilder.or(exactMatchPredicate,partialMatchPredicate);
         };
     }
-    public static Specification<Product> hasCategoryId(UUID categoryId) {
+    public static Specification<Product> hasCategorySlug(UUID categoryId) {
         return (root, query, criteriaBuilder) -> {
             if (categoryId == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu categoryId là null
@@ -31,7 +31,7 @@ public class ProductSpecification {
             return criteriaBuilder.equal(root.get("category").get("id"), categoryId);
         };
     }
-    public static Specification<Product> hasParentCategoryId(UUID parentId) {
+    public static Specification<Product> hasParentCategorySlug(UUID parentId) {
         return (root, query, criteriaBuilder) -> {
             if (parentId == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu parentId là null
@@ -41,7 +41,7 @@ public class ProductSpecification {
         };
     }
 
-    public static Specification<Product> hasGenderId(UUID genderId) {
+    public static Specification<Product> hasGenderSlug(UUID genderId) {
         return (root, query, criteriaBuilder) -> {
             if (genderId == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu genderId là null
@@ -50,7 +50,7 @@ public class ProductSpecification {
             return criteriaBuilder.equal(categoryJoin.get("gender").get("id"), genderId);
         };
     }
-    public static Specification<Product> hasColorId(UUID colorId) {
+    public static Specification<Product> hasColorCode(UUID colorId) {
         return (root, query, criteriaBuilder) -> {
             if (colorId == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu colorId là null
@@ -59,7 +59,7 @@ public class ProductSpecification {
             return criteriaBuilder.equal(variantJoin.get("color").get("id"), colorId);
         };
     }
-    public static Specification<Product> hasSizeId(UUID sizeId) {
+    public static Specification<Product> hasSizeValue(UUID sizeId) {
         return (root, query, criteriaBuilder) -> {
             if (sizeId == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu colorId là null

@@ -154,6 +154,11 @@ public class CategoryService {
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
         return convertToDTO(category);
     }
+    public CategoryDTO getCategoryBySlug(String slug) {
+        Category category = categoryRepository.findBySlug(slug)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+        return convertToDTO(category);
+    }
 
 
     // Lấy tất cả categories
@@ -185,8 +190,6 @@ public class CategoryService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-
-
     // Trích xuất publicId từ Cloudinary URL
     private String extractPublicIdFromUrl(String url) {
         String[] parts = url.split("/");
@@ -214,6 +217,8 @@ public class CategoryService {
         GenderDTO genderDTO = new GenderDTO();
         genderDTO.setId(gender.getId());
         genderDTO.setName(gender.getName());
+        genderDTO.setSlug(gender.getSlug());
+        genderDTO.setImageUrl(genderDTO.getImageUrl());
         return  genderDTO;
     }
 

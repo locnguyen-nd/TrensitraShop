@@ -56,7 +56,8 @@ public class WebSecurityConfig {
             "/api/v1/sizes/**",
             "/api/v1/role/**",
             "/api/v1/permissions/**",
-            "/api/v1/home/**"
+            "/api/v1/home/**",
+            "/oauth2/**"
     };
     /**
      * Cấu hình bảo mật cho ứng dụng, xác định cách thức xử lý các yêu cầu HTTP.
@@ -87,7 +88,7 @@ public class WebSecurityConfig {
                                    .hasAnyAuthority(permissions.toArray(new  String[0]));
                        });
                     });
-                    auth.requestMatchers("/oauth2/success").permitAll();
+//                    auth.requestMatchers("/oauth2/success").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .logout(logout -> {

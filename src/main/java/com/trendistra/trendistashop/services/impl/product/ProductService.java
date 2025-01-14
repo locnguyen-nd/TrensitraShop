@@ -141,7 +141,7 @@ public class ProductService implements IProductService {
 
 
     @Override
-    public Page<ProductDTO> getProductByTag(String tag, Pageable pageable) {
+    public Page<ProductDTO> getProductByTag(String genderSlug , String tag, Pageable pageable) {
         String tagEnum = tag.toUpperCase();
         Page<Product> productPage = productRepository.findProductsByTag(ProductTagEnum.valueOf(tagEnum), pageable);
         return productPage.map(this::mapToProductDto);
@@ -172,11 +172,11 @@ public class ProductService implements IProductService {
         }
         ;
         Specification<Product> productSpecification = Specification
-                .where(hasCategoryId(categoryId)) // tìm kiếm scopr nhỏ
-                .and(hasParentCategoryId(parentId)) //  tìm kiếm lớn
-                .and(hasGenderId(genderId))
-                .and(hasColorId(colorId))
-                .and(hasSizeId(sizeId))
+                .where(hasCategorySlug(categoryId)) // tìm kiếm scopr nhỏ
+                .and(hasParentCategorySlug(parentId)) //  tìm kiếm lớn
+                .and(hasGenderSlug(genderId))
+                .and(hasColorCode(colorId))
+                .and(hasSizeValue(sizeId))
                 .and(hasStatus(true))
                 .and(hasPriceBetween(minPrice, maxPrice));
 
