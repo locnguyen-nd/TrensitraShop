@@ -2,17 +2,17 @@ package com.trendistra.trendistashop.services.impl.category;
 
 import com.trendistra.trendistashop.dto.response.CategoryDTO;
 import com.trendistra.trendistashop.dto.response.DiscountDTO;
+import com.trendistra.trendistashop.dto.response.GenderCategoryGroup;
 import com.trendistra.trendistashop.dto.response.GenderDTO;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.category.Gender;
 import com.trendistra.trendistashop.entities.product.Discount;
 import com.trendistra.trendistashop.exceptions.DataAccessException;
+import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.helper.GenerateSlug;
 import com.trendistra.trendistashop.repositories.category.CategoryRepository;
 import com.trendistra.trendistashop.repositories.category.GenderRepository;
 import com.trendistra.trendistashop.services.CloudinaryService;
-import com.trendistra.trendistashop.services.impl.product.DiscountService;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.text.Normalizer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -80,12 +77,12 @@ public class CategoryService {
         // Thiết lập danh mục cha
         if (categoryDTO.getParentId() != null) {
             Category parentCategory = categoryRepository.findById(categoryDTO.getParentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Parent category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundEx("Parent category not found"));
             category.setParent(parentCategory);
         }
         // Thiết lập giới tính
         Gender gender = genderRepository.findById(categoryDTO.getGender().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Gender not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Gender not found"));
         category.setGender(gender);
         // Lưu category
         Category savedCategory = categoryRepository.save(category);
@@ -97,7 +94,7 @@ public class CategoryService {
     @Transactional
     public CategoryDTO updateCategory(UUID id, CategoryDTO categoryDTO, MultipartFile imageFile) throws IOException {
         Category existingCategory = categoryRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Category not found"));
 
         // Xóa ảnh cũ nếu có
         if (existingCategory.getImageUrl() != null) {
@@ -119,13 +116,13 @@ public class CategoryService {
         // Cập nhật danh mục cha
         if (categoryDTO.getParentId() != null) {
             Category parentCategory = categoryRepository.findById(categoryDTO.getParentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Parent category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundEx("Parent category not found"));
             existingCategory.setParent(parentCategory);
         }
 
         // Cập nhật giới tính
         Gender gender = genderRepository.findById(categoryDTO.getGender().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Gender not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Gender not found"));
         existingCategory.setGender(gender);
 
         // Lưu thay đổi
@@ -137,7 +134,7 @@ public class CategoryService {
     @Transactional
     public void deleteCategory(UUID id) throws IOException {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Category not found"));
 
         // Xóa ảnh trên Cloudinary nếu có
         if (category.getImageUrl() != null) {
@@ -151,34 +148,38 @@ public class CategoryService {
     // Lấy category theo ID
     public CategoryDTO getCategoryById(UUID id) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Category not found"));
         return convertToDTO(category);
     }
     public CategoryDTO getCategoryBySlug(String slug) {
         Category category = categoryRepository.findBySlug(slug)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Category not found"));
         return convertToDTO(category);
     }
-
-
     // Lấy tất cả categories
-    public List<CategoryDTO> getAllCategories() {
-        List<CategoryDTO> categories =  categoryRepository.findAll().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-        // Tạo map để nhóm các danh mục theo parentId
-        Map<UUID, List<CategoryDTO>> groupedByParent = categories.stream()
-                .filter(category -> category.getParentId() != null)
-                .collect(Collectors.groupingBy(CategoryDTO::getParentId));
-
-        // Tìm các danh mục gốc (parentId == null)
-        List<CategoryDTO> rootCategories = categories.stream()
-                .filter(category -> category.getParentId() == null)
-                .collect(Collectors.toList());
-        for (CategoryDTO parent : rootCategories) {
-            parent.setItems(groupedByParent.getOrDefault(parent.getId(), new ArrayList<>()));
+    public List<GenderCategoryGroup> getAllCategoriesGroupByGender(String genderSlug) {
+        List<Category> categories;
+        if (genderSlug != null && !genderSlug.isEmpty()) {
+            categories = categoryRepository.findByGenderSlug(genderSlug); // Giả sử bạn có phương thức findByGenderSlug
+        } else {
+            categories = categoryRepository.findAll(); // Nếu không có genderSlug, lấy tất cả danh mục
         }
-        return rootCategories;
+        Map<Gender, List<Category>> groupedByGender = categories.stream()
+                .collect(Collectors.groupingBy(category -> category.getGender()));
+        // Chuyển đổi sang DTO và xây dựng Map<GenderDTO, List<CategoryDTO>>
+       List<GenderCategoryGroup> result = new ArrayList<>();
+        groupedByGender.forEach((gender, genderCategories) -> {
+            // Chuyển Gender sang GenderDTO
+            GenderDTO genderDTO = convertGenderDTO(gender);
+            // Lọc danh mục cha và ánh xạ sang DTO
+            List<CategoryDTO> parentCategories = genderCategories.stream()
+                    .filter(category -> category.getParent() == null) // Lọc danh mục cha
+                    .map(parent -> mapToCategoryDTO(parent, genderCategories)) // Ánh xạ sang DTO
+                    .collect(Collectors.toList());
+            // Đưa vào Map
+            result.add(new GenderCategoryGroup(genderDTO, parentCategories));
+        });
+        return result;
     }
     public List<CategoryDTO> getAllCategoriesByParenId(UUID parentId) {
         return categoryRepository.findByParentId(parentId).stream()
@@ -205,6 +206,7 @@ public class CategoryService {
         dto.setSlug(category.getSlug());
         dto.setDescription(category.getDescription());
         dto.setImageUrl(category.getImageUrl());
+        dto.setIndex(category.getIndexNum());
         if (category.getGender() != null) {
             dto.setGender(convertGenderDTO(category.getGender()));
         }
@@ -214,12 +216,36 @@ public class CategoryService {
         return dto;
     }
     private GenderDTO convertGenderDTO(Gender gender){
-        GenderDTO genderDTO = new GenderDTO();
-        genderDTO.setId(gender.getId());
-        genderDTO.setName(gender.getName());
-        genderDTO.setSlug(gender.getSlug());
-        genderDTO.setImageUrl(genderDTO.getImageUrl());
+        GenderDTO genderDTO = new GenderDTO().builder()
+                .id(gender.getId())
+                .slug(gender.getSlug())
+                .name(gender.getName())
+                .imageUrl(gender.getImageUrl())
+                .build();
         return  genderDTO;
     }
 
+    private  CategoryDTO mapToCategoryDTO (Category parent , List<Category> allCategories) {
+        List<Category> childCategories = allCategories.stream()
+                .filter(category -> parent.equals(category.getParent())) // Lọc danh mục con
+                .collect(Collectors.toList());
+
+        // Chuyển đổi danh mục con sang DTO
+        List<CategoryDTO> children = new ArrayList<>();
+        childCategories.sort(Comparator.comparingInt(category-> category.getIndexNum() != null ? category.getIndexNum() : Integer.MAX_VALUE));
+        for (int i = 0; i < childCategories.size(); i++) {
+            Category child = childCategories.get(i);
+            CategoryDTO childDTO = mapToCategoryDTO(child, allCategories);
+            children.add(childDTO);
+        }
+        return new CategoryDTO().builder()
+                .id(parent.getId())
+                .slug(parent.getSlug())
+                .name(parent.getName())
+                .description(parent.getDescription())
+                .imageUrl(parent.getImageUrl())
+                .items(children)
+                .index(parent.getIndexNum())
+                .build();
+    }
 }

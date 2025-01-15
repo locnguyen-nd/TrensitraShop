@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -47,9 +48,12 @@ public class AuthorizationController {
         return ResponseEntity.ok(roleService.updateRole(id, roleDTO));
     }
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteRole(@PathVariable UUID id) {
+    public ResponseEntity<?> deleteRole(@PathVariable UUID id) {
         roleService.deleteRole(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().body(Map.of(
+                "message", "Delete successful",
+                "status", HttpStatus.OK
+        ));
     }
     @PostMapping("/{roleId}/permissions")
     public ResponseEntity<RoleDTO> addPermissionsToRole(

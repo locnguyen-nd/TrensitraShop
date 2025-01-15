@@ -28,6 +28,7 @@ public class Category extends BaseEntity {
     private String slug;
     private String description;
     private String imageUrl;
+    private Integer indexNum;
     @ManyToOne
     @JoinColumn(name = "parent_id", referencedColumnName = "id")
     private Category parent; // Danh mục cha
