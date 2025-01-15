@@ -84,10 +84,10 @@ public class ProductController {
 
     @GetMapping("/filter")
     public Page<ProductDTO> getAllProductsWithFilter(
-            @RequestParam() UUID categoryId,
-            @RequestParam(required = false) UUID colorId,
-            @RequestParam(required = false) UUID sizeId,
-            @RequestParam(required = false) UUID genderId,
+            @RequestParam(required = false) String categorySlug,
+            @RequestParam(required = false) String colorCode,
+            @RequestParam(required = false) String sizeValue,
+            @RequestParam(required = false) String genderSlug,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(defaultValue = "0")  int page,
@@ -96,7 +96,7 @@ public class ProductController {
             @RequestParam(defaultValue = "false") boolean ascending
     ) {
         PageRequest pageRequest = createPageRequest(page, size, sortBy , ascending);
-        Page<ProductDTO>products =   productService.filterProduct(categoryId, genderId, colorId, sizeId, minPrice, maxPrice, pageRequest);
+        Page<ProductDTO>products =   productService.filterProduct(categorySlug, genderSlug, colorCode, sizeValue, minPrice, maxPrice, pageRequest);
         return products;
     }
     private PageRequest createPageRequest (int page , int size, String sortBy , Boolean ascending) {
@@ -107,7 +107,6 @@ public class ProductController {
             return  PageRequest.of(page, size , sort);
         }
     }
-    // Read Product by ID
     @GetMapping("/{id}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable UUID id) {
         ProductDTO product = productService.getProductById(id);
@@ -124,9 +123,12 @@ public class ProductController {
     }
     // Delete Product
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable UUID id) {
+    public ResponseEntity<?> deleteProduct(@PathVariable UUID id) {
         productService.deleteProduct(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().body(Map.of(
+                "message", "Delete successful",
+                "status", HttpStatus.OK
+        ));
     }
 
     // Update Product Status

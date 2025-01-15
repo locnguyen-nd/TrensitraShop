@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.controllers.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trendistra.trendistashop.dto.response.CategoryDTO;
+import com.trendistra.trendistashop.dto.response.GenderCategoryGroup;
 import com.trendistra.trendistashop.dto.response.GenderDTO;
 import com.trendistra.trendistashop.entities.category.Gender;
 import com.trendistra.trendistashop.services.impl.category.CategoryService;
@@ -16,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -58,9 +60,12 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable UUID id) throws IOException {
+    public ResponseEntity<?> deleteCategory(@PathVariable UUID id) throws IOException {
         categoryService.deleteCategory(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().body(Map.of(
+                "message", "Delete successful",
+                "status", HttpStatus.OK
+        ));
     }
 
     @GetMapping("/{id}")
@@ -68,7 +73,7 @@ public class CategoryController {
         CategoryDTO category = categoryService.getCategoryById(id);
         return ResponseEntity.ok(category);
     }
-    @GetMapping("/{slug}")
+    @GetMapping("/slug/{slug}")
     public ResponseEntity<CategoryDTO> getCategoryBySlug(@PathVariable String slug){
         CategoryDTO category = categoryService.getCategoryBySlug(slug);
         return ResponseEntity.ok(category);
@@ -84,13 +89,18 @@ public class CategoryController {
         return ResponseEntity.ok(categories);
     }
     @GetMapping
-    public ResponseEntity<List<CategoryDTO>> getAllCategories() {
-        List<CategoryDTO> categories = categoryService.getAllCategories();
-        return ResponseEntity.ok(categories);
+    public ResponseEntity<List<GenderCategoryGroup>>  getAllCategories() {
+        List<GenderCategoryGroup>  groupedCategories = categoryService.getAllCategoriesGroupByGender(null);
+        return ResponseEntity.ok(groupedCategories);
     }
     @GetMapping("/genders")
     public ResponseEntity<List<GenderDTO>> getAllGender() {
         List<GenderDTO> genders = categoryService.getAllGender();
         return ResponseEntity.ok(genders);
+    }
+    @GetMapping("/gender/slug/{slug}")
+    public ResponseEntity<List<GenderCategoryGroup>> getAllByGenderBySlug(@PathVariable String slug) {
+        List<GenderCategoryGroup> groups = categoryService.getAllCategoriesGroupByGender(slug);
+        return ResponseEntity.ok(groups);
     }
 }
