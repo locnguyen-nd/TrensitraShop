@@ -26,6 +26,8 @@ public class Category extends BaseEntity {
     private String name;
     @Column(name = "slug", nullable = false)
     private String slug;
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String description;
     private String imageUrl;
     private Integer indexNum;
