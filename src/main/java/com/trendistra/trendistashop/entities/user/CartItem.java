@@ -30,6 +30,7 @@ public class CartItem {
     })
     private Product cartProduct;
     private UUID productVariantId;
+    private UUID productImageId;
     private Integer cartItemQuantity;
     @Override
     public String toString() {

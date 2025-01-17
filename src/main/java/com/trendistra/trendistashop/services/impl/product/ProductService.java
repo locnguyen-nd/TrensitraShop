@@ -311,6 +311,7 @@ public class ProductService implements IProductService {
                 .id(productVariant.getId())
                 .codeVariant(productVariant.getCodeVariant())
                 .colorCode(productVariant.getColor().getValue())
+                .colorName(productVariant.getColor().getName())
                 .colorId(productVariant.getColor().getId())
                 .sizeId(productVariant.getSize().getId())
                 .sizeName(productVariant.getSize().getValue())
