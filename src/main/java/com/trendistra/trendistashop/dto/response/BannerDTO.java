@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 public class BannerDTO {
     private Long id;
     private String title;
+    private String event;
     private String imageUrl;
     private String linkUrl;
     private BannerTypeEnum type; // MAIN , DISCOUNT

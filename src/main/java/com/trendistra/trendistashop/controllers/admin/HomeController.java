@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("${api.prefix}/home")
@@ -31,10 +32,10 @@ public class HomeController {
         return ResponseEntity.ok(bannerDTO);
     }
     @GetMapping("/banner/{type}")
-    public ResponseEntity<List<BannerDTO>> getBannerWithType(
+    public ResponseEntity<Map<String, List<BannerDTO>>> getBannerWithType(
             @PathVariable String type) {
-        List<BannerDTO> bannerDTOs = homeService.getBannerWithType(type);
-        return ResponseEntity.ok(bannerDTOs);
+        Map<String, List<BannerDTO>> banners = homeService.getBannerWithType(type);
+        return ResponseEntity.ok(banners);
     }
 
 }
