@@ -117,9 +117,9 @@ public class CartService implements ICartService {
         if (cart.getCartItems().size() == 0) {
             throw new ResourceNotFoundEx("Cart already empty");
         }
-        List<CartItem> emptyCart = new ArrayList<>();
-        user.getUserCart().setCartItems(emptyCart);
-        user.getUserCart().setCartTotal(BigDecimal.ZERO);
+//        List<CartItem> emptyCart = cart.getCartItems();
+        cart.getCartItems().clear();
+        cart.setCartTotal(BigDecimal.ZERO);
         return cartRepository.save(cart);
     }
 }

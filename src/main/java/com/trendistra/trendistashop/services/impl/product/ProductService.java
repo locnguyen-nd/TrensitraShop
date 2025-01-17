@@ -166,22 +166,38 @@ public class ProductService implements IProductService {
     @Override
     public Page<ProductDTO> filterProduct(String categorySlug, String genderSlug, String colorCode,
                                           String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest) {
-        // kiểm tra xem category có parent không , nếu có thì lấy chính nó còn không thì getAll
-        Optional<Category> category = categoryRepository.findBySlug(categorySlug);
+        // Nếu có cate thì kiểm tra xem có parent không nếu có thì search parent chính nó còn nếu kh search chính nó
         String parentSlug = null;
-        if (category.get().getParent() == null) {
-            parentSlug = categorySlug;
-            categorySlug = null;
-        };
-        Specification<Product> productSpecification = Specification
-                .where(hasCategorySlug(categorySlug)) // tìm kiếm scopr nhỏ
-                .and(hasParentCategorySlug(parentSlug)) //  tìm kiếm lớn
-                .and(hasGenderSlug(genderSlug))
-                .and(hasColorCode(colorCode))
-                .and(hasSizeValue(sizeValue))
-                .and(hasStatus(true))
-                .and(hasPriceBetween(minPrice, maxPrice));
+        if (categorySlug != null) {
+            Optional<Category> category = categoryRepository.findBySlug(categorySlug);
+            if (category.isPresent() && category.get().getParent() == null) {
+                parentSlug = categorySlug;
+                categorySlug = null;
+            }
+        }
+        // Xây dựng Specification linh hoạt
+        Specification<Product> productSpecification = Specification.where(null);
 
+        if (categorySlug != null) {
+            productSpecification = productSpecification.and(hasCategorySlug(categorySlug));
+        }
+        if (parentSlug != null) {
+            productSpecification = productSpecification.and(hasParentCategorySlug(parentSlug));
+        }
+        if (genderSlug != null) {
+            productSpecification = productSpecification.and(hasGenderSlug(genderSlug));
+        }
+        if (colorCode != null) {
+            productSpecification = productSpecification.and(hasColorCode(colorCode));
+        }
+        if (sizeValue != null) {
+            productSpecification = productSpecification.and(hasSizeValue(sizeValue));
+        }
+        if (minPrice != null && maxPrice != null) {
+            productSpecification = productSpecification.and(hasPriceBetween(minPrice, maxPrice));
+        }
+        // Luôn lọc theo trạng thái (status = true)
+        productSpecification = productSpecification.and(hasStatus(true));
         // Tìm kiếm sản phẩm theo điều kiện và phân trang
         Page<Product> productPage = productRepository.findAll(productSpecification, pageRequest);
         if(productPage.isEmpty()) {
