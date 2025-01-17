@@ -10,8 +10,9 @@ import java.util.UUID;
 public class CartItemDTO {
     private UUID id;
     private UUID productId;
-    private String productName;
     private UUID variantId;
+    private UUID imageId;
+    private String productName;
     private Integer quantity;
     private BigDecimal price;
     public static CartItemDTO fromEntity(CartItem cartItem) {
@@ -19,9 +20,10 @@ public class CartItemDTO {
         dto.setId(cartItem.getId());
         dto.setProductId(cartItem.getCartProduct().getId());
         dto.setVariantId(cartItem.getProductVariantId());
+        dto.setImageId(cartItem.getProductImageId());
+        dto.setProductName(cartItem.getCartProduct().getName());
         dto.setQuantity(cartItem.getCartItemQuantity());
         dto.setPrice(cartItem.getCartProduct().getPrice());
-        dto.setProductName(cartItem.getCartProduct().getName());
         return dto;
     }
 }
