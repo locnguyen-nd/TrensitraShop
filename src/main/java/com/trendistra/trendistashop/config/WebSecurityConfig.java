@@ -18,6 +18,10 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -40,6 +44,8 @@ public class WebSecurityConfig {
     private JWTTokenHelper jwtTokenHelper;
     @Value("${api.prefix}")
     private String prefix ;
+    @Value("frontend.url")
+    private String frontendUrl;
 
     /**
      * Danh sach các URL không cần phân quyền
@@ -56,7 +62,8 @@ public class WebSecurityConfig {
             "/api/v1/sizes/**",
             "/api/v1/role/**",
             "/api/v1/permissions/**",
-            "/api/v1/home/**"
+            "/api/v1/home/**",
+            "/oauth2/**"
     };
     /**
      * Cấu hình bảo mật cho ứng dụng, xác định cách thức xử lý các yêu cầu HTTP.
@@ -74,7 +81,9 @@ public class WebSecurityConfig {
         Map<String, Map<String, List<String>>> permissionMappings = permissionService.loadPermissions();
         http
                 .csrf(csrf -> csrf.disable())
-//                .requestCache(cache -> cache.disable())
+                .cors(cors -> cors.configurationSource(
+                        corsConfigurationSource()
+                ))
                 .authenticationManager(authenticationManager())
                 // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
                 .authorizeHttpRequests(auth -> {
@@ -87,7 +96,12 @@ public class WebSecurityConfig {
                                    .hasAnyAuthority(permissions.toArray(new  String[0]));
                        });
                     });
-                    auth.requestMatchers("/oauth2/success").permitAll();
+                    auth.requestMatchers(
+                            "/",
+                            "/login/**",
+                            "/oauth2/**",
+                            "/oauth2/callback**",
+                            "/error").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .logout(logout -> {
@@ -98,17 +112,34 @@ public class WebSecurityConfig {
                                 String token = jwtTokenHelper.getToken(request);
                                 jwtTokenHelper.logout(token);
                             })
+                            .clearAuthentication(true)
+                            .invalidateHttpSession(true)
+                            .deleteCookies("JSESSIONID")
                             .logoutSuccessHandler((request, response, authentication) -> {
                                 response.setStatus(HttpServletResponse.SC_OK);
                                 response.getWriter().write("Logged out successfully");
                             });
                 })
-                .oauth2Login((oauth2login) -> oauth2login.defaultSuccessUrl("/oauth2/success"))
+                .oauth2Login(oauth2 -> oauth2
+                        .defaultSuccessUrl("/oauth2/success", true)
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(oAuth2UserService())
+                        )
+                )
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .addFilterBefore(new JWTAuthenticationFilter(jwtTokenHelper, userDetailsService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
+    @Bean
+    public OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService() {
+        DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
 
+        return request -> {
+            OAuth2User user = delegate.loadUser(request);
+            // Có thể thêm xử lý custom cho user ở đây
+            return user;
+        };
+    }
     /**
      * Cấu hình WebSecurity để bỏ qua bảo mật cho các API công khai.
      *
@@ -144,7 +175,7 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList(frontendUrl));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

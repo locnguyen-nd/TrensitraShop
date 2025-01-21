@@ -3,6 +3,7 @@ package com.trendistra.trendistashop.services.impl.product;
 import com.trendistra.trendistashop.dto.request.ProductRequestDTO;
 import com.trendistra.trendistashop.dto.response.ProductDTO;
 import com.trendistra.trendistashop.dto.response.ProductImageDTO;
+import com.trendistra.trendistashop.dto.response.SearchSuggestionDTO;
 import com.trendistra.trendistashop.dto.response.VariantDTO;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.product.*;
@@ -15,10 +16,12 @@ import com.trendistra.trendistashop.helper.GenerateSlug;
 import com.trendistra.trendistashop.repositories.category.CategoryRepository;
 import com.trendistra.trendistashop.repositories.product.DiscountRepository;
 import com.trendistra.trendistashop.repositories.product.ProductRepository;
+import com.trendistra.trendistashop.services.CloudinaryService;
 import com.trendistra.trendistashop.services.IProductService;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -50,28 +53,51 @@ public class ProductService implements IProductService {
 
     @Autowired
     private VariantService variantService;
-
+    @Autowired
+    private CloudinaryService cloudinaryService;
     private GenerateSlug generateSlug;
     private GenerateCodeProduct generateCodeProduct;
     @Autowired
     private ModelMapper modelMapper;
+    @Value("${search.suggestion.limit}")
+    private int suggestionLimit;
 
     @Override
     public Page<ProductDTO> getAllProduct(Pageable pageable) {
         Page<Product> productPage = productRepository.findAll(pageable);
+        if(productPage.isEmpty()) {
+            throw new ResourceNotFoundEx("Products not found");
+        }
         return productPage.map(this::mapToProductDto);
     }
-
     @Override
-    public Page<ProductDTO> searchWithName(String name, Pageable pageable) {
-        if (name == null) {
+    public SearchSuggestionDTO getSuggestion (String keyword) {
+        if(keyword == null || keyword.trim().isEmpty()) {
+            return  new SearchSuggestionDTO();
+        }
+        List<String> productNames = productRepository.findProductNames(
+                keyword.toLowerCase().trim(),
+                PageRequest.of(0, suggestionLimit)
+        );
+        List<String> categoryNames = categoryRepository.findCategoryNames(
+                keyword.toLowerCase().trim(),
+                PageRequest.of(0, suggestionLimit)
+        );
+        SearchSuggestionDTO result = new SearchSuggestionDTO();
+        result.setProductNames(productNames);
+        result.setCategoryNames(categoryNames);
+        return result;
+    }
+    @Override
+    public Page<ProductDTO> searchWithName(String keyword, Pageable pageable) {
+        if (keyword == null) {
             throw new InvalidParameterException("You don't trying search with name and slug empty !");
         }
         Specification<Product> specification = Specification
-                .where(hasName(name));
+                .where(hasName(keyword));
         Page<Product> productPage = productRepository.findAll(specification, pageable);
         if (productPage.isEmpty()) {
-            throw new ResourceNotFoundEx(String.format("Don't find any product with %s ", name));
+            throw new ResourceNotFoundEx(String.format("Don't find any product with %s ", keyword));
         }
         return productPage.map(this::mapToProductDto);
     }
@@ -85,7 +111,7 @@ public class ProductService implements IProductService {
         }
         // Fetch category
         Category category = categoryRepository.findById(productDto.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Category not found"));
         // Fetch discounts
         List<Discount> discounts = productDto.getDiscountIds() != null
                 ? discountRepository.findAllById(productDto.getDiscountIds())
@@ -134,95 +160,162 @@ public class ProductService implements IProductService {
     @Override
     public ProductDTO getProductById(UUID id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-        product.incrementView();
+                .orElseThrow(() -> new ResourceNotFoundEx(String.format("Product not found with %s", id)));
+        product.incrementView(); // tăng view xem sản phẩm
         return mapToProductDto(product);
     }
-
-
     @Override
-    public Page<ProductDTO> getProductByTag(String tag, Pageable pageable) {
+    public Page<ProductDTO> getProductByTag(String genderSlug , String tag, Pageable pageable) {
         String tagEnum = tag.toUpperCase();
-        Page<Product> productPage = productRepository.findProductsByTag(ProductTagEnum.valueOf(tagEnum), pageable);
+        Specification<Product> productSpecification = Specification
+                .where(hasGenderSlug(genderSlug))
+                .and(hasTag(ProductTagEnum.valueOf(tagEnum)));
+        Page<Product> productPage = productRepository.findAll(productSpecification, pageable);
+        if(productPage.isEmpty()) {
+            throw new ResourceNotFoundEx(String.format("Don't find any product with %s and gender %s ", tag, genderSlug));
+        }
         return productPage.map(this::mapToProductDto);
     }
 
     @Override
     public ProductDTO getProductBySlug(String slug) {
         Product product = productRepository.findProductsBySlug(slug);
+        if(product == null) {
+            throw new ResourceNotFoundEx(String.format("Product not found with %s ", slug));
+        }
         return mapToProductDto(product);
     }
 
-
-    public Product getProductByIdEntity(UUID id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-        return product;
-    }
-
     @Override
-    public Page<ProductDTO> filterProduct(UUID categoryId, UUID genderId, UUID colorId,
-                                          UUID sizeId, Double minPrice, Double maxPrice, PageRequest pageRequest) {
-        // kiểm tra xem category có parent không , nếu có thì lấy chính nó còn không thì getAll
-        Optional<Category> category = categoryRepository.findById(categoryId);
-        UUID parentId = null;
-        if (category.get().getParent() == null) {
-            parentId = categoryId;
-            categoryId = null;
+    public Page<ProductDTO> filterProduct(String categorySlug, String genderSlug, String colorCode,
+                                          String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest) {
+        // Nếu có cate thì kiểm tra xem có parent không nếu có thì search parent chính nó còn nếu kh search chính nó
+        String parentSlug = null;
+        if (categorySlug != null) {
+            Optional<Category> category = categoryRepository.findBySlug(categorySlug);
+            if (category.isPresent() && category.get().getParent() == null) {
+                parentSlug = categorySlug;
+                categorySlug = null;
+            }
         }
-        ;
-        Specification<Product> productSpecification = Specification
-                .where(hasCategoryId(categoryId)) // tìm kiếm scopr nhỏ
-                .and(hasParentCategoryId(parentId)) //  tìm kiếm lớn
-                .and(hasGenderId(genderId))
-                .and(hasColorId(colorId))
-                .and(hasSizeId(sizeId))
-                .and(hasStatus(true))
-                .and(hasPriceBetween(minPrice, maxPrice));
+        // Xây dựng Specification linh hoạt
+        Specification<Product> productSpecification = Specification.where(null);
 
+        if (categorySlug != null) {
+            productSpecification = productSpecification.and(hasCategorySlug(categorySlug));
+        }
+        if (parentSlug != null) {
+            productSpecification = productSpecification.and(hasParentCategorySlug(parentSlug));
+        }
+        if (genderSlug != null) {
+            productSpecification = productSpecification.and(hasGenderSlug(genderSlug));
+        }
+        if (colorCode != null) {
+            productSpecification = productSpecification.and(hasColorCode(colorCode));
+        }
+        if (sizeValue != null) {
+            productSpecification = productSpecification.and(hasSizeValue(sizeValue));
+        }
+        if (minPrice != null && maxPrice != null) {
+            productSpecification = productSpecification.and(hasPriceBetween(minPrice, maxPrice));
+        }
+        // Luôn lọc theo trạng thái (status = true)
+        productSpecification = productSpecification.and(hasStatus(true));
         // Tìm kiếm sản phẩm theo điều kiện và phân trang
         Page<Product> productPage = productRepository.findAll(productSpecification, pageRequest);
+        if(productPage.isEmpty()) {
+            throw new ResourceNotFoundEx(String.format("Don't find any product with filter"));
+        }
         // Chuyển đổi Page<Product> sang Page<ProductDTO>
         return productPage.map(this::mapToProductDto);
     }
 
+    @Transactional
     @Override
-    public ProductDTO updateProduct(UUID id, ProductDTO productDto) {
-        // Find existing product
-        Product existingProduct = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+    public ProductDTO updateProduct(UUID productId, ProductRequestDTO productDto, List<MultipartFile> files) throws IOException {
 
-        // Update category if changed
-        Category category = categoryRepository.findById(productDto.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+        // Fetch the existing product from the database
+        Product existingProduct = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
 
-
-        // Update product details
+        // Update basic fields of the product
         existingProduct.setName(productDto.getName());
-        existingProduct.setCode(productDto.getCode());
-        existingProduct.setSlug(generateSlug.generateSlug(productDto.getName()));
-        existingProduct.setStatus(productDto.getStatus());
-        existingProduct.setOriginPrice(productDto.getOriginPrice());
         existingProduct.setPrice(productDto.getPrice());
+        existingProduct.setOriginPrice(productDto.getOriginPrice());
+        existingProduct.setTag(productDto.getTag());
+        existingProduct.setSummary(productDto.getSummary());
+        existingProduct.setDescription(productDto.getDescription());
+        existingProduct.setStatus(productDto.getStatus());
         existingProduct.setIsFreeShip(productDto.getIsFreeShip());
-        existingProduct.setCategory(category);
-        // Save updated product
-        Product updatedProduct = productRepository.save(existingProduct);
 
-        return mapToProductDto(updatedProduct);
+        // Update category
+        Category category = categoryRepository.findById(productDto.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundEx("Category not found"));
+        existingProduct.setCategory(category);
+
+        // Update discounts
+        List<Discount> discounts = productDto.getDiscountIds() != null
+                ? discountRepository.findAllById(productDto.getDiscountIds())
+                : List.of();
+        existingProduct.setDiscounts(discounts);
+
+        // Update product variants
+        List<ProductVariant> variants = variantService.createProductVariant(existingProduct, productDto.getVariants());
+        existingProduct.setProductVariants(variants);
+
+        // Delete old images before uploading new ones
+        deleteOldImages(existingProduct);
+
+        // Update product images by color
+        if (files != null && !files.isEmpty() && productDto.getColorImageMapping() != null) {
+            List<ProductImage> productImages = imageService.uploadImagesByColor(
+                    files,
+                    productDto.getColorImageMapping(),
+                    productId
+            );
+
+            // Set the first image as the featured image
+            Optional<ProductImage> thumbnailImage = productImages.stream()
+                    .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
+                    .findFirst();
+            thumbnailImage.ifPresent(image -> existingProduct.setFeaturedImage(image.getUrl()));
+
+            existingProduct.setImages(productImages);
+        }
+
+        // Save the updated product
+        productRepository.save(existingProduct);
+
+        // Return updated product DTO
+        return mapToProductDto(existingProduct);
+    }
+
+    private void deleteOldImages(Product product) {
+        // Delete all old images associated with the product
+        List<ProductImage> oldImages = product.getImages();
+        if (oldImages != null && !oldImages.isEmpty()) {
+            // Delete images from Cloudinary or file system if needed
+            for (ProductImage image : oldImages) {
+                // Assuming you have a method to delete image from Cloudinary or filesystem
+                cloudinaryService.deleteFile(image.getUrl()); // Or file system delete logic
+            }
+
+            // Remove old images from the product entity
+            product.setImages(List.of()); // Clear the existing images
+        }
     }
 
     @Override
     public void deleteProduct(UUID id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
         productRepository.delete(product);
     }
 
     @Override
     public void updateProductStatus(UUID id, boolean status) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
 
         product.setStatus(status);
         productRepository.save(product);
@@ -231,7 +324,7 @@ public class ProductService implements IProductService {
     @Override
     public void updateProductQuantities(UUID id, int availableQuantities) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
         productRepository.save(product);
     }
 
@@ -290,6 +383,7 @@ public class ProductService implements IProductService {
                 .id(productVariant.getId())
                 .codeVariant(productVariant.getCodeVariant())
                 .colorCode(productVariant.getColor().getValue())
+                .colorName(productVariant.getColor().getName())
                 .colorId(productVariant.getColor().getId())
                 .sizeId(productVariant.getSize().getId())
                 .sizeName(productVariant.getSize().getValue())

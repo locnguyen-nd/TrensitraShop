@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,6 +34,7 @@ public class HomeService {
         }
         banner.setTitle(bannerDTO.getTitle());
         banner.setType(bannerDTO.getType());
+        banner.setEvent(bannerDTO.getEvent());
         banner.setDisplayOrder(banner.getDisplayOrder());
         banner.setLinkUrl(bannerDTO.getLinkUrl());
         banner.setIsActive(bannerDTO.getIsActive() != null ? bannerDTO.getIsActive() : true);
@@ -44,11 +46,12 @@ public class HomeService {
         }
         return bannerDTORes;
     }
-    public List<BannerDTO> getBannerWithType(String type){
+    public Map<String, List<BannerDTO>> getBannerWithType(String type){
         List <Banner> banners = bannerRepository.findBannerByTypeAndIsActiveTrue(BannerTypeEnum.valueOf(type));
         List<BannerDTO> bannerDTOS = banners.stream().map(
                 banner -> mapper.map(banner, BannerDTO.class)
         ).collect(Collectors.toList());
-       return bannerDTOS;
+        Map<String, List<BannerDTO>> groupedByEvent = bannerDTOS.stream().collect(Collectors.groupingBy(BannerDTO::getEvent));
+       return groupedByEvent;
     }
 }

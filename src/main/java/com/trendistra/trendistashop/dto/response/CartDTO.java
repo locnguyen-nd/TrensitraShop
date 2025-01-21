@@ -18,6 +18,8 @@ public class CartDTO {
 
     private VariantDTO variantDTO;
 
+    private ProductImageDTO imageDTO;
+
     private String productName;
 
     private BigDecimal price;

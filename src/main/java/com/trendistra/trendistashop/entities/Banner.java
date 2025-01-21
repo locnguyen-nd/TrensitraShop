@@ -16,19 +16,16 @@ public class Banner {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String title;
-
+    @Column(nullable = false)
+    private String event;
     @Column(nullable = false)
     private String imageUrl;
     private String linkUrl;
-
     @Enumerated(EnumType.STRING)
     private BannerTypeEnum type; // MAIN, PROMO, CATEGORY
-
     @Column
     private Integer displayOrder;
-
     @Column
     private Boolean isActive;
 }

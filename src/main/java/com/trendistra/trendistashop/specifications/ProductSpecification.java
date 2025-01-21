@@ -11,66 +11,78 @@ import org.springframework.data.jpa.domain.Specification;
 import java.util.UUID;
 
 public class ProductSpecification {
-    public static Specification<Product> hasName(String name) {
+    public static Specification<Product> hasName(String keyword) {
         return (root, query, criteriaBuilder) -> {
-            if(name == null || name.trim().isEmpty()) {
+            if(keyword == null || keyword.trim().isEmpty()) {
                 return criteriaBuilder.conjunction();
             }
-            // Attempt an exact match first
-            Predicate exactMatchPredicate = criteriaBuilder.equal(criteriaBuilder.lower(root.get("name")), name.toLowerCase());
-            // Then, allow partial matches (like search)
-            Predicate partialMatchPredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), "%" + name.toLowerCase() + "%");
-        return criteriaBuilder.or(exactMatchPredicate,partialMatchPredicate);
+            String searchTerm = "%"+ keyword.toLowerCase().trim() + "%";
+            // Tìm theo tên sản phẩm
+            Predicate productNamePredicate = criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("name")),
+                    searchTerm
+            );
+            // Tìm theo tên category
+            Predicate categoryNamePredicate = criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("category").get("name")),
+                    searchTerm
+            );
+            return criteriaBuilder.or(productNamePredicate, categoryNamePredicate);
         };
     }
-    public static Specification<Product> hasCategoryId(UUID categoryId) {
+    public static Specification<Product> hasCategorySlug(String slug) {
         return (root, query, criteriaBuilder) -> {
-            if (categoryId == null) {
+            if (slug == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu categoryId là null
             }
-            return criteriaBuilder.equal(root.get("category").get("id"), categoryId);
+            return criteriaBuilder.equal(root.get("category").get("slug"), slug);
         };
     }
-    public static Specification<Product> hasParentCategoryId(UUID parentId) {
+    public static Specification<Product> hasParentCategorySlug(String slug) {
         return (root, query, criteriaBuilder) -> {
-            if (parentId == null) {
+            if (slug == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu parentId là null
             }
             Join<Product, Category> categoryJoin = root.join("category");
-            return criteriaBuilder.equal(categoryJoin.get("parent").get("id"), parentId);
+            return criteriaBuilder.equal(categoryJoin.get("parent").get("slug"), slug);
         };
     }
 
-    public static Specification<Product> hasGenderId(UUID genderId) {
+    public static Specification<Product> hasGenderSlug(String slug) {
         return (root, query, criteriaBuilder) -> {
-            if (genderId == null) {
+            if (slug == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu genderId là null
             }
             Join<Product, Category> categoryJoin = root.join("category");
-            return criteriaBuilder.equal(categoryJoin.get("gender").get("id"), genderId);
+            return criteriaBuilder.equal(categoryJoin.get("gender").get("slug"), slug);
         };
     }
-    public static Specification<Product> hasColorId(UUID colorId) {
+    public static Specification<Product> hasColorCode(String code) {
         return (root, query, criteriaBuilder) -> {
-            if (colorId == null) {
+            if (code == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu colorId là null
             }
             Join<Product, ProductVariant> variantJoin = root.join("productVariants", JoinType.INNER);
-            return criteriaBuilder.equal(variantJoin.get("color").get("id"), colorId);
+            return criteriaBuilder.equal(variantJoin.get("color").get("code"), code);
         };
     }
-    public static Specification<Product> hasSizeId(UUID sizeId) {
+    public static Specification<Product> hasSizeValue(String value) {
         return (root, query, criteriaBuilder) -> {
-            if (sizeId == null) {
+            if (value == null) {
                 return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu colorId là null
             }
             Join<Product, ProductVariant> variantJoin = root.join("productVariants",JoinType.INNER);
-            return criteriaBuilder.equal(variantJoin.get("size").get("id"), sizeId);
+            return criteriaBuilder.equal(variantJoin.get("size").get("value"), value);
         };
     }
     public static  Specification<Product> hasStatus(Boolean status) {
         return ((root, query, criteriaBuilder) ->
              criteriaBuilder.equal(root.get("status"), status)
+        );
+    }
+    public static  Specification<Product> hasTag(Enum tag) {
+        return ((root, query, criteriaBuilder) ->
+                criteriaBuilder.equal(root.get("tag"), tag)
         );
     }
     // Bộ lọc giá

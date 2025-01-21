@@ -3,6 +3,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trendistra.trendistashop.dto.request.ProductRequestDTO;
 import com.trendistra.trendistashop.dto.response.ProductDTO;
 import com.trendistra.trendistashop.dto.response.ProductImageDTO;
+import com.trendistra.trendistashop.dto.response.SearchSuggestionDTO;
 import com.trendistra.trendistashop.services.IProductService;
 import com.trendistra.trendistashop.services.impl.product.ImageService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,7 +53,7 @@ public class ProductController {
         Page<ProductDTO> products = productService.getAllProduct(pageable);
         return ResponseEntity.ok(products);
     }
-    @GetMapping("search")
+    @GetMapping("/search")
     public ResponseEntity<Page<ProductDTO>> getProductsByName(
             @RequestParam(required = false) String name,
             @RequestParam(defaultValue = "0") int page,
@@ -63,14 +64,20 @@ public class ProductController {
         Page<ProductDTO> products = productService.searchWithName(name, pageable);
         return ResponseEntity.ok(products);
     }
-    @GetMapping("/tag/{tag}")
+    @GetMapping("/search/suggest")
+    public ResponseEntity<SearchSuggestionDTO> getSuggestions(
+            @RequestParam String keyword) {
+        return ResponseEntity.ok(productService.getSuggestion(keyword));
+    }
+    @GetMapping("/tag")
     public ResponseEntity<Page<ProductDTO>> getProductsByTag(
-            @PathVariable String tag,
+            @RequestParam String tag,
+            @RequestParam String genderSlug,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ProductDTO> products = productService.getProductByTag(tag, pageable);
+        Page<ProductDTO> products = productService.getProductByTag(genderSlug, tag, pageable);
         return ResponseEntity.ok(products);
     }
     @GetMapping("/slug/{slug}")
@@ -83,10 +90,10 @@ public class ProductController {
 
     @GetMapping("/filter")
     public Page<ProductDTO> getAllProductsWithFilter(
-            @RequestParam() UUID categoryId,
-            @RequestParam(required = false) UUID colorId,
-            @RequestParam(required = false) UUID sizeId,
-            @RequestParam(required = false) UUID genderId,
+            @RequestParam(required = false) String categorySlug,
+            @RequestParam(required = false) String colorCode,
+            @RequestParam(required = false) String sizeValue,
+            @RequestParam(required = false) String genderSlug,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(defaultValue = "0")  int page,
@@ -95,7 +102,7 @@ public class ProductController {
             @RequestParam(defaultValue = "false") boolean ascending
     ) {
         PageRequest pageRequest = createPageRequest(page, size, sortBy , ascending);
-        Page<ProductDTO>products =   productService.filterProduct(categoryId, genderId, colorId, sizeId, minPrice, maxPrice, pageRequest);
+        Page<ProductDTO>products =   productService.filterProduct(categorySlug, genderSlug, colorCode, sizeValue, minPrice, maxPrice, pageRequest);
         return products;
     }
     private PageRequest createPageRequest (int page , int size, String sortBy , Boolean ascending) {
@@ -106,7 +113,6 @@ public class ProductController {
             return  PageRequest.of(page, size , sort);
         }
     }
-    // Read Product by ID
     @GetMapping("/{id}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable UUID id) {
         ProductDTO product = productService.getProductById(id);
@@ -116,16 +122,28 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<ProductDTO> updateProduct(
             @PathVariable UUID id,
-            @RequestBody ProductDTO productDto
+            @RequestParam(value = "images", required = false) List<MultipartFile> files,  // Nhận ảnh từ client
+            @RequestBody ProductRequestDTO productDto  // Nhận thông tin sản phẩm
     ) {
-        ProductDTO updatedProduct = productService.updateProduct(id, productDto);
-        return ResponseEntity.ok(updatedProduct);
+        try {
+            // Gọi service để cập nhật sản phẩm và ảnh mới
+            ProductDTO updatedProduct = productService.updateProduct(id, productDto, files);
+            // Trả về sản phẩm đã được cập nhật
+            return ResponseEntity.ok(updatedProduct);
+        } catch (Exception e) {
+            // Xử lý lỗi nếu có
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);  // Hoặc trả về một thông báo lỗi chi tiết hơn
+        }
     }
     // Delete Product
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable UUID id) {
+    public ResponseEntity<?> deleteProduct(@PathVariable UUID id) {
         productService.deleteProduct(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().body(Map.of(
+                "message", "Delete successful",
+                "status", HttpStatus.OK
+        ));
     }
 
     // Update Product Status

@@ -55,7 +55,7 @@ public class Product extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.EAGER , orphanRemoval = true)
     private List<ProductVariant> productVariants;
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -65,7 +65,7 @@ public class Product extends BaseEntity {
     )
     private List<Discount> discounts = new ArrayList<>();
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProductImage> images = new ArrayList<>(); // Initialize with ArrayList
+    private List<ProductImage> images = new ArrayList<>();
     // Tăng số lượt xem
     public void incrementView() {
         this.views++;

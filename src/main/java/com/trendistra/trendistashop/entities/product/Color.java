@@ -24,6 +24,6 @@ public class Color extends BaseEntity {
     private String name ;
     private String code;
     private String value;
-    @OneToMany(mappedBy = "color", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "color", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductImage> productImages; // Danh sách các hinh anh liên quan
 }

@@ -3,17 +3,15 @@ package com.trendistra.trendistashop.services.impl.auth;
 import com.trendistra.trendistashop.dto.response.RoleDTO;
 import com.trendistra.trendistashop.entities.user.PermissionEntity;
 import com.trendistra.trendistashop.entities.user.RoleEntity;
+import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.repositories.auth.PermissionRepository;
 import com.trendistra.trendistashop.repositories.auth.RoleRepository;
 import com.trendistra.trendistashop.services.IAuthorizationService;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import javax.management.relation.Role;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,7 +37,7 @@ public class AuthorizationService implements IAuthorizationService {
         // Fetch and validate permissions
         List<PermissionEntity> permissions = roleDTO.getPermissionIds().stream()
                 .map(permId -> permissionRepository.findById(permId)
-                        .orElseThrow(() -> new EntityNotFoundException("Permission not found: " + permId)))
+                        .orElseThrow(() -> new ResourceNotFoundEx("Permission not found: " + permId)))
                 .collect(Collectors.toList());
         RoleEntity role = RoleEntity.builder()
                 .name(roleDTO.getName())
@@ -51,7 +49,7 @@ public class AuthorizationService implements IAuthorizationService {
     }
     public RoleDTO getRoleById(UUID id) {
         RoleEntity role = roleRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundEx("Role not found: " + id));
 
         return  modelMapper.map(role, RoleDTO.class);
     }
@@ -70,7 +68,7 @@ public class AuthorizationService implements IAuthorizationService {
     @Transactional
     public RoleDTO updateRole(UUID id, RoleDTO roleDTO) {
         RoleEntity existingRole = roleRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundEx("Role not found: " + id));
 
         // Check if name is being changed and is unique
         if (!existingRole.getName().equals(roleDTO.getName()) &&
@@ -80,7 +78,7 @@ public class AuthorizationService implements IAuthorizationService {
         // Fetch and validate permissions
         List<PermissionEntity> permissions = roleDTO.getPermissionIds().stream()
                 .map(permId -> permissionRepository.findById(permId)
-                        .orElseThrow(() -> new EntityNotFoundException("Permission not found: " + permId)))
+                        .orElseThrow(() -> new ResourceNotFoundEx("Permission not found: " + permId)))
                 .collect(Collectors.toList());
         existingRole.setName(roleDTO.getName());
         existingRole.setDescription(roleDTO.getDescription());
@@ -92,20 +90,19 @@ public class AuthorizationService implements IAuthorizationService {
     @Transactional
     public void deleteRole(UUID id) {
         RoleEntity role = roleRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found: " + id));
-
+                .orElseThrow(() -> new ResourceNotFoundEx("Role not found: " + id));
         roleRepository.delete(role);
     }
     @Transactional
     public RoleDTO addPermissionsToRole(UUID roleId, Set<UUID> permissionIds) {
         // Find the role
         RoleEntity role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found: " + roleId));
+                .orElseThrow(() -> new ResourceNotFoundEx("Role not found: " + roleId));
 
         // Fetch and validate permissions
         Set<PermissionEntity> newPermissions = permissionIds.stream()
                 .map(permId -> permissionRepository.findById(permId)
-                        .orElseThrow(() -> new EntityNotFoundException("Permission not found: " + permId)))
+                        .orElseThrow(() -> new ResourceNotFoundEx("Permission not found: " + permId)))
                 .collect(Collectors.toSet());
 
         // Add new permissions to existing role permissions
@@ -121,7 +118,7 @@ public class AuthorizationService implements IAuthorizationService {
     public RoleDTO removePermissionsFromRole(UUID roleId, Set<UUID> permissionIds) {
         // Find the role
         RoleEntity role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found: " + roleId));
+                .orElseThrow(() -> new ResourceNotFoundEx("Role not found: " + roleId));
 
         // Remove specified permissions
         role.getPermissions().removeIf(permission ->
@@ -143,7 +140,7 @@ public class AuthorizationService implements IAuthorizationService {
     @Transactional()
     public List<PermissionEntity> getRolePermissions(UUID roleId) {
         RoleEntity role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found: " + roleId));
+                .orElseThrow(() -> new ResourceNotFoundEx("Role not found: " + roleId));
 
         return role.getPermissions();
     }
@@ -151,7 +148,7 @@ public class AuthorizationService implements IAuthorizationService {
     @Transactional()
     public boolean hasPermission(UUID roleId, UUID permissionId) {
         RoleEntity role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found: " + roleId));
+                .orElseThrow(() -> new ResourceNotFoundEx("Role not found: " + roleId));
 
         return role.getPermissions().stream()
                 .anyMatch(permission -> permission.getId().equals(permissionId));

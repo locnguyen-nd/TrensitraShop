@@ -6,7 +6,6 @@ import com.trendistra.trendistashop.entities.product.Product;
 import com.trendistra.trendistashop.entities.product.ProductVariant;
 import com.trendistra.trendistashop.entities.product.Size;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
-import com.trendistra.trendistashop.helper.GenerateCodeProduct;
 import com.trendistra.trendistashop.repositories.product.ColorRepository;
 import com.trendistra.trendistashop.repositories.product.ProductVariantRepository;
 import com.trendistra.trendistashop.repositories.product.SizeRepository;
@@ -24,24 +23,23 @@ public class VariantService {
     private ColorRepository colorRepository;
     @Autowired
     private SizeRepository sizeRepository;
-    public List<ProductVariant> createProductVariant(
-            Product product ,
-            List<VariantRequestDTO> variantRequests
-    ) {
-        return variantRequests.stream().map(variantRequest  -> {
+
+    public List<ProductVariant> createProductVariant(Product product, List<VariantRequestDTO> variantRequests) {
+        List<ProductVariant> variants = variantRequests.stream().map(variantRequest -> {
             Color color = colorRepository.findById(variantRequest.getColorId())
                     .orElseThrow(() -> new ResourceNotFoundEx("Color not found"));
             Size size = sizeRepository.findById(variantRequest.getSizeId())
                     .orElseThrow(() -> new ResourceNotFoundEx("Size not found"));
             String codeName = product.getCode() + "-" + color.getName() + "-" + size.getValue();
-            ProductVariant variant = ProductVariant.builder()
+            return ProductVariant.builder()
                     .product(product)
                     .color(color)
                     .size(size)
                     .codeVariant(codeName.toUpperCase())
                     .stockQuantity(variantRequest.getStockQuantity())
                     .build();
-            return productVariantRepository.save(variant);
         }).collect(Collectors.toList());
+
+        return productVariantRepository.saveAll(variants);
     }
 }

@@ -47,7 +47,11 @@ public class Discount {
 
     @Column(name = "end_date", nullable = false)
     private LocalDateTime endDate; // ngày  kết thuc
+    @Column(name = "usage_limit")
+    private Integer usageLimit; // Số lượng voucher có thể sử dụng
 
+    @Column(name = "max_usage_per_customer")
+    private Integer maxUsagePerCustomer; // Số lần sử dụng voucher cho mỗi khách hàng
     @Column(name = "is_active")
     private Boolean isActive = true; // trạng thái
 }

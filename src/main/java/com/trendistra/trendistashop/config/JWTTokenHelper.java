@@ -1,9 +1,9 @@
 package com.trendistra.trendistashop.config;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -119,10 +119,18 @@ public class JWTTokenHelper {
             return userName != null
                     && userName.equals(userDetails.getUsername())
                     && !isTokenExpired(token);
+        } catch (ExpiredJwtException e) {
+            log.warn("Token has expired: " + e.getMessage());
+        } catch (MalformedJwtException e) {
+            log.warn("Token is malformed: " + e.getMessage());
+        } catch (SignatureException e) {
+            log.warn("Token signature is invalid: " + e.getMessage());
+        } catch (JwtException e) {
+            log.warn("JWT processing error: " + e.getMessage());
         } catch (Exception e) {
-            log.warn("userName null hoặc không khớp với useDetail" + e);
-            return false;
+            log.warn("Unexpected error during token validation: " + e.getMessage());
         }
+        return false;
     }
 
     /**
@@ -151,8 +159,21 @@ public class JWTTokenHelper {
         try {
             final Claims claims = this.getAllClaimsFromToken(token);
             expireDate = claims.getExpiration();
+        } catch (ExpiredJwtException e) {
+            expireDate = null;
+            log.warn("Token has expired: " + e.getMessage());
+        } catch (MalformedJwtException e) {
+            expireDate = null;
+            log.warn("Token is malformed: " + e.getMessage());
+        } catch (SignatureException e) {
+            expireDate = null;
+            log.warn("Token signature is invalid: " + e.getMessage());
+        } catch (JwtException e) {
+            expireDate = null;
+            log.warn("JWT processing error: " + e.getMessage());
         } catch (Exception e) {
             expireDate = null;
+            log.warn("Unexpected error during token expiration retrieval: " + e.getMessage());
         }
         return expireDate;
     }
@@ -178,8 +199,21 @@ public class JWTTokenHelper {
         try {
             final Claims claims = this.getAllClaimsFromToken(authToken);
             userName = claims.getSubject();
+        } catch (ExpiredJwtException e) {
+            userName = null;
+            log.warn("Token has expired: " + e.getMessage());
+        } catch (MalformedJwtException e) {
+            userName = null;
+            log.warn("Token is malformed: " + e.getMessage());
+        } catch (SignatureException e) {
+            userName = null;
+            log.warn("Token signature is invalid: " + e.getMessage());
+        } catch (JwtException e) {
+            userName = null;
+            log.warn("JWT processing error: " + e.getMessage());
         } catch (Exception e) {
             userName = null;
+            log.warn("Unexpected error during token username extraction: " + e.getMessage());
         }
         return userName;
     }
@@ -246,9 +280,16 @@ public class JWTTokenHelper {
                 log.info("refresh Token done !");
                 return generateRefreshToken(userName);
             }
+        } catch (ExpiredJwtException e) {
+            log.warn("Refresh token has expired: " + e.getMessage());
+        } catch (MalformedJwtException e) {
+            log.warn("Refresh token is malformed: " + e.getMessage());
+        } catch (SignatureException e) {
+            log.warn("Refresh token signature is invalid: " + e.getMessage());
+        } catch (JwtException e) {
+            log.warn("JWT processing error during refresh token: " + e.getMessage());
         } catch (Exception e) {
-            // Log lỗi nếu cần
-            log.warn("lỗi refresh token");
+            log.warn("Unexpected error during refresh token: " + e.getMessage());
         }
         return null;
     }
@@ -260,8 +301,20 @@ public class JWTTokenHelper {
             try {
                 log.info("Xóa blacklist token done !");
                 return isTokenExpired(token);
+            } catch (ExpiredJwtException e) {
+                log.warn("Token expired during blacklist cleanup: " + e.getMessage());
+                return true;
+            } catch (MalformedJwtException e) {
+                log.warn("Malformed token during blacklist cleanup: " + e.getMessage());
+                return true;
+            } catch (SignatureException e) {
+                log.warn("Signature invalid during blacklist cleanup: " + e.getMessage());
+                return true;
+            } catch (JwtException e) {
+                log.warn("JWT error during blacklist cleanup: " + e.getMessage());
+                return true;
             } catch (Exception e) {
-                log.warn("Xóa blacklist token fail !");
+                log.warn("Unexpected error during blacklist cleanup: " + e.getMessage());
                 return true;
             }
         });
