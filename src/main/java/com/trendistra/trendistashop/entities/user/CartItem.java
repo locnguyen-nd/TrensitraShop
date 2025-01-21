@@ -1,9 +1,12 @@
 package com.trendistra.trendistashop.entities.user;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.entities.product.Product;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.Date;
 import java.util.UUID;
 
 @Table(name = "cart-item")
@@ -32,6 +35,7 @@ public class CartItem {
     private UUID productVariantId;
     private UUID productImageId;
     private Integer cartItemQuantity;
+    private Date createAt;
     @Override
     public String toString() {
         return "CartItem(id=" + id.toString() +

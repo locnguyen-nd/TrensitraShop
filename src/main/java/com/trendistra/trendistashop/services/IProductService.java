@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.services;
 
 import com.trendistra.trendistashop.dto.request.ProductRequestDTO;
 import com.trendistra.trendistashop.dto.response.ProductDTO;
+import com.trendistra.trendistashop.dto.response.SearchSuggestionDTO;
 import com.trendistra.trendistashop.enums.ProductTagEnum;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -16,10 +17,10 @@ import java.util.UUID;
 public interface IProductService {
     Page<ProductDTO> getAllProduct(Pageable pageable);
     Page<ProductDTO> searchWithName(String name,Pageable pageable);
+    SearchSuggestionDTO getSuggestion (String keyword);
     @Transactional
     public ProductDTO createProductWithImages(ProductRequestDTO productDto, List<MultipartFile> files) throws IOException;
     public ProductDTO getProductById(UUID id);
-
 
     Page<ProductDTO> getProductByTag(String genderSlug , String tag, Pageable pageable);
 
@@ -29,7 +30,7 @@ public interface IProductService {
                                    String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest);
 
     @Transactional
-    public ProductDTO updateProduct(UUID id, ProductDTO productDto);
+    public ProductDTO updateProduct(UUID productId, ProductRequestDTO productDto, List<MultipartFile> files) throws IOException;
     public void deleteProduct(UUID id);
     public void updateProductStatus(UUID id, boolean status);
     public void updateProductQuantities(UUID id, int availableQuantities);

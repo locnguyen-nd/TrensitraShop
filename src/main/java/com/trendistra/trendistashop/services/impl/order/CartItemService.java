@@ -8,8 +8,11 @@ import com.trendistra.trendistashop.entities.user.Cart;
 import com.trendistra.trendistashop.entities.user.CartItem;
 import com.trendistra.trendistashop.exceptions.OrderCreationException;
 import com.trendistra.trendistashop.repositories.product.ProductRepository;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Date;
 import java.util.Objects;
 
 @Service
@@ -42,6 +45,7 @@ public class CartItemService {
                 .productVariantId(cartDTO.getVariantDTO().getId())
                 .productImageId(productImage.getId())
                 .cartItemQuantity(cartDTO.getQuantity())
+                .createAt(new Date())
                 .build();
         return newItem;
     }

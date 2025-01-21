@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,44 +43,52 @@ public class ImageService {
         }
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
-        List<ProductImage> uploadedImages = new ArrayList<>();
-        boolean isThumbnailSet = false;
+        List<CompletableFuture<ProductImage>> uploadedImages = new ArrayList<>();
+        Map<String, MultipartFile> fileMap = mapFilesByName(files);
+        boolean[] isThumbnailSet = {false};
         for (Map.Entry<UUID, List<String>> entry : colorImageMapping.entrySet()) {
             UUID colorId = entry.getKey();
             Color color = colorRepository.findById(colorId)
                     .orElseThrow(() -> new ResourceNotFoundEx("Color not found"));
+
             List<String> imageFileNames = entry.getValue();
             for (String fileName : imageFileNames) {
-                MultipartFile file = findFileByName(files, fileName);
+                MultipartFile file = findFileByName(fileMap, fileName); // Tìm file từ Map
                 if (file != null && !file.isEmpty()) {
-                    boolean isThumbnail = !isThumbnailSet;
-                    try{
-                        ProductImage image = uploadSingleImage(file, product, color, isThumbnail);
-                        uploadedImages.add(image);
-                        if (isThumbnail) {
-                            isThumbnailSet = true; // Đánh dấu thumbnail đã được đặt
+                    boolean isThumbnail = !isThumbnailSet[0];
+                    uploadedImages.add(CompletableFuture.supplyAsync(() -> {
+                        try {
+                            ProductImage image = uploadSingleImage(file, product, color, isThumbnail);
+                            if (isThumbnail) {
+                                isThumbnailSet[0] = true; // Đánh dấu thumbnail đã được đặt
+                            }
+                            return image;
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
                         }
-                    } catch (Exception e){
-                        System.out.println(e);
-                    }
+                    }));
                 }
             }
         }
-        return  uploadedImages;
-    }
-    private MultipartFile findFileByName(List<MultipartFile> files, String fileName) {
-        return files.stream()
-                .filter(file -> {
-                    String originalFilename = file.getOriginalFilename();
-                    if (originalFilename == null) return false;
-                    String fileNameWithoutExt = fileName.contains(".")
-                            ? fileName.substring(0, fileName.lastIndexOf('.'))
-                            : fileName;
 
-                    return originalFilename.contains(fileNameWithoutExt);
-                })
-                .findFirst()
-                .orElse(null);
+        return uploadedImages.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
+    }
+    private Map<String, MultipartFile> mapFilesByName(List<MultipartFile> files) {
+        return files.stream()
+                .collect(Collectors.toMap(file -> {
+                    String originalFilename = file.getOriginalFilename();
+                    return originalFilename != null
+                            ? originalFilename.substring(0, originalFilename.lastIndexOf('.'))
+                            : "";
+                }, file -> file));
+    }
+    private MultipartFile findFileByName(Map<String, MultipartFile> fileMap, String fileName) {
+        String fileNameWithoutExt = fileName.contains(".")
+                ? fileName.substring(0, fileName.lastIndexOf('.'))
+                : fileName;
+        return fileMap.get(fileNameWithoutExt);
     }
     private ProductImage uploadSingleImage(MultipartFile file, Product product, Color color , boolean isThumbnail) throws IOException {
         // Generate unique filename based on product and color

@@ -58,14 +58,14 @@ public class UserEntity extends BaseEntity implements UserDetails {
     private String verificationCode;
     private LocalDateTime codeExpiry;
     private boolean enabled = false;
-    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, orphanRemoval = true)
     @ToString.Exclude
     private List<Address> addressList;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "user")
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "user" , orphanRemoval = true)
     @JsonManagedReference("user-orders")
     private List<Order> orders = new ArrayList<>();
-    @OneToOne(cascade = CascadeType.ALL,mappedBy = "user")
+    @OneToOne(cascade = CascadeType.ALL,mappedBy = "user", orphanRemoval = true)
     @Builder.Default
     @EqualsAndHashCode.Exclude
     private Cart userCart = new Cart() ;

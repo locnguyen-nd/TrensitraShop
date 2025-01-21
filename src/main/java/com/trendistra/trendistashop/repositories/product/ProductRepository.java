@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,4 +20,14 @@ public interface ProductRepository extends JpaSpecificationExecutor<Product>, Jp
     Page<Product> findProductsByTag(ProductTagEnum tag, Pageable pageable);
 
     Product findProductsBySlug(String slug);
+    @Query("SELECT DISTINCT p.name FROM Product p " +
+            "WHERE LOWER(p.name) LIKE %:keyword% " +
+            "ORDER BY CASE " +
+            "  WHEN LOWER(p.name) = :keyword THEN 0 " +
+            "  WHEN LOWER(p.name) LIKE :keyword || '%' THEN 1 " +
+            "  ELSE 2 END, p.name")
+    List<String> findProductNames(
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
 }

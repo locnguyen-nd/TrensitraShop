@@ -11,16 +11,23 @@ import org.springframework.data.jpa.domain.Specification;
 import java.util.UUID;
 
 public class ProductSpecification {
-    public static Specification<Product> hasName(String name) {
+    public static Specification<Product> hasName(String keyword) {
         return (root, query, criteriaBuilder) -> {
-            if(name == null || name.trim().isEmpty()) {
+            if(keyword == null || keyword.trim().isEmpty()) {
                 return criteriaBuilder.conjunction();
             }
-            // Attempt an exact match first
-            Predicate exactMatchPredicate = criteriaBuilder.equal(criteriaBuilder.lower(root.get("name")), name.toLowerCase());
-            // Then, allow partial matches (like search)
-            Predicate partialMatchPredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), "%" + name.toLowerCase() + "%");
-        return criteriaBuilder.or(exactMatchPredicate,partialMatchPredicate);
+            String searchTerm = "%"+ keyword.toLowerCase().trim() + "%";
+            // Tìm theo tên sản phẩm
+            Predicate productNamePredicate = criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("name")),
+                    searchTerm
+            );
+            // Tìm theo tên category
+            Predicate categoryNamePredicate = criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("category").get("name")),
+                    searchTerm
+            );
+            return criteriaBuilder.or(productNamePredicate, categoryNamePredicate);
         };
     }
     public static Specification<Product> hasCategorySlug(String slug) {

@@ -15,10 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.security.Principal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class CartService implements ICartService {
@@ -41,6 +38,7 @@ public class CartService implements ICartService {
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
             item.setCartItemQuantity(item.getCartItemQuantity() + cart.getQuantity());
+            item.setCreateAt(new Date());
             userCart.setCartTotal(userCart.getCartTotal()
                     .add(item.getCartProduct().getPrice()
                             .multiply(new BigDecimal(cart.getQuantity()))));
