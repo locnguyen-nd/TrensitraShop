@@ -1,19 +1,24 @@
 package com.trendistra.trendistashop.services.impl.order;
 
+import com.trendistra.trendistashop.config.VietQRConfig;
 import com.trendistra.trendistashop.dto.request.OrderRequest;
 import com.trendistra.trendistashop.dto.response.*;
 import com.trendistra.trendistashop.entities.product.Product;
 import com.trendistra.trendistashop.entities.product.ProductVariant;
 import com.trendistra.trendistashop.entities.user.*;
 import com.trendistra.trendistashop.enums.OrderStatus;
+import com.trendistra.trendistashop.enums.PaymentMethod;
 import com.trendistra.trendistashop.enums.PaymentStatus;
 import com.trendistra.trendistashop.exceptions.OrderCancelException;
 import com.trendistra.trendistashop.exceptions.OrderCreationException;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.repositories.order.CartRepository;
 import com.trendistra.trendistashop.repositories.order.OrderRepository;
+import com.trendistra.trendistashop.repositories.order.PaymentRepository;
 import com.trendistra.trendistashop.repositories.product.ProductVariantRepository;
 import com.trendistra.trendistashop.services.IOrderService;
+import jakarta.transaction.Transactional;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +27,10 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,25 +47,33 @@ public class OrderService implements IOrderService {
     private ProductVariantRepository productVariantRepository;
     @Autowired
     private CartRepository cartRepository;
+    @Autowired
+    private PaymentRepository paymentRepository;
+    @Autowired
+    private VietQRService vietQRService;
+    @Autowired
+    private VietQRConfig vietQRConfig;
 
     @Override
     public OrderDetailDTO updateOrderByOrder(OrderRequest orderRequest, Principal principal) {
         return null;
     }
+
     @Override
     public List<OrderDetailDTO> getAllOrder(Principal principal) {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
         List<Order> orders = orderRepository.findByUser(user);
         return orders.stream()
                 .map(this::convertToOrderDetailDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private List<OrderItemDTO> getItemDetails(List<OrderItem> orderItems) {
         return orderItems.stream()
                 .map(this::convertToOrderItemDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
+
     @Override
     public void cancelOrderByOrderId(UUID id, Principal principal) {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
@@ -78,18 +94,19 @@ public class OrderService implements IOrderService {
     }
 
     @Override
+    @Transactional
     public OrderDetailDTO saveOrder(OrderRequest orderRequest, Principal principal) throws OrderCreationException {
         try {
             UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
             Cart useCart = user.getUserCart();
             if (useCart.getCartItems().isEmpty()) {
-                new OrderCreationException("No products in cart");
+                throw new OrderCreationException("No products in cart");
             }
             List<UUID> listItemIds = orderRequest.getOrderItems()
                     .stream()
                     .map(CartItemDTO::getId) // Extract IDs
                     .collect(Collectors.toList()); // Collect into a List
-            if(listItemIds == null || listItemIds.isEmpty()) {
+            if (listItemIds == null || listItemIds.isEmpty()) {
                 throw new OrderCreationException("No items selected for order");
             }
             List<CartItem> selectedItems = useCart.getCartItems().stream()
@@ -106,6 +123,7 @@ public class OrderService implements IOrderService {
                             () -> new ResourceNotFoundEx("Address not found for the given ID")
                     );
             BigDecimal totalAmount = calculateTotalAmount(selectedItems);
+            String orderCode = generateOrderCode();
             Order order = new Order().builder()
                     .user(user)
                     .address(address)
@@ -113,12 +131,18 @@ public class OrderService implements IOrderService {
                     .expectedDeliveryDate(calculateExpectedDeliveryDate())
                     .orderStatus(OrderStatus.PENDING)
                     .paymentMethod(orderRequest.getPaymentMethod())
+                    .orderCoder(orderCode)
+                    .note(orderRequest.getNote())
+                    .expiredAt(LocalDateTime.now().plusMinutes(VietQRConfig.ORDER_TIMEOUT_MINUTES))
+                    .orderDate(LocalDateTime.now())
                     .build();
             Order saveOrder = orderRepository.save(order);
             List<OrderItem> orderItems = processOrderItem(selectedItems, saveOrder);
             saveOrder.setOrderItems(orderItems);
-            Payment payment = createPayment(saveOrder);
+            Payment payment = createPayment(saveOrder, vietQRService, orderRequest.getBankApp());
+            log.info("Payment created: {}", payment);
             saveOrder.setPayment(payment);
+            paymentRepository.save(payment);
             // Remove item in cart
             removeItemsFromCart(useCart, selectedItems);
             return convertToOrderDetailDTO(orderRepository.save(saveOrder));
@@ -138,7 +162,7 @@ public class OrderService implements IOrderService {
         return null;
     }
 
-    private List<OrderItem> processOrderItem(List<CartItem> cartItems, Order order)  {
+    private List<OrderItem> processOrderItem(List<CartItem> cartItems, Order order) {
         return cartItems.stream()
                 .map(cartItem -> {
                     try {
@@ -156,7 +180,7 @@ public class OrderService implements IOrderService {
 
     private OrderItem covertCartItemToOrderItem(CartItem cartItem, Order order) throws OrderCreationException {
         Product product = cartItem.getCartProduct();
-        if(product == null) {
+        if (product == null) {
             throw new OrderCreationException("Product not found for cart item: " + cartItem.getId());
         }
 
@@ -183,9 +207,9 @@ public class OrderService implements IOrderService {
                 .order(order)
                 .build();
     }
-    
+
     private void removeItemsFromCart(Cart cart, List<CartItem> itemsToRemove) {
-        if(cart == null || itemsToRemove == null || itemsToRemove.isEmpty()) {
+        if (cart == null || itemsToRemove == null || itemsToRemove.isEmpty()) {
             return;
         }
         BigDecimal totalToRemove = itemsToRemove.stream()
@@ -198,11 +222,17 @@ public class OrderService implements IOrderService {
         cartRepository.save(cart);
         System.out.println("Delete item success");
     }
+
     private BigDecimal calculateTotalAmount(List<CartItem> items) {
         return items.stream()
                 .map(item -> item.getCartProduct().getPrice()
                         .multiply(BigDecimal.valueOf(item.getCartItemQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private String generateOrderCode() {
+        return "ORD" + System.currentTimeMillis() +
+                RandomStringUtils.randomNumeric(4);
     }
 
     private Date calculateExpectedDeliveryDate() {
@@ -211,13 +241,32 @@ public class OrderService implements IOrderService {
         return calendar.getTime();
     }
 
-    private Payment createPayment(Order order) {
+    private Payment createPayment(Order order, VietQRService vietQRService, String bankApp) {
+        // Tao QR Code thanh toan
+        String qrCode = null;
+        String deeplinkUrl = null;
+        if (order.getPaymentMethod().equals(PaymentMethod.QR_CODE)) {
+            // Tạo QR Code thanh toán
+            qrCode = vietQRService.generateQRCode(order);
+            if (bankApp != null) {
+                deeplinkUrl = String.format("https://dl.vietqr.io/pay?app=%s&ba=%s&am=%d&tn=%s",
+                        bankApp, vietQRConfig.getAccountNo(), order.getTotalAmount().toBigInteger(), order.getOrderCoder());
+            }
+            log.info("Deep link generated: {}", deeplinkUrl);
+        } else if (order.getPaymentMethod().equals(PaymentMethod.COD)) {
+            log.info("Payment method is Cash on Delivery (COD). No QR code or deeplink required.");
+        }
+
         return Payment.builder()
-                .paymentStatus(PaymentStatus.PENDING)
+                .transactionId(null)
+                .paymentStatus(PaymentStatus.CREATED)
                 .order(order)
-                .paymentDate(new Date())
+                .createdAt(LocalDateTime.now())
+                .paidAt(null)
                 .paymentMethod(order.getPaymentMethod())
                 .amount(order.getTotalAmount())
+                .qrCode(qrCode)
+                .deepLink(deeplinkUrl)
                 .build();
     }
 
@@ -231,8 +280,10 @@ public class OrderService implements IOrderService {
                 .address(modelMapper.map(order.getAddress(), AddressDTO.class))
                 .totalAmount(order.getTotalAmount())
                 .expectedDeliveryDate(order.getExpectedDeliveryDate())
+                .payment(order.getPayment())
                 .build();
     }
+
     private OrderItemDTO convertToOrderItemDTO(OrderItem orderItem) {
         return OrderItemDTO.builder()
                 .id(orderItem.getId())

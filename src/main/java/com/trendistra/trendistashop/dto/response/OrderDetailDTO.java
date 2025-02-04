@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.trendistra.trendistashop.entities.user.Address;
+import com.trendistra.trendistashop.entities.user.Payment;
 import com.trendistra.trendistashop.enums.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,4 +29,5 @@ public class OrderDetailDTO {
     private Date expectedDeliveryDate;
     @JsonProperty("orderItems")
     private List<OrderItemDTO> orderItemList;
+    private Payment payment;
 }

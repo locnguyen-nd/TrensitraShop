@@ -27,4 +27,6 @@ public class OrderRequest {
     private Double discount;
     private String paymentMethod;
     private Date expectedDeliverDate;
+    private String bankApp;
+    private String note;
 }

@@ -37,7 +37,7 @@ public class CartItemService {
 
         // Check stock availability
         if (productVariant.getStockQuantity() < cartDTO.getQuantity()) {
-            throw new OrderCreationException("Insufficient stock for product variant: " + productVariant.getId());
+            throw new OrderCreationException("Insufficient stock for product variant: " + productVariant.getProduct().getName());
         }
         CartItem newItem = CartItem.builder()
                 .cart(useCart)

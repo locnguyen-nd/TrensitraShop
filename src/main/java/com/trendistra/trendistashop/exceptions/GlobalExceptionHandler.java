@@ -1,5 +1,6 @@
 package com.trendistra.trendistashop.exceptions;
 
+import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -98,6 +99,12 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    }
+    // Xử lý OrderCreationException
+    @ExceptionHandler(OrderCreationException.class)
+    public ResponseEntity<ErrorResponse> handleOrderCreationException(OrderCreationException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(400, ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 }
 

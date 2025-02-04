@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
 
@@ -27,16 +28,18 @@ public class Payment {
     @EqualsAndHashCode.Exclude
     @JsonBackReference("order-payment")
     private Order order;
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(nullable = false)
-    private Date paymentDate;
     @Column(nullable = false)
     private BigDecimal amount;
     @Column(nullable = false)
     private String paymentMethod;
-    @Column(nullable = false)
+//    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
-
-
+    @Lob
+    @Column(columnDefinition = "MEDIUMTEXT")
+    private String qrCode;
+    private String transactionId;
+    private LocalDateTime createdAt;
+    private LocalDateTime paidAt;
+    private String deepLink;
 }

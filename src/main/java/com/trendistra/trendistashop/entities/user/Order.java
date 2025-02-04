@@ -8,6 +8,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -40,17 +41,21 @@ public class Order extends BaseEntity {
     private OrderStatus orderStatus;
     @Column(nullable = false)
     private String paymentMethod;
-    private String cardNumber; // Số tk thanh toan
+//    private String cardNumber; // Số tk thanh toan
     private String shipmentTrackingNumber; // Số theo dõi lô hàng
     @Temporal(TemporalType.TIMESTAMP)
     private Date expectedDeliveryDate; // ngày giao dự kiến
-
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     @JsonManagedReference("order-items") // Parent side of order-items relationship
     private List<OrderItem> orderItems = new ArrayList<>();
     private Double discount;
+    private String orderCoder;
+    private String note;
+    private LocalDateTime expiredAt;
+    private LocalDateTime orderDate;
+
     @OneToOne(fetch = FetchType.LAZY, mappedBy = "order", cascade = CascadeType.ALL)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
