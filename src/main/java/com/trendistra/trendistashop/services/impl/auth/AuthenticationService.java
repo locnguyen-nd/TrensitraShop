@@ -92,7 +92,7 @@ public class AuthenticationService implements IAuthenticationService {
                         .email(user.getEmail())
                         .phoneNumber(user.getPhoneNumber())
                         .authorityList(user.getRoles().stream()
-                                .map(RoleEntity::getId)
+                                .map(role -> "ROLE_" + role.getName().toUpperCase())
                                 .collect(Collectors.toList()))
                         .isEnabled(user.isEnabled())
                         .token(token)
