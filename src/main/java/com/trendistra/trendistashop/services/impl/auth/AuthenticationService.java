@@ -5,6 +5,7 @@ import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
 import com.trendistra.trendistashop.entities.user.Cart;
+import com.trendistra.trendistashop.entities.user.RoleEntity;
 import com.trendistra.trendistashop.entities.user.UserEntity;
 import com.trendistra.trendistashop.enums.ProviderEnum;
 import com.trendistra.trendistashop.exceptions.AuthenticationFailedException;
@@ -90,6 +91,9 @@ public class AuthenticationService implements IAuthenticationService {
                         .lastName(user.getLastName())
                         .email(user.getEmail())
                         .phoneNumber(user.getPhoneNumber())
+                        .authorityList(user.getRoles().stream()
+                                .map(RoleEntity::getId)
+                                .collect(Collectors.toList()))
                         .isEnabled(user.isEnabled())
                         .token(token)
                         .build();

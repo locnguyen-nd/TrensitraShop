@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Ecommerce</title>
+    <!-- Tham chiếu socket.io-client từ CDN -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #chat {
+            border: 1px solid #ccc;
+            height: 300px;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+<h1>Chat giữa User và Admin</h1>
+<div id="chat"></div>
+<input type="text" id="messageInput" placeholder="Nhập tin nhắn..." />
+<button onclick="sendMessage()">Gửi</button>
+
+<script>
+    // Kết nối đến Socket.IO server (port 9092)
+    const socket = io("http://localhost:9092");
+
+    // Định danh user (ví dụ: userId)
+    const userId = "0fd7847e-063f-4585-8e8d-206839d81d5e";
+
+    socket.on("connect", () => {
+        console.log("Connected with id:", socket.id);
+        // Tải lịch sử chat sau khi kết nối thành công
+        loadChatHistory(userId);
+    });
+
+    socket.on("chat_message", (data) => {
+        console.log("Received message:", data);
+        appendMessage(data);
+    });
+
+    function sendMessage() {
+        const messageInput = document.getElementById("messageInput");
+        const message = messageInput.value.trim();
+        if (message !== "") {
+            const chatMessage = {
+                sender: "admin",  // Hoặc "user", tùy vào vai trò
+                content: message,
+                timestamp: new Date().getTime(),
+                userId: userId
+            };
+            socket.emit("chat_message", chatMessage);
+            messageInput.value = "";
+        }
+    }
+
+    function appendMessage(data) {
+        const chatDiv = document.getElementById("chat");
+        const messageElement = document.createElement("p");
+        messageElement.innerHTML = `<strong>${data.sender}:</strong> ${data.content} <small>${new Date(data.timestamp).toLocaleTimeString()}</small>`;
+        chatDiv.appendChild(messageElement);
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    function loadChatHistory(userId) {
+        fetch("http://localhost:8080/api/v1/chat/history/" + userId)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("HTTP error " + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const chatDiv = document.getElementById("chat");
+                chatDiv.innerHTML = "";
+                data.forEach(msg => {
+                    const date = new Date(msg.timestamp);
+                    const messageHtml = `<p><strong>${msg.sender}:</strong> ${msg.content} <small>${date.toLocaleTimeString()}</small></p>`;
+                    chatDiv.innerHTML += messageHtml;
+                });
+            })
+            .catch(error => console.error("Error fetching chat history:", error));
+    }
+</script>
+</body>
+</html>

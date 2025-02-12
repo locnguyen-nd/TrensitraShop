@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -19,7 +20,7 @@ public class LoginResponse {
     private String lastName;
     private String phoneNumber;
     private String email;
-    private Set<Object> authorityList;
+    private List<Object> authorityList;
     private String token;
     private Boolean isEnabled;
 }

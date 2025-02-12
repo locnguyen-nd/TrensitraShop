@@ -63,6 +63,7 @@ public class WebSecurityConfig {
             "/api/v1/role/**",
             "/api/v1/permissions/**",
             "/api/v1/home/**",
+            "/api/v1/collections/**",
             "/oauth2/**"
     };
     /**
@@ -100,6 +101,7 @@ public class WebSecurityConfig {
                             "/",
                             "/login/**",
                             "/oauth2/**",
+                            "/api/v1/chat/**",
                             "/oauth2/callback**",
                             "/error").permitAll();
                     auth.anyRequest().authenticated();
@@ -120,12 +122,12 @@ public class WebSecurityConfig {
                                 response.getWriter().write("Logged out successfully");
                             });
                 })
-                .oauth2Login(oauth2 -> oauth2
-                        .defaultSuccessUrl("/oauth2/success", true)
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(oAuth2UserService())
-                        )
-                )
+//                .oauth2Login(oauth2 -> oauth2
+//                        .defaultSuccessUrl("/oauth2/success", true)
+//                        .userInfoEndpoint(userInfo -> userInfo
+//                                .userService(oAuth2UserService())
+//                        )
+//                )
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .addFilterBefore(new JWTAuthenticationFilter(jwtTokenHelper, userDetailsService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
@@ -175,7 +177,7 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(frontendUrl));
+        configuration.setAllowedOrigins(Arrays.asList(frontendUrl,"/**"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

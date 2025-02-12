@@ -21,7 +21,7 @@ public class UserDetailMapper {
                 userEntity.getRoles()
                         .stream()
                         .map(roleEntity -> roleEntity.getId())
-                        .collect(Collectors.toSet()));
+                        .collect(Collectors.toList()));
         userDTO.setAddressList(userEntity.getAddressList());
         return userDTO;
     }

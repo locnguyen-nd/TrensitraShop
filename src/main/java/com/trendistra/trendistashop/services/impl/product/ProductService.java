@@ -334,7 +334,7 @@ public class ProductService implements IProductService {
     }
 
     // Helper method to map Product to ProductDto
-    private ProductDTO mapToProductDto(Product product) {
+    public ProductDTO mapToProductDto(Product product) {
         return ProductDTO.builder()
                 .id(product.getId())
                 .name(product.getName())

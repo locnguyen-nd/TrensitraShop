@@ -107,12 +107,14 @@ public class CategoryService {
             String imageUrl = cloudinaryService.uploadFile(imageFile, null, "CATEGORIES");
             existingCategory.setImageUrl(imageUrl);
         }
-
-        // Cập nhật các trường
-        existingCategory.setName(categoryDTO.getName());
-        existingCategory.setSlug(generateSlug.generateSlug(categoryDTO.getName()));
-        existingCategory.setDescription(categoryDTO.getDescription());
-
+        // Cập nhật các trường nếu dữ liệu mới khác dữ liệu cũ
+        if (!existingCategory.getName().equals(categoryDTO.getName())) {
+            existingCategory.setName(categoryDTO.getName());
+            existingCategory.setSlug(generateSlug.generateSlug(categoryDTO.getName()));
+        }
+        if (!existingCategory.getDescription().equals(categoryDTO.getDescription())) {
+            existingCategory.setDescription(categoryDTO.getDescription());
+        }
         // Cập nhật danh mục cha
         if (categoryDTO.getParentId() != null) {
             Category parentCategory = categoryRepository.findById(categoryDTO.getParentId())
@@ -121,10 +123,12 @@ public class CategoryService {
         }
 
         // Cập nhật giới tính
-        Gender gender = genderRepository.findById(categoryDTO.getGender().getId())
-                .orElseThrow(() -> new ResourceNotFoundEx("Gender not found"));
-        existingCategory.setGender(gender);
-
+        if (categoryDTO.getGender() != null &&
+                (existingCategory.getGender() == null || !existingCategory.getGender().getId().equals(categoryDTO.getGender().getId()))) {
+            Gender gender = genderRepository.findById(categoryDTO.getGender().getId())
+                    .orElseThrow(() -> new ResourceNotFoundEx("Gender not found"));
+            existingCategory.setGender(gender);
+        }
         // Lưu thay đổi
         Category updatedCategory = categoryRepository.save(existingCategory);
         return convertToDTO(updatedCategory);
