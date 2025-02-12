@@ -175,5 +175,14 @@
     <orderEntry type="library" name="Maven: io.micrometer:micrometer-core:1.13.4" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.hdrhistogram:HdrHistogram:2.2.2" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.latencyutils:LatencyUtils:2.0.3" level="project" />
+    <orderEntry type="library" name="Maven: com.corundumstudio.socketio:netty-socketio:2.0.12" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-buffer:4.1.113.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-common:4.1.113.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-transport:4.1.113.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-resolver:4.1.113.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-handler:4.1.113.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-transport-native-unix-common:4.1.113.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-codec-http:4.1.113.Final" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty-codec:4.1.113.Final" level="project" />
   </component>
 </module>

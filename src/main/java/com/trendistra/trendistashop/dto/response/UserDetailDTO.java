@@ -24,6 +24,6 @@ public class UserDetailDTO {
         private String email;
         private boolean enabled;
         private ProviderEnum provider;
-        private Set<Object> authorityList;
+        private List<Object> authorityList;
         private List<Address> addressList;
 }

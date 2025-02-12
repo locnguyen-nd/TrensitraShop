@@ -1,5 +1,6 @@
 package com.trendistra.trendistashop.entities.product;
 
+import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.enums.DiscountType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,6 +10,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Table(name = "Discount")
@@ -54,4 +57,8 @@ public class Discount {
     private Integer maxUsagePerCustomer; // Số lần sử dụng voucher cho mỗi khách hàng
     @Column(name = "is_active")
     private Boolean isActive = true; // trạng thái
+    @ManyToMany(mappedBy = "discounts")
+    private List<Product> products = new ArrayList<>();
+    @ManyToMany(mappedBy = "discounts")
+    private List<Category> categories = new ArrayList<>();
 }

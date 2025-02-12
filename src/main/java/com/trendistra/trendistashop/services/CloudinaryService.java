@@ -75,4 +75,26 @@ public class CloudinaryService {
         String fileName = parts[parts.length - 1];
         return fileName.substring(0, fileName.lastIndexOf("."));
     }
+    /**
+     * ✅ Deletes all files in a folder using a prefix match.
+     */
+    public void deleteFilesInFolder(String folderPath) {
+        try {
+            cloudinary.api().deleteResourcesByPrefix(folderPath, ObjectUtils.emptyMap());
+            logger.info("All files deleted in folder: {}", folderPath);
+        } catch (Exception e) {
+            logger.error("Error deleting files in folder '{}': {}", folderPath, e.getMessage());
+        }
+    }
+    /**
+     * ✅ Deletes a folder in Cloudinary.
+     */
+    public void deleteFolder(String folderPath) {
+        try {
+            cloudinary.api().deleteFolder(folderPath, ObjectUtils.emptyMap());
+            logger.info("Cloudinary folder deleted: {}", folderPath);
+        } catch (Exception e) {
+            logger.error("Error deleting folder '{}': {}", folderPath, e.getMessage());
+        }
+    }
 }

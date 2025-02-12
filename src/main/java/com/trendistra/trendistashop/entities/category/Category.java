@@ -37,7 +37,7 @@ public class Category extends BaseEntity {
     @ManyToOne(optional = false)
     @JoinColumn(name = "gender_id", referencedColumnName = "id", nullable = false)
     private Gender gender; // Giới tính (liên kết với Gender)
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @JoinTable(
             name = "category_discount",
             joinColumns = @JoinColumn(name = "category_id"),

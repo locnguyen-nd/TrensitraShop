@@ -146,8 +146,13 @@ public class DiscountService {
         existingDiscount.setIsActive(discountDto.getIsActive() != null ? discountDto.getIsActive() : true);
         // Upload ảnh
         if (imageFile != null && !imageFile.isEmpty()) {
+            if (existingDiscount.getFrame() != null) {
+                cloudinaryService.deleteFile(extractPublicIdFromUrl(existingDiscount.getFrame()));
+            }
             String imageUrl = cloudinaryService.uploadFile(imageFile, null, "Discount Frame");
             existingDiscount.setFrame(imageUrl);
+        } else {
+            existingDiscount.setFrame(discountDto.getFrame());
         }
         Discount updatedDiscount = discountRepository.save(existingDiscount);
         // For Categories
@@ -196,7 +201,13 @@ public class DiscountService {
     public void deleteDiscount(UUID id) {
         Discount discount = discountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Discount not found"));
-
+        for(Product product : discount.getProducts()) {
+            product.getDiscounts().remove(discount);
+        }
+        for (Category category : discount.getCategories()) {
+            category.getDiscounts().remove(discount);
+        }
+        discountRepository.save(discount);
         discountRepository.delete(discount);
     }
 
@@ -374,6 +385,11 @@ public class DiscountService {
 
     private void updateProductPrice(Product product) {
         productRepository.save(product);
+    }
+    private String extractPublicIdFromUrl(String url) {
+        String[] parts = url.split("/");
+        String filename = parts[parts.length - 1];
+        return "BANNER/" + filename.split("\\.")[0];
     }
 
 }
