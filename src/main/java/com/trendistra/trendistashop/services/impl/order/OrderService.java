@@ -23,6 +23,7 @@ import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
@@ -55,8 +56,16 @@ public class OrderService implements IOrderService {
     private VietQRConfig vietQRConfig;
 
     @Override
-    public OrderDetailDTO updateOrderByOrder(OrderRequest orderRequest, Principal principal) {
-        return null;
+    public OrderDetailDTO updateOrderStatus(UUID orderId,OrderStatus orderStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundEx("Order not found for ID: " + orderId));
+        order.setOrderStatus(orderStatus);
+        if(orderStatus.equals(OrderStatus.SHIPPED)) {
+            order.getPayment().setPaymentStatus(PaymentStatus.COMPLETED);
+        }
+        orderRepository.save(order);
+        // gửi thôngbaoso qua mail and thông báo đơn hàng
+        return convertToOrderDetailDTO(order);
     }
 
     @Override
@@ -130,7 +139,7 @@ public class OrderService implements IOrderService {
                     .totalAmount(totalAmount)
                     .expectedDeliveryDate(calculateExpectedDeliveryDate())
                     .orderStatus(OrderStatus.PENDING)
-                    .paymentMethod(orderRequest.getPaymentMethod())
+                    .paymentMethod(PaymentMethod.valueOf(orderRequest.getPaymentMethod()))
                     .orderCoder(orderCode)
                     .note(orderRequest.getNote())
                     .expiredAt(LocalDateTime.now().plusMinutes(VietQRConfig.ORDER_TIMEOUT_MINUTES))
@@ -245,15 +254,19 @@ public class OrderService implements IOrderService {
         // Tao QR Code thanh toan
         String qrCode = null;
         String deeplinkUrl = null;
-        if (order.getPaymentMethod().equals(PaymentMethod.QR_CODE)) {
+        String paymentMethod = null;
+        if (order.getPaymentMethod().equals(PaymentMethod.QR)) {
             // Tạo QR Code thanh toán
             qrCode = vietQRService.generateQRCode(order);
+            paymentMethod = PaymentMethod.QR.name();
             if (bankApp != null) {
                 deeplinkUrl = String.format("https://dl.vietqr.io/pay?app=%s&ba=%s&am=%d&tn=%s",
                         bankApp, vietQRConfig.getAccountNo(), order.getTotalAmount().toBigInteger(), order.getOrderCoder());
             }
             log.info("Deep link generated: {}", deeplinkUrl);
         } else if (order.getPaymentMethod().equals(PaymentMethod.COD)) {
+            paymentMethod = PaymentMethod.COD.name();
+            order.setOrderStatus(OrderStatus.PROCESSING);
             log.info("Payment method is Cash on Delivery (COD). No QR code or deeplink required.");
         }
 
@@ -263,11 +276,61 @@ public class OrderService implements IOrderService {
                 .order(order)
                 .createdAt(LocalDateTime.now())
                 .paidAt(null)
-                .paymentMethod(order.getPaymentMethod())
+                .paymentMethod(PaymentMethod.valueOf(paymentMethod))
                 .amount(order.getTotalAmount())
                 .qrCode(qrCode)
                 .deepLink(deeplinkUrl)
                 .build();
+    }
+    @Transactional
+    @Override
+    public   OrderDetailDTO retryPayment (UUID orderId, String bankApp, String paymentMethod) {
+        Order order = orderRepository.findById(orderId).get();
+        Payment newPayment = new Payment();
+        if (order == null) {
+            throw new ResourceNotFoundEx("Order not found for ID: " + orderId);
+        }
+        // Kiểm tra hình thức thanh toán và trạng thái đơn hàng
+        if (!order.getPayment().getPaymentMethod().equals(PaymentMethod.QR)) {
+            throw new OrderCreationException("Order payment method is not QR. Retry payment not applicable.");
+        }
+        if (!order.getOrderStatus().equals(OrderStatus.PENDING)) {
+            throw new OrderCreationException("Order is not pending payment.");
+        }
+        if(paymentMethod != null) {
+            order.setPaymentMethod(PaymentMethod.valueOf(paymentMethod));
+            if(order.getPaymentMethod().equals(PaymentMethod.COD)) {
+                order.setOrderStatus(OrderStatus.PROCESSING);
+            }
+        }
+        // Nếu Payment hiện tại chưa hết hạn, không cho phép retry
+        if (order.getExpiredAt() != null && LocalDateTime.now().isBefore(order.getExpiredAt())) {
+            newPayment = order.getPayment();
+        }
+        // Nếu QR cũ đã hết hạn, cập nhật trạng thái của Payment cũ thành FAILED
+        if (order.getPayment() != null && order.getExpiredAt() != null && LocalDateTime.now().isAfter(order.getExpiredAt())) {
+            // Tạo thông tin mới cho Payment (cập nhật nếu đã có, hoặc tạo mới nếu chưa có)
+            String newQrCode = vietQRService.generateQRCode(order);
+            String newDeepLink = null;
+            if (bankApp != null) {
+                newDeepLink = String.format("https://dl.vietqr.io/pay?app=%s&ba=%s&am=%d&tn=%s",
+                        bankApp, vietQRConfig.getAccountNo(), order.getTotalAmount().toBigInteger(), order.getOrderCoder());
+            }
+            log.info("New deep link generated: {}", newDeepLink);
+            Payment oldPayment = order.getPayment();
+            oldPayment.setPaymentStatus(PaymentStatus.CREATED);
+            oldPayment.setDeepLink(newDeepLink);
+            oldPayment.setQrCode(newQrCode);
+            oldPayment.setCreatedAt(LocalDateTime.now());
+            oldPayment.setPaidAt(LocalDateTime.now().plusMinutes(VietQRConfig.ORDER_TIMEOUT_MINUTES));
+            paymentRepository.save(oldPayment);
+            log.info("Old QR payment updated.");
+            newPayment = oldPayment;
+        }
+        // Cập nhật lại đơn hàng: gán Payment mới và reset thời gian hết hạn (ví dụ: thêm 10 phút)
+        order.setPayment(newPayment);// Lưu lại đơn hàng và Payment mới
+        orderRepository.save(order);
+        return convertToOrderDetailDTO(order);
     }
 
     private OrderDetailDTO convertToOrderDetailDTO(Order order) {
@@ -300,5 +363,21 @@ public class OrderService implements IOrderService {
         return productVariantRepository.findById(variantId)
                 .map(variant -> modelMapper.map(variant, VariantDTO.class))
                 .orElse(null); // Handle the case where the variant is not found
+    }
+    @Scheduled(fixedRate = 60000)
+    public void checkOrderStatus() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Order> expiredOrders = orderRepository.findAllByExpiredAtBeforeAndPayment_PaymentStatus( now,PaymentStatus.CREATED);
+        if (expiredOrders.isEmpty()) {
+            return;
+        }
+        for (Order order : expiredOrders) {
+            Payment payment = order.getPayment();
+            if(payment != null) {
+                payment.setPaymentStatus(PaymentStatus.FAILED);
+                paymentRepository.save(payment);
+                log.info("Cập nhật Order {}: Payment chuyển sang PAID", order.getId());
+            }
+        }
     }
 }

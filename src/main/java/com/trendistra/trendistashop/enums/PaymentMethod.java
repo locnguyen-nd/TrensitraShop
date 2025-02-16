@@ -1,6 +1,6 @@
 package com.trendistra.trendistashop.enums;
 
 public enum PaymentMethod {
-    QR_CODE,
+    QR,
     COD
 }

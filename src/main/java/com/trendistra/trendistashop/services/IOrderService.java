@@ -3,6 +3,8 @@ package com.trendistra.trendistashop.services;
 import com.trendistra.trendistashop.dto.request.OrderRequest;
 import com.trendistra.trendistashop.dto.response.OrderDetailDTO;
 import com.trendistra.trendistashop.entities.user.Order;
+import com.trendistra.trendistashop.enums.OrderStatus;
+import com.trendistra.trendistashop.enums.PaymentMethod;
 import com.trendistra.trendistashop.exceptions.OrderCreationException;
 import jakarta.transaction.Transactional;
 
@@ -19,6 +21,7 @@ public interface IOrderService {
     List<OrderDetailDTO> getAllOrder(Principal principal);
 
     public void cancelOrderByOrderId(UUID id, Principal principal);
-    public  OrderDetailDTO updateOrderByOrder(OrderRequest orderRequest, Principal principal);
+    public OrderDetailDTO retryPayment(UUID orderId, String bankCode, String paymentMethod);
+    public  OrderDetailDTO updateOrderStatus(UUID orderId, OrderStatus orderStatus);
 
 }

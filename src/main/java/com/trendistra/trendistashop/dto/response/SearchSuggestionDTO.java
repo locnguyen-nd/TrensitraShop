@@ -6,6 +6,7 @@ import java.util.List;
 
 @Data
 public class SearchSuggestionDTO {
+    private List<ProductDTO> products;
     private List<String> productNames;
-    private List<String> categoryNames;
+    private List<String> categorySlug;
 }

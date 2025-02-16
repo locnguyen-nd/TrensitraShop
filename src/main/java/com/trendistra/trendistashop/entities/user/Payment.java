@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.entities.user;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.trendistra.trendistashop.enums.PaymentMethod;
 import com.trendistra.trendistashop.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,7 +32,8 @@ public class Payment {
     @Column(nullable = false)
     private BigDecimal amount;
     @Column(nullable = false)
-    private String paymentMethod;
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
 //    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;

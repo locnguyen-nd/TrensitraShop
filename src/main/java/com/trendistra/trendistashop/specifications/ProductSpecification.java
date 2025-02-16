@@ -51,7 +51,7 @@ public class ProductSpecification {
     public static Specification<Product> hasGenderSlug(String slug) {
         return (root, query, criteriaBuilder) -> {
             if (slug == null) {
-                return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu genderId là null
+                return criteriaBuilder.conjunction();
             }
             Join<Product, Category> categoryJoin = root.join("category");
             return criteriaBuilder.equal(categoryJoin.get("gender").get("slug"), slug);
@@ -60,7 +60,7 @@ public class ProductSpecification {
     public static Specification<Product> hasColorCode(String code) {
         return (root, query, criteriaBuilder) -> {
             if (code == null) {
-                return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu colorId là null
+                return criteriaBuilder.conjunction();
             }
             Join<Product, ProductVariant> variantJoin = root.join("productVariants", JoinType.INNER);
             return criteriaBuilder.equal(variantJoin.get("color").get("code"), code);
@@ -69,7 +69,7 @@ public class ProductSpecification {
     public static Specification<Product> hasSizeValue(String value) {
         return (root, query, criteriaBuilder) -> {
             if (value == null) {
-                return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu colorId là null
+                return criteriaBuilder.conjunction();
             }
             Join<Product, ProductVariant> variantJoin = root.join("productVariants",JoinType.INNER);
             return criteriaBuilder.equal(variantJoin.get("size").get("value"), value);

@@ -18,6 +18,7 @@ import com.trendistra.trendistashop.repositories.product.DiscountRepository;
 import com.trendistra.trendistashop.repositories.product.ProductRepository;
 import com.trendistra.trendistashop.services.CloudinaryService;
 import com.trendistra.trendistashop.services.IProductService;
+import com.trendistra.trendistashop.specifications.ProductSpecification;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,17 +76,22 @@ public class ProductService implements IProductService {
         if(keyword == null || keyword.trim().isEmpty()) {
             return  new SearchSuggestionDTO();
         }
-        List<String> productNames = productRepository.findProductNames(
+        List<Product> products = productRepository.findProductNames(
                 keyword.toLowerCase().trim(),
                 PageRequest.of(0, suggestionLimit)
         );
-        List<String> categoryNames = categoryRepository.findCategoryNames(
+        List<String> categorySlugs = categoryRepository.findCategorySlugs(
                 keyword.toLowerCase().trim(),
                 PageRequest.of(0, suggestionLimit)
         );
         SearchSuggestionDTO result = new SearchSuggestionDTO();
-        result.setProductNames(productNames);
-        result.setCategoryNames(categoryNames);
+        result.setProductNames(products.stream()
+                .map(Product::getName)
+                .collect(Collectors.toList()));
+        result.setProducts(products.stream()
+                .map(this::mapToProductDto)
+                .collect(Collectors.toList()));
+        result.setCategorySlug(categorySlugs);
         return result;
     }
     @Override
@@ -190,39 +196,37 @@ public class ProductService implements IProductService {
     public Page<ProductDTO> filterProduct(String categorySlug, String genderSlug, String colorCode,
                                           String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest) {
         // Nếu có cate thì kiểm tra xem có parent không nếu có thì search parent chính nó còn nếu kh search chính nó
-        String parentSlug = null;
+        Specification<Product> spec = Specification.where(ProductSpecification.hasStatus(true));
+
+        // Xử lý bộ lọc theo Category
         if (categorySlug != null) {
-            Optional<Category> category = categoryRepository.findBySlug(categorySlug);
-            if (category.isPresent() && category.get().getParent() == null) {
-                parentSlug = categorySlug;
-                categorySlug = null;
+            Optional<Category> categoryOpt = categoryRepository.findBySlug(categorySlug);
+            if (categoryOpt.isPresent() && categoryOpt.get().getParent() == null) {
+                // Nếu category là parent thì tìm theo điều kiện:
+                // Sản phẩm thuộc category có slug = categorySlug OR sản phẩm thuộc category con của category đó
+                spec = spec.and((root, query, cb) -> cb.or(
+                        cb.equal(root.get("category").get("slug"), categorySlug),
+                        cb.equal(root.get("category").get("parent").get("slug"), categorySlug)
+                ));
+            } else {
+                // Nếu không phải parent thì lọc theo categorySlug của chính category đó
+                spec = spec.and(ProductSpecification.hasCategorySlug(categorySlug));
             }
         }
-        // Xây dựng Specification linh hoạt
-        Specification<Product> productSpecification = Specification.where(null);
-
-        if (categorySlug != null) {
-            productSpecification = productSpecification.and(hasCategorySlug(categorySlug));
-        }
-        if (parentSlug != null) {
-            productSpecification = productSpecification.and(hasParentCategorySlug(parentSlug));
-        }
         if (genderSlug != null) {
-            productSpecification = productSpecification.and(hasGenderSlug(genderSlug));
+            spec = spec.and(ProductSpecification.hasGenderSlug(genderSlug));
         }
         if (colorCode != null) {
-            productSpecification = productSpecification.and(hasColorCode(colorCode));
+            spec = spec.and(ProductSpecification.hasColorCode(colorCode));
         }
         if (sizeValue != null) {
-            productSpecification = productSpecification.and(hasSizeValue(sizeValue));
+            spec = spec.and(ProductSpecification.hasSizeValue(sizeValue));
         }
         if (minPrice != null && maxPrice != null) {
-            productSpecification = productSpecification.and(hasPriceBetween(minPrice, maxPrice));
+            spec = spec.and(ProductSpecification.hasPriceBetween(minPrice, maxPrice));
         }
-        // Luôn lọc theo trạng thái (status = true)
-        productSpecification = productSpecification.and(hasStatus(true));
         // Tìm kiếm sản phẩm theo điều kiện và phân trang
-        Page<Product> productPage = productRepository.findAll(productSpecification, pageRequest);
+        Page<Product> productPage = productRepository.findAll(spec, pageRequest);
         if(productPage.isEmpty()) {
             throw new ResourceNotFoundEx(String.format("Don't find any product with filter"));
         }

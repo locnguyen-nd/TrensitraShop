@@ -3,6 +3,8 @@ package com.trendistra.trendistashop.controllers.user;
 import com.trendistra.trendistashop.dto.request.OrderRequest;
 import com.trendistra.trendistashop.dto.response.OrderDetailDTO;
 import com.trendistra.trendistashop.entities.user.Order;
+import com.trendistra.trendistashop.enums.OrderStatus;
+import com.trendistra.trendistashop.enums.PaymentMethod;
 import com.trendistra.trendistashop.exceptions.OrderCreationException;
 import com.trendistra.trendistashop.services.IOrderService;
 import com.trendistra.trendistashop.services.impl.order.OrderService;
@@ -33,9 +35,19 @@ public class OrderController {
         OrderDetailDTO order = orderService.saveOrder(orderRequest, principal);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
+    @PostMapping("/{orderId}/retry-payment")
+    public ResponseEntity<OrderDetailDTO> retryPayment(@PathVariable UUID orderId, String bankCode, String paymentMethod) {
+        OrderDetailDTO order = orderService.retryPayment(orderId,bankCode, paymentMethod);
+        return new ResponseEntity<>(order, HttpStatus.OK);
+    }
     @PutMapping("/cancel/{id}")
     public ResponseEntity<String> cancelOrder(@PathVariable UUID id, Principal principal){
         orderService.cancelOrderByOrderId(id,principal);
         return ResponseEntity.ok("Your order has been canceled successfully.");
+    }
+    @PutMapping("/{orderId}/update-status")
+    public ResponseEntity<OrderDetailDTO> updateOrderStatus(@PathVariable UUID orderId, OrderStatus orderStatus) {
+        OrderDetailDTO order = orderService.updateOrderStatus(orderId, orderStatus);
+        return new ResponseEntity<>(order, HttpStatus.OK);
     }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.enums.OrderStatus;
+import com.trendistra.trendistashop.enums.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -40,7 +41,8 @@ public class Order extends BaseEntity {
     @Column(nullable = false)
     private OrderStatus orderStatus;
     @Column(nullable = false)
-    private String paymentMethod;
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
 //    private String cardNumber; // Số tk thanh toan
     private String shipmentTrackingNumber; // Số theo dõi lô hàng
     @Temporal(TemporalType.TIMESTAMP)
