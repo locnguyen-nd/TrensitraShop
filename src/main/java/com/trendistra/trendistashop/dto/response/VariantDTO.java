@@ -17,6 +17,7 @@ public class VariantDTO {
     private UUID sizeId;
     private String colorName;
     private String colorCode;
+    private String colorValue;
     private  String sizeName;
     private  Integer stockQuantity;
     private String codeVariant;
