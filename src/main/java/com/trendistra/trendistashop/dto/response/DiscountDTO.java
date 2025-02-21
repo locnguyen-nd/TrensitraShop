@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.validator.constraints.Length;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,9 +20,8 @@ import java.util.UUID;
 @Builder
 public class DiscountDTO {
     private UUID id;
-    @NotBlank(message = "name not blank")
-    private String name;
-    @NotBlank(message = "description not blank")
+    @Length(max = 6)
+    private String code;
     private String description; // điều kiện áp dụng
     @NotBlank(message = "discount type not blank")
     private DiscountType discountType;

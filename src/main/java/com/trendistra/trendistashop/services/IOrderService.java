@@ -1,5 +1,6 @@
 package com.trendistra.trendistashop.services;
 
+import com.trendistra.trendistashop.dto.request.CreateOrder;
 import com.trendistra.trendistashop.dto.request.OrderRequest;
 import com.trendistra.trendistashop.dto.response.OrderDetailDTO;
 import com.trendistra.trendistashop.entities.user.Order;
@@ -14,14 +15,13 @@ import java.util.UUID;
 
 public interface IOrderService {
 
-    public OrderDetailDTO saveOrder(OrderRequest orderRequest, Principal principal) throws OrderCreationException;
-    public OrderDetailDTO getOrderByOrderId(UUID orderId);
-    public List<OrderDetailDTO> getAllOrder();
-
-    List<OrderDetailDTO> getAllOrder(Principal principal);
+    public OrderDetailDTO checkoutOrder(OrderRequest orderRequest, Principal principal) throws OrderCreationException;
+    public OrderDetailDTO createOrder (CreateOrder createOrder, Principal principal) throws OrderCreationException;
+    List<OrderDetailDTO> getAllOrder(OrderStatus orderStatus, Principal principal);
 
     public void cancelOrderByOrderId(UUID id, Principal principal);
-    public OrderDetailDTO retryPayment(UUID orderId, String bankCode, String paymentMethod);
+    public OrderDetailDTO retryPayment(UUID orderId, String paymentMethod) throws Exception;
     public  OrderDetailDTO updateOrderStatus(UUID orderId, OrderStatus orderStatus);
+    public void updateOrderStatusFromPayment(Long transactionId, String newPaymentStatus) throws Exception;
 
 }

@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.enums;
 
 public enum OrderStatus {
+    CREATED,       // Đơn hàng đã được tạo
     PENDING,       // Đơn hàng đang chờ xử lý
     PROCESSING,    // Đơn hàng đang được xử lý
     SHIPPED,       // Đơn hàng đã được giao đi

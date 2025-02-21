@@ -11,6 +11,7 @@ import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
+import vn.payos.PayOS;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -19,6 +20,12 @@ import java.util.Collections;
 @Configuration
 @Log4j2
 public class WebConfig {
+    private final PayOsConfig payOsConfig;
+
+    public WebConfig(PayOsConfig payOsConfig) {
+        this.payOsConfig = payOsConfig;
+    }
+
     @Bean
     public ModelMapper modelMapper() {
         return new ModelMapper();
@@ -63,4 +70,9 @@ public class WebConfig {
         log.debug("Response Status: {}", response.getStatusCode());
         log.debug("Response Headers: {}", response.getHeaders());
     }
+    @Bean
+    public PayOS payOS() {
+        return new PayOS(payOsConfig.getClientId(), payOsConfig.getApiKey(), payOsConfig.getChecksumKey());
+    }
+
 }

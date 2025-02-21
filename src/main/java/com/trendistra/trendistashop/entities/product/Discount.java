@@ -25,8 +25,8 @@ public class Discount {
     @GeneratedValue
     private UUID id;
 
-    @Column(nullable = false)
-    private String name;
+    @Column(nullable = false,unique = true)
+    private String code;
 
     @Column(columnDefinition = "TEXT")
     private String description;

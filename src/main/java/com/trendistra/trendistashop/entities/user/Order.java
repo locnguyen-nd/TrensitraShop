@@ -3,6 +3,7 @@ package com.trendistra.trendistashop.entities.user;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.trendistra.trendistashop.entities.BaseEntity;
+import com.trendistra.trendistashop.entities.product.Discount;
 import com.trendistra.trendistashop.enums.OrderStatus;
 import com.trendistra.trendistashop.enums.PaymentMethod;
 import jakarta.persistence.*;
@@ -40,10 +41,8 @@ public class Order extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus orderStatus;
-    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
-//    private String cardNumber; // Số tk thanh toan
     private String shipmentTrackingNumber; // Số theo dõi lô hàng
     @Temporal(TemporalType.TIMESTAMP)
     private Date expectedDeliveryDate; // ngày giao dự kiến
@@ -52,8 +51,11 @@ public class Order extends BaseEntity {
     @EqualsAndHashCode.Exclude
     @JsonManagedReference("order-items") // Parent side of order-items relationship
     private List<OrderItem> orderItems = new ArrayList<>();
-    private Double discount;
-    private String orderCoder;
+
+    @ManyToOne
+    @JoinColumn(name = "discount_id") // Tạo khóa ngoại discount_id
+    private Discount discount; // Mã giảm giá được áp dụng
+    private Long orderCoder;
     private String note;
     private LocalDateTime expiredAt;
     private LocalDateTime orderDate;

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.trendistra.trendistashop.dto.response.DiscountApply;
 import com.trendistra.trendistashop.dto.response.DiscountDTO;
 import com.trendistra.trendistashop.services.impl.product.DiscountService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,12 +47,12 @@ public class DiscountController {
         return new ResponseEntity<>(createdDiscount, HttpStatus.CREATED);
     }
 
-    @PostMapping(value = "/apply")
+    @PutMapping(value = "/apply")
     public ResponseEntity<?> applyDiscount(
-            @RequestParam UUID discountId,
-            @RequestParam BigDecimal orderTotal
+            @RequestParam String discountCode,
+            @RequestParam UUID orderId
             ) {
-        DiscountDTO discountDTO = discountService.applyDiscountToOrder(discountId, orderTotal);
+        DiscountApply discountDTO = discountService.applyDiscountToOrder(discountCode, orderId);
         // Check if discount was successfully applied
         if(discountDTO == null) {
             return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Discount can not apply for this order");

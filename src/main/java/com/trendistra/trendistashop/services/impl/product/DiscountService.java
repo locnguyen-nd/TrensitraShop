@@ -1,12 +1,17 @@
 package com.trendistra.trendistashop.services.impl.product;
 
+import com.trendistra.trendistashop.dto.response.DiscountApply;
 import com.trendistra.trendistashop.dto.response.DiscountDTO;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.product.Discount;
 import com.trendistra.trendistashop.entities.product.Product;
+import com.trendistra.trendistashop.entities.user.Order;
 import com.trendistra.trendistashop.enums.DiscountType;
+import com.trendistra.trendistashop.exceptions.DataAccessException;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
+import com.trendistra.trendistashop.helper.GenerateCodeDiscount;
 import com.trendistra.trendistashop.repositories.category.CategoryRepository;
+import com.trendistra.trendistashop.repositories.order.OrderRepository;
 import com.trendistra.trendistashop.repositories.product.DiscountRepository;
 import com.trendistra.trendistashop.repositories.product.ProductRepository;
 import com.trendistra.trendistashop.services.CloudinaryService;
@@ -27,11 +32,14 @@ public class DiscountService {
     @Autowired
     private DiscountRepository discountRepository;
     @Autowired
+    private OrderRepository orderRepository;
+    @Autowired
     private CloudinaryService cloudinaryService;
     @Autowired
     private CategoryRepository categoryRepository;
     @Autowired
     private ProductRepository productRepository;
+    private GenerateCodeDiscount generateCodeDiscount;
 
     // Create
     @Transactional
@@ -39,17 +47,19 @@ public class DiscountService {
                                       List<UUID> categoryTds,
                                       List<UUID> productIds,
                                       MultipartFile imageFile) throws IOException {
-
         // Check if discount with same name already exists
-        if (discountRepository.existsByName(discountDto.getName())) {
-            throw new RuntimeException("Discount with this name already exists");
+
+        if (discountDto.getCode() == null || discountDto.getCode().isBlank()) {
+            discountDto.setCode(generateCodeDiscount.generateUniqueDiscountCode());
+        } else if (discountRepository.existsByCode(discountDto.getCode())) {
+            throw new ResourceNotFoundEx("Discount with this code already exists, you can blank code to system generate code");
         }
 
         // Validate dates
         discountDto = validateDiscount(discountDto);
 
         Discount discount = Discount.builder()
-                .name(discountDto.getName())
+                .code(discountDto.getCode())
                 .description(discountDto.getDescription())
                 .discountType(discountDto.getDiscountType())
                 .discountValue(discountDto.getDiscountValue())
@@ -86,7 +96,7 @@ public class DiscountService {
             discountDTO.setStartDate(LocalDateTime.now());
         }
         if (discountDTO.getStartDate().isAfter(discountDTO.getEndDate())) {
-            throw new RuntimeException("Start date must be before end date");
+            throw new ResourceNotFoundEx("Start date must be before end date");
         }
         if (discountDTO.getEndDate() == null || discountDTO.getEndDate().isBefore(discountDTO.getStartDate())) {
             throw new IllegalArgumentException("Invalid discount end date");
@@ -111,7 +121,7 @@ public class DiscountService {
     // Read One
     public DiscountDTO getDiscountById(UUID id) {
         Discount discount = discountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Discount not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
 
         return mapToDiscountDto(discount);
     }
@@ -133,9 +143,9 @@ public class DiscountService {
         discountDto = validateDiscount(discountDto);
         // Find existing discount
         Discount existingDiscount = discountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Discount not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundEx("Discount not found with id: " + id));
         // Update discount
-        existingDiscount.setName(discountDto.getName());
+        existingDiscount.setCode(discountDto.getCode());
         existingDiscount.setDescription(discountDto.getDescription());
         existingDiscount.setDiscountType(discountDto.getDiscountType());
         existingDiscount.setDiscountValue(discountDto.getDiscountValue());
@@ -200,7 +210,7 @@ public class DiscountService {
     // Delete
     public void deleteDiscount(UUID id) {
         Discount discount = discountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Discount not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
         for(Product product : discount.getProducts()) {
             product.getDiscounts().remove(discount);
         }
@@ -215,28 +225,46 @@ public class DiscountService {
     // Additional method to manage discount activation
     public void setDiscountStatus(UUID id, boolean status) {
         Discount discount = discountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Discount not found"));
+                .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
         discount.setIsActive(status);
         discountRepository.save(discount);
     }
 
-    public DiscountDTO applyDiscountToOrder(UUID discountId, BigDecimal orderTotal) {
-        Discount discountOptional = discountRepository.findById(discountId).orElseThrow(
-                () -> new RuntimeException("Discount not found"));
+    public DiscountApply applyDiscountToOrder(String discountCode, UUID orderId) {
+        Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
+        Order order = orderRepository.findById(orderId).get();
+        if (discountOptional == null || order == null) {
+            throw new ResourceNotFoundEx("Discount or Order not found with code and id: " + discountCode + orderId);
+        }
+        // nếu có rồi thì kh add nữa
+        if (order.getDiscount() != null && order.getDiscount().getCode().equals(discountCode)) {
+            return null;
+        }
         if (!discountOptional.getIsActive()
                 || LocalDateTime.now().isBefore(discountOptional.getStartDate())
                 || LocalDateTime.now().isAfter(discountOptional.getEndDate())) {
             return null;
         }
         // check minimum order value
-        if (orderTotal.compareTo(discountOptional.getMinOrderValue()) < 0) {
+        if (order.getTotalAmount().compareTo(discountOptional.getMinOrderValue()) < 0) {
             return null;
         }
         // Calculate discount amount
-        BigDecimal discountAmount = calculateDiscountAmount(discountOptional, orderTotal);
-        DiscountDTO discountDTO = mapToDiscountDto(discountOptional);
-        discountDTO.setValueApply(discountAmount);
-        return discountDTO;
+        BigDecimal discountAmount = calculateDiscountAmount(discountOptional, order.getTotalAmount());
+        BigDecimal originPrice = order.getOrderItems().stream()
+                .findFirst()
+                .map(orderItem -> orderItem.getProduct().getOriginPrice())
+                .orElse(BigDecimal.ZERO);
+
+        BigDecimal saved = originPrice.subtract(discountAmount);
+        DiscountApply discountApply = DiscountApply.builder()
+                .code(discountOptional.getCode())
+                .valueApply(discountAmount)
+                .saved(saved)
+                .build();
+        order.setDiscount(discountOptional);
+        orderRepository.save(order);
+        return discountApply;
     }
 
     private BigDecimal calculateDiscountAmount(Discount discount, BigDecimal orderTotal) {
@@ -262,7 +290,7 @@ public class DiscountService {
     public DiscountDTO mapToDiscountDto(Discount discount) {
         return DiscountDTO.builder()
                 .id(discount.getId())
-                .name(discount.getName())
+                .code(discount.getCode())
                 .frame(discount.getFrame())
                 .description(discount.getDescription())
                 .discountType(discount.getDiscountType())
@@ -389,7 +417,7 @@ public class DiscountService {
     private String extractPublicIdFromUrl(String url) {
         String[] parts = url.split("/");
         String filename = parts[parts.length - 1];
-        return "BANNER/" + filename.split("\\.")[0];
+        return "Discount Frame/" + filename.split("\\.")[0];
     }
 
 }

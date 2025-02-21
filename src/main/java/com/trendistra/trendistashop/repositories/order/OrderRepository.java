@@ -14,4 +14,5 @@ import java.util.UUID;
 public interface OrderRepository extends JpaRepository<Order , UUID> {
     List<Order> findByUser(UserEntity user);
     List<Order> findAllByExpiredAtBeforeAndPayment_PaymentStatus(LocalDateTime now, PaymentStatus status);
+
 }

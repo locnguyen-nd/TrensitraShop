@@ -1,8 +1,11 @@
 package com.trendistra.trendistashop.services.impl.order;
 
+import com.trendistra.trendistashop.config.PayOsConfig;
 import com.trendistra.trendistashop.config.VietQRConfig;
+import com.trendistra.trendistashop.dto.request.CreateOrder;
 import com.trendistra.trendistashop.dto.request.OrderRequest;
 import com.trendistra.trendistashop.dto.response.*;
+import com.trendistra.trendistashop.entities.product.Discount;
 import com.trendistra.trendistashop.entities.product.Product;
 import com.trendistra.trendistashop.entities.product.ProductVariant;
 import com.trendistra.trendistashop.entities.user.*;
@@ -17,6 +20,7 @@ import com.trendistra.trendistashop.repositories.order.OrderRepository;
 import com.trendistra.trendistashop.repositories.order.PaymentRepository;
 import com.trendistra.trendistashop.repositories.product.ProductVariantRepository;
 import com.trendistra.trendistashop.services.IOrderService;
+import com.trendistra.trendistashop.services.impl.product.DiscountService;
 import jakarta.transaction.Transactional;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.modelmapper.ModelMapper;
@@ -26,10 +30,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+import vn.payos.PayOS;
+import vn.payos.type.CheckoutResponseData;
+import vn.payos.type.ItemData;
+import vn.payos.type.PaymentData;
 
 import java.math.BigDecimal;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -51,9 +57,15 @@ public class OrderService implements IOrderService {
     @Autowired
     private PaymentRepository paymentRepository;
     @Autowired
-    private VietQRService vietQRService;
+    private DiscountService discountService;
     @Autowired
-    private VietQRConfig vietQRConfig;
+    private PayOsConfig payOsConfig;
+    private final PayOS payOS ;
+
+    public OrderService(PayOS payOS) {
+        super();
+        this.payOS = payOS;
+    }
 
     @Override
     public OrderDetailDTO updateOrderStatus(UUID orderId,OrderStatus orderStatus) {
@@ -61,7 +73,7 @@ public class OrderService implements IOrderService {
                 .orElseThrow(() -> new ResourceNotFoundEx("Order not found for ID: " + orderId));
         order.setOrderStatus(orderStatus);
         if(orderStatus.equals(OrderStatus.SHIPPED)) {
-            order.getPayment().setPaymentStatus(PaymentStatus.COMPLETED);
+//            order.getPayment().setPaymentStatus(PaymentStatus.COMPLETED);
         }
         orderRepository.save(order);
         // gửi thôngbaoso qua mail and thông báo đơn hàng
@@ -69,13 +81,16 @@ public class OrderService implements IOrderService {
     }
 
     @Override
-    public List<OrderDetailDTO> getAllOrder(Principal principal) {
+    public List<OrderDetailDTO> getAllOrder(OrderStatus orderStatus, Principal principal) {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
         List<Order> orders = orderRepository.findByUser(user);
+
         return orders.stream()
+                .filter(order -> orderStatus == null || order.getOrderStatus() == orderStatus)
                 .map(this::convertToOrderDetailDTO)
                 .toList();
     }
+
 
     private List<OrderItemDTO> getItemDetails(List<OrderItem> orderItems) {
         return orderItems.stream()
@@ -102,58 +117,42 @@ public class OrderService implements IOrderService {
         orderRepository.save(order);
     }
 
+    /**
+     * Creates an initial order when a user clicks "Buy Now"
+     * This method stores minimal order information and product selections
+     */
     @Override
     @Transactional
-    public OrderDetailDTO saveOrder(OrderRequest orderRequest, Principal principal) throws OrderCreationException {
-        try {
+    public OrderDetailDTO createOrder(CreateOrder createOrder, Principal principal) throws OrderCreationException {
+        try{
             UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
-            Cart useCart = user.getUserCart();
-            if (useCart.getCartItems().isEmpty()) {
+            Cart userCart = user.getUserCart();
+            if (userCart.getCartItems().isEmpty()) {
                 throw new OrderCreationException("No products in cart");
             }
-            List<UUID> listItemIds = orderRequest.getOrderItems()
-                    .stream()
-                    .map(CartItemDTO::getId) // Extract IDs
-                    .collect(Collectors.toList()); // Collect into a List
+            List<UUID> listItemIds = createOrder.getOrderItems();
             if (listItemIds == null || listItemIds.isEmpty()) {
                 throw new OrderCreationException("No items selected for order");
             }
-            List<CartItem> selectedItems = useCart.getCartItems().stream()
+            List<CartItem> selectedItems = userCart.getCartItems().stream()
                     .filter(item -> listItemIds.contains(item.getId()))
                     .collect(Collectors.toList());
             if (selectedItems.isEmpty()) {
                 new OrderCreationException("No items selected for order");
             }
-            Address address = user.getAddressList()
-                    .stream()
-                    .filter(address1 -> Objects.equals(orderRequest.getAddressId(), address1.getId()))
-                    .findFirst()
-                    .orElseThrow(
-                            () -> new ResourceNotFoundEx("Address not found for the given ID")
-                    );
             BigDecimal totalAmount = calculateTotalAmount(selectedItems);
-            String orderCode = generateOrderCode();
+            Long orderCode = generateOrderCode();
             Order order = new Order().builder()
                     .user(user)
-                    .address(address)
                     .totalAmount(totalAmount)
                     .expectedDeliveryDate(calculateExpectedDeliveryDate())
-                    .orderStatus(OrderStatus.PENDING)
-                    .paymentMethod(PaymentMethod.valueOf(orderRequest.getPaymentMethod()))
+                    .orderStatus(OrderStatus.CREATED)
                     .orderCoder(orderCode)
-                    .note(orderRequest.getNote())
-                    .expiredAt(LocalDateTime.now().plusMinutes(VietQRConfig.ORDER_TIMEOUT_MINUTES))
                     .orderDate(LocalDateTime.now())
                     .build();
             Order saveOrder = orderRepository.save(order);
             List<OrderItem> orderItems = processOrderItem(selectedItems, saveOrder);
             saveOrder.setOrderItems(orderItems);
-            Payment payment = createPayment(saveOrder, vietQRService, orderRequest.getBankApp());
-            log.info("Payment created: {}", payment);
-            saveOrder.setPayment(payment);
-            paymentRepository.save(payment);
-            // Remove item in cart
-            removeItemsFromCart(useCart, selectedItems);
             return convertToOrderDetailDTO(orderRepository.save(saveOrder));
         } catch (Exception e) {
             log.error("Order creation failed", e);
@@ -162,15 +161,74 @@ public class OrderService implements IOrderService {
     }
 
     @Override
-    public OrderDetailDTO getOrderByOrderId(UUID orderId) {
-        return null;
-    }
+    @Transactional
+    public OrderDetailDTO checkoutOrder(OrderRequest orderRequest, Principal principal) throws OrderCreationException {
+        OrderDetailDTO orderDetailDTO = new OrderDetailDTO();
+        try {
+            UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
+            // Tìm đơn hàng đã được tạo trước đó
+            Order existingOrder = orderRepository.findById(orderRequest.getOrderId())
+                    .orElseThrow(() -> new ResourceNotFoundEx("Order not found with ID: " + orderRequest.getOrderId()));
 
-    @Override
-    public List<OrderDetailDTO> getAllOrder() {
-        return null;
-    }
+            // Kiểm tra đơn hàng thuộc về người dùng hiện tại
+            if (!existingOrder.getUser().getId().equals(user.getId())) {
+                throw new OrderCreationException("Unauthorized access to order");
+            }
+            // Xác định địa chỉ giao hàng
+            Address address = user.getAddressList()
+                    .stream()
+                    .filter(addr -> Objects.equals(orderRequest.getAddressId(), addr.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundEx("Address not found for the given ID"));
+            if(orderRequest.getDiscountValue() != null) {
+                existingOrder.setTotalAmount(existingOrder.getTotalAmount().subtract(orderRequest.getDiscountValue()));
+            }
+            // Cập nhật thông tin còn thiếu cho đơn hàng
+            existingOrder.setAddress(address);
+            existingOrder.setPaymentMethod(PaymentMethod.valueOf(orderRequest.getPaymentMethod()));
+            existingOrder.setOrderStatus(OrderStatus.PENDING);
+            existingOrder.setNote(orderRequest.getNote());
+            existingOrder.setExpiredAt(LocalDateTime.now().plusMinutes(VietQRConfig.ORDER_TIMEOUT_MINUTES));
+            // Kiểm tra và cập nhật tồn kho
+            List<OrderItem> orderItems = existingOrder.getOrderItems();
+            for (OrderItem item : orderItems) {
+                ProductVariant variant = productVariantRepository.findById(item.getProductVariantId())
+                        .orElseThrow(() -> new OrderCreationException("Product variant not found: " + item.getProductVariantId()));
 
+                if (variant.getStockQuantity() == null || variant.getStockQuantity() < item.getQuantity()) {
+                    throw new OrderCreationException("Insufficient stock for product: " + item.getProduct().getName() +
+                            ", variant: " + variant.getId());
+                }
+
+                // Cập nhật tồn kho
+                variant.setStockQuantity(variant.getStockQuantity() - item.getQuantity());
+                productVariantRepository.save(variant);
+            }
+            // Tạo thông tin thanh toán
+            Payment payment = createPayment(existingOrder);
+            log.info("Payment created: {}", payment);
+            existingOrder.setPayment(payment);
+            paymentRepository.save(payment);
+            List<CartItem> itemsToRemove = extractCartItemsFromOrder(existingOrder, user.getUserCart());
+            // Remove item in cart
+            removeItemsFromCart(user.getUserCart(), itemsToRemove);
+            Order completedOrder = orderRepository.save(existingOrder);
+            orderDetailDTO = convertToOrderDetailDTO(completedOrder);
+            return orderDetailDTO;
+        } catch (Exception e) {
+            log.error("Order creation failed", e);
+            throw new OrderCreationException("Failed to create order: " + e.getMessage());
+        }
+    }
+    private List<CartItem> extractCartItemsFromOrder(Order order, Cart userCart) {
+        List<UUID> variantIds = order.getOrderItems().stream()
+                .map(OrderItem::getProductVariantId)
+                .collect(Collectors.toList());
+
+        return userCart.getCartItems().stream()
+                .filter(cartItem -> variantIds.contains(cartItem.getProductVariantId()))
+                .collect(Collectors.toList());
+    }
     private List<OrderItem> processOrderItem(List<CartItem> cartItems, Order order) {
         return cartItems.stream()
                 .map(cartItem -> {
@@ -239,9 +297,10 @@ public class OrderService implements IOrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private String generateOrderCode() {
-        return "ORD" + System.currentTimeMillis() +
-                RandomStringUtils.randomNumeric(4);
+    private Long generateOrderCode() {
+        String currentTimeString = String.valueOf(new Date().getTime());
+        long orderCode = Long.parseLong(currentTimeString.substring(currentTimeString.length() - 6));
+        return orderCode;
     }
 
     private Date calculateExpectedDeliveryDate() {
@@ -250,41 +309,91 @@ public class OrderService implements IOrderService {
         return calendar.getTime();
     }
 
-    private Payment createPayment(Order order, VietQRService vietQRService, String bankApp) {
-        // Tao QR Code thanh toan
-        String qrCode = null;
-        String deeplinkUrl = null;
-        String paymentMethod = null;
+    private Payment createPayment(Order order) throws Exception {
+        Payment payment;
+
         if (order.getPaymentMethod().equals(PaymentMethod.QR)) {
-            // Tạo QR Code thanh toán
-            qrCode = vietQRService.generateQRCode(order);
-            paymentMethod = PaymentMethod.QR.name();
-            if (bankApp != null) {
-                deeplinkUrl = String.format("https://dl.vietqr.io/pay?app=%s&ba=%s&am=%d&tn=%s",
-                        bankApp, vietQRConfig.getAccountNo(), order.getTotalAmount().toBigInteger(), order.getOrderCoder());
-            }
-            log.info("Deep link generated: {}", deeplinkUrl);
+            // Với QR: Tạo dữ liệu thanh toán và gọi API PayOS để nhận CheckoutResponseData chứa thông tin thanh toán (qrCode, checkoutUrl,...)
+            PaymentData paymentData = PaymentData.builder()
+                    .orderCode(order.getOrderCoder())
+                    .amount(order.getTotalAmount().intValue())
+                    .description("TT hóa đơn " + order.getOrderCoder())
+                    .items(order.getOrderItems().stream()
+                            .map(item -> ItemData.builder()
+                                    .name(item.getProduct().getName())
+                                    .quantity(item.getQuantity())
+                                    .price(item.getItemPrice().intValue())
+                                    .build())
+                            .collect(Collectors.toList()))
+                    .cancelUrl(payOsConfig.getCancelUrl())
+                    .returnUrl(payOsConfig.getReturnUrl())
+                    .build();
+
+            CheckoutResponseData checkoutResponseData = payOS.createPaymentLink(paymentData);
+
+            payment = Payment.builder()
+                    .transactionId(checkoutResponseData.getOrderCode())  // Mã giao dịch từ PayOS
+                    .paymentStatus(checkoutResponseData.getStatus())       // Trạng thái trả về từ PayOS
+                    .order(order)
+                    .createdAt(LocalDateTime.now())
+                    .paidAt(null)
+                    .paymentMethod(PaymentMethod.QR)
+                    .amount(checkoutResponseData.getAmount())
+                    .qrCode(checkoutResponseData.getQrCode())              // Mã QR nhận được
+                    .deepLink(checkoutResponseData.getCheckoutUrl())       // URL thanh toán
+                    .build();
         } else if (order.getPaymentMethod().equals(PaymentMethod.COD)) {
-            paymentMethod = PaymentMethod.COD.name();
-            order.setOrderStatus(OrderStatus.PROCESSING);
-            log.info("Payment method is Cash on Delivery (COD). No QR code or deeplink required.");
+            // Với COD: Không cần gọi API bên ngoài. Tạo Payment trực tiếp với trạng thái mặc định là CREATED
+            payment = Payment.builder()
+                    .transactionId(order.getOrderCoder())         // Mã giao dịch tự sinh cho COD
+                    .paymentStatus(String.valueOf(PaymentStatus.CREATED))                   // COD thường được gán trạng thái CREATED ban đầu
+                    .order(order)
+                    .createdAt(LocalDateTime.now())
+                    .paidAt(null)
+                    .paymentMethod(PaymentMethod.COD)
+                    .amount(order.getTotalAmount().intValue())
+                    .qrCode(null)
+                    .deepLink(null)
+                    .build();
+        } else {
+            throw new Exception("Unsupported payment method: " + order.getPaymentMethod());
         }
 
-        return Payment.builder()
-                .transactionId(null)
-                .paymentStatus(PaymentStatus.CREATED)
-                .order(order)
-                .createdAt(LocalDateTime.now())
-                .paidAt(null)
-                .paymentMethod(PaymentMethod.valueOf(paymentMethod))
-                .amount(order.getTotalAmount())
-                .qrCode(qrCode)
-                .deepLink(deeplinkUrl)
-                .build();
+        return payment;
     }
+    /**
+     * Cập nhật trạng thái đơn hàng dựa vào kết quả thanh toán từ PayOS.
+     * Nếu thanh toán bằng QR:
+     *    - Nếu trạng thái SUCCESS thì chuyển order sang PAID.
+     *    - Nếu trạng thái khác SUCCESS thì giữ trạng thái cho phép người dùng retry (ví dụ: PENDING_PAYMENT).
+     * Nếu thanh toán bằng COD:
+     *    - Chuyển đơn hàng sang trạng thái PENDING_APPROVAL để chờ admin duyệt.
+     */
+    @Override
+    public void updateOrderStatusFromPayment(Long transactionId, String newPaymentStatus) throws Exception {
+        Payment payment = paymentRepository.findByTransactionId(transactionId);
+        if (payment == null) {
+            throw new Exception("Không tìm thấy Payment với transactionId: " + transactionId);
+        }
+        Order order = payment.getOrder();
+        String updatedStatus = newPaymentStatus;
+        System.out.println(updatedStatus);
+        // Cập nhật trạng thái Payment (có thể thực hiện trước)
+        payment.setPaymentStatus(updatedStatus);
+        if (updatedStatus.equals(PaymentStatus.PAID.name())) {
+            payment.setPaidAt(LocalDateTime.now());
+            order.setOrderStatus(OrderStatus.PROCESSING);
+        } else {
+            payment.setPaymentStatus(PaymentStatus.FAILED.name());
+        }
+
+        paymentRepository.save(payment);
+        orderRepository.save(order);
+}
+
     @Transactional
     @Override
-    public   OrderDetailDTO retryPayment (UUID orderId, String bankApp, String paymentMethod) {
+    public   OrderDetailDTO retryPayment (UUID orderId, String paymentMethod) throws Exception {
         Order order = orderRepository.findById(orderId).get();
         Payment newPayment = new Payment();
         if (order == null) {
@@ -296,6 +405,9 @@ public class OrderService implements IOrderService {
         }
         if (!order.getOrderStatus().equals(OrderStatus.PENDING)) {
             throw new OrderCreationException("Order is not pending payment.");
+        }
+        if (order.getPayment().getPaymentStatus().equals(PaymentStatus.FAILED.name())) {
+            throw new OrderCreationException("Payment is success.");
         }
         if(paymentMethod != null) {
             order.setPaymentMethod(PaymentMethod.valueOf(paymentMethod));
@@ -309,20 +421,35 @@ public class OrderService implements IOrderService {
         }
         // Nếu QR cũ đã hết hạn, cập nhật trạng thái của Payment cũ thành FAILED
         if (order.getPayment() != null && order.getExpiredAt() != null && LocalDateTime.now().isAfter(order.getExpiredAt())) {
-            // Tạo thông tin mới cho Payment (cập nhật nếu đã có, hoặc tạo mới nếu chưa có)
-            String newQrCode = vietQRService.generateQRCode(order);
-            String newDeepLink = null;
-            if (bankApp != null) {
-                newDeepLink = String.format("https://dl.vietqr.io/pay?app=%s&ba=%s&am=%d&tn=%s",
-                        bankApp, vietQRConfig.getAccountNo(), order.getTotalAmount().toBigInteger(), order.getOrderCoder());
-            }
-            log.info("New deep link generated: {}", newDeepLink);
+            Long orderCode = generateOrderCode();
+            order.setOrderCoder(orderCode);
+            PaymentData paymentData = PaymentData.builder()
+                    .orderCode(order.getOrderCoder())
+                    .amount(order.getTotalAmount().intValue())
+                    .description("TT hóa đơn " + order.getOrderCoder())
+                    .items(order.getOrderItems().stream()
+                            .map(item -> ItemData.builder()
+                                    .name(item.getProduct().getName())
+                                    .quantity(item.getQuantity())
+                                    .price(item.getItemPrice().intValue())
+                                    .build())
+                            .collect(Collectors.toList()))
+                    .cancelUrl(payOsConfig.getCancelUrl())
+                    .returnUrl(payOsConfig.getReturnUrl())
+                    .build();
+
+            CheckoutResponseData checkoutResponseData = payOS.createPaymentLink(paymentData);
             Payment oldPayment = order.getPayment();
-            oldPayment.setPaymentStatus(PaymentStatus.CREATED);
-            oldPayment.setDeepLink(newDeepLink);
-            oldPayment.setQrCode(newQrCode);
-            oldPayment.setCreatedAt(LocalDateTime.now());
-            oldPayment.setPaidAt(LocalDateTime.now().plusMinutes(VietQRConfig.ORDER_TIMEOUT_MINUTES));
+                    oldPayment.setTransactionId(checkoutResponseData.getOrderCode());
+                    oldPayment.setPaymentStatus(checkoutResponseData.getStatus());
+                    oldPayment.setPaymentMethod(PaymentMethod.QR);
+                    oldPayment.setAmount(checkoutResponseData.getAmount());
+                    oldPayment.setQrCode(checkoutResponseData.getQrCode());
+                    oldPayment.setDeepLink(checkoutResponseData.getCheckoutUrl());
+                    oldPayment.setCreatedAt(LocalDateTime.now());
+                    oldPayment.setPaidAt(LocalDateTime.now().plusMinutes(PayOsConfig.ORDER_TIMEOUT_MINUTES));
+                    oldPayment.setOrder(order);
+            log.info("New deep link generated: {}", oldPayment);
             paymentRepository.save(oldPayment);
             log.info("Old QR payment updated.");
             newPayment = oldPayment;
@@ -333,19 +460,39 @@ public class OrderService implements IOrderService {
         return convertToOrderDetailDTO(order);
     }
 
-    private OrderDetailDTO convertToOrderDetailDTO(Order order) {
+    public OrderDetailDTO convertToOrderDetailDTO(Order order) {
+
         return OrderDetailDTO.builder()
                 .id(order.getId())
                 .orderDate(order.getCreateAt())
+                .discountApply(order.getDiscount() != null ? convertDiscount(order) : null)
                 .orderStatus(order.getOrderStatus())
                 .shipmentNumber(order.getShipmentTrackingNumber())
                 .orderItemList(getItemDetails(order.getOrderItems()))
-                .address(modelMapper.map(order.getAddress(), AddressDTO.class))
+                .address(order.getAddress() != null ? modelMapper.map(order.getAddress(), AddressDTO.class) : null)
                 .totalAmount(order.getTotalAmount())
                 .expectedDeliveryDate(order.getExpectedDeliveryDate())
-                .payment(order.getPayment())
+                .payment(order.getPayment() != null ? order.getPayment() : null)
                 .build();
     }
+    public DiscountApply convertDiscount(Order order) {
+        BigDecimal originPrice = order.getOrderItems().stream()
+                .findFirst()
+                .map(orderItem -> orderItem.getProduct().getOriginPrice())
+                .orElse(BigDecimal.ZERO);
+        BigDecimal price = order.getOrderItems().stream()
+                .findFirst()
+                .map(orderItem -> orderItem.getProduct().getPrice())
+                .orElse(BigDecimal.ZERO);
+        BigDecimal saved = originPrice.subtract(order.getTotalAmount());
+        BigDecimal valueApply = price.subtract(order.getTotalAmount());
+        return DiscountApply.builder()
+                .code(order.getDiscount().getCode())
+                .valueApply(valueApply)
+                .saved(saved)
+                .build();
+    }
+
 
     private OrderItemDTO convertToOrderItemDTO(OrderItem orderItem) {
         return OrderItemDTO.builder()
@@ -374,7 +521,7 @@ public class OrderService implements IOrderService {
         for (Order order : expiredOrders) {
             Payment payment = order.getPayment();
             if(payment != null) {
-                payment.setPaymentStatus(PaymentStatus.FAILED);
+//                payment.setPaymentStatus(PaymentStatus.FAILED);
                 paymentRepository.save(payment);
                 log.info("Cập nhật Order {}: Payment chuyển sang PAID", order.getId());
             }

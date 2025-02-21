@@ -184,5 +184,9 @@
     <orderEntry type="library" name="Maven: io.netty:netty-transport-native-unix-common:4.1.113.Final" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-codec-http:4.1.113.Final" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-codec:4.1.113.Final" level="project" />
+    <orderEntry type="library" name="Maven: vn.payos:payos-java:1.0.3" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.httpcomponents.client5:httpclient5:5.3.1" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.httpcomponents.core5:httpcore5:5.2.5" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.httpcomponents.core5:httpcore5-h2:5.2.5" level="project" />
   </component>
 </module>

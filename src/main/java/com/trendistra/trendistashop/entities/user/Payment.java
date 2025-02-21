@@ -30,17 +30,17 @@ public class Payment {
     @JsonBackReference("order-payment")
     private Order order;
     @Column(nullable = false)
-    private BigDecimal amount;
+    private int amount;
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
 //    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private PaymentStatus paymentStatus;
+
+    private String paymentStatus;
     @Lob
     @Column(columnDefinition = "MEDIUMTEXT")
     private String qrCode;
-    private String transactionId;
+    private Long transactionId;
     private LocalDateTime createdAt;
     private LocalDateTime paidAt;
     private String deepLink;

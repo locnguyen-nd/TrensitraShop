@@ -1,11 +1,16 @@
 package com.trendistra.trendistashop.dto.request;
 
 import com.trendistra.trendistashop.dto.response.CartItemDTO;
+import com.trendistra.trendistashop.dto.response.DiscountDTO;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.validator.constraints.Length;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -17,16 +22,13 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class OrderRequest {
-    private UUID userId;
-    private Date orderDate;
-    @NotBlank(message = "Address not empty")
+    @NotNull(message = "Order ID cannot be null")
+    private UUID orderId;
+    @NotNull(message = "Address ID cannot be null")
     private UUID addressId;
-    @NotBlank(message = "Item not empty")
-    private List<CartItemDTO> orderItems;
-    private BigDecimal totalAmount;
-    private Double discount;
+    @Min(value = 0)
+    private BigDecimal discountValue;
+    @NotBlank(message = "Payment method not empty (QR/COD)")
     private String paymentMethod;
-    private Date expectedDeliverDate;
-    private String bankApp;
     private String note;
 }
