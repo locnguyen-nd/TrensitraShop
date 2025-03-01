@@ -2,9 +2,12 @@ package com.trendistra.trendistashop.controllers.user;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trendistra.trendistashop.dto.request.ResetPassword;
 import com.trendistra.trendistashop.dto.request.UserUpdateDTO;
+import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import com.trendistra.trendistashop.dto.response.UserDetailDTO;
 import com.trendistra.trendistashop.entities.user.UserEntity;
+import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.mapper.UserDetailMapper;
 import com.trendistra.trendistashop.services.ICustomUserService;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -20,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.security.Principal;
@@ -75,26 +79,40 @@ public class UserController {
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
     @ApiResponses({
-            @ApiResponse( responseCode = "403", description = "Unauthorized access - Admin privileges required."),
-            @ApiResponse( responseCode = "404", description = "User Not Found."),
-            @ApiResponse(responseCode = "201", description = "Successfully update user.")
+            @ApiResponse(responseCode = "403", description = "Unauthorized access - Admin privileges required."),
+            @ApiResponse(responseCode = "404", description = "User Not Found."),
+            @ApiResponse(responseCode = "200", description = "Successfully updated user."),
+            @ApiResponse(responseCode = "400", description = "Invalid input data."),
+            @ApiResponse(responseCode = "500", description = "Internal Server Error.")
     })
-    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> updateUser(@Valid
-                                        @RequestPart(value = "profile") String updateDTOJson,
-                                        @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        UserUpdateDTO updateDTO = objectMapper.readValue(updateDTOJson, UserUpdateDTO.class);
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateUser(@PathVariable UUID id,
+                                        @RequestParam(value = "profile") String updateDTOJson,
+                                        @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) {
         try {
-            if ((updateDTO == null) && (avatarFile == null || avatarFile.isEmpty())) {
+            if ((updateDTOJson == null || updateDTOJson.isBlank()) && (avatarFile == null || avatarFile.isEmpty())) {
                 return ResponseEntity.badRequest().body("Không có dữ liệu để cập nhật");
             }
-            UserDetailDTO updateUser = iCustomUserService.updateUser( updateDTO, avatarFile);
-            return ResponseEntity.ok(updateUser);
+
+            // Chuyển đổi JSON thành DTO
+            ObjectMapper objectMapper = new ObjectMapper();
+            UserUpdateDTO updateDTO = objectMapper.readValue(updateDTOJson, UserUpdateDTO.class);
+            updateDTO.setId(id);  // Đảm bảo ID được set từ đường dẫn URL
+
+            UserDetailDTO updatedUser = iCustomUserService.updateUser(updateDTO, avatarFile);
+            return ResponseEntity.ok(updatedUser);
+
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Dữ liệu JSON không hợp lệ: " + e.getMessage());
+        } catch (ResourceNotFoundEx e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi cập nhật: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi xử lý tệp: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi hệ thống: " + e.getMessage());
         }
     }
+
     @PostMapping("/{userId}/roles")
     public ResponseEntity<UserDetailDTO> assignRoles(
             @PathVariable UUID userId,
@@ -122,4 +140,5 @@ public class UserController {
         iCustomUserService.deleteOwnAccount();
         return ResponseEntity.ok("Your account has been deleted successfully.");
     }
+
 }

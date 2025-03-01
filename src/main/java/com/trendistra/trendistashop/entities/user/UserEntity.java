@@ -3,6 +3,8 @@ package com.trendistra.trendistashop.entities.user;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.trendistra.trendistashop.entities.BaseEntity;
+import com.trendistra.trendistashop.entities.notification.ChatMessage;
+import com.trendistra.trendistashop.entities.notification.Notification;
 import com.trendistra.trendistashop.enums.ProviderEnum;
 import jakarta.persistence.*;
 import lombok.*;
@@ -76,6 +78,15 @@ public class UserEntity extends BaseEntity implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "roles_id")
     )
     private List<RoleEntity> roles ;
+
+    @OneToMany(mappedBy = "user")
+    private List<Notification> notifications;
+
+    @OneToMany(mappedBy = "sender")
+    private List<ChatMessage> sentMessages;
+
+    @OneToMany(mappedBy = "receiver")
+    private List<ChatMessage> receivedMessages;
     @Override
     public Collection<? extends  GrantedAuthority> getAuthorities() {
         String prefixRole = "ROLE_";

@@ -2,6 +2,8 @@ package com.trendistra.trendistashop.controllers.auth;
 import com.trendistra.trendistashop.config.JWTTokenHelper;
 import com.trendistra.trendistashop.dto.request.LoginRequest;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
+import com.trendistra.trendistashop.dto.request.ResetPassword;
+import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
 import com.trendistra.trendistashop.entities.user.UserEntity;
@@ -22,6 +24,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -143,4 +146,24 @@ public class AuthController {
                 "status", HttpStatus.BAD_REQUEST
         ));    }
 
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody String email) {
+        try {
+            ErrorResponse response = iAuthenticationService.forgotPassword(email);
+            return ResponseEntity.ok(response);
+        } catch (ResponseStatusException ex) {
+            return ResponseEntity.status(ex.getStatusCode()).body(new ErrorResponse(ex.getStatusCode().value(), ex.getReason()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody @Valid  ResetPassword request) {
+        try {
+            ErrorResponse response = iAuthenticationService.resetPassword(request);
+            return ResponseEntity.ok(response);
+        } catch (ResponseStatusException ex) {
+            return ResponseEntity.status(ex.getStatusCode()).body(new ErrorResponse(ex.getStatusCode().value(), ex.getReason()));
+        }
+    }
 }

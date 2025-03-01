@@ -27,45 +27,66 @@ public class CloudinaryService {
             if (file == null || file.isEmpty()) {
                 throw new IllegalArgumentException("File is empty");
             }
-            String originalFilename = file.getOriginalFilename(); ;
+
+            // Lấy tên file gốc và xử lý an toàn
+            String originalFilename = file.getOriginalFilename();
             String uniqueFileName;
-            if(fileName == null) {
-                // Sinh tên file duy nhất
-                 uniqueFileName = folder + "_" +
-                        (originalFilename != null ? originalFilename.substring(0, originalFilename.lastIndexOf(".")) : ".jpg");
-            } else {
-                uniqueFileName = fileName.substring(0, fileName.lastIndexOf("."));
+
+            // Xác định phần mở rộng (extension)
+            String extension = ".jpg"; // Mặc định nếu không có phần mở rộng
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
             }
-            String selectFolder = folder.isEmpty() ? "root/" : (folder + "/"); // chọn folder upload
+
+            // Tạo tên file duy nhất
+            if (fileName == null || fileName.trim().isEmpty()) {
+                uniqueFileName = folder + "_" + UUID.randomUUID().toString() + extension;
+            } else {
+                // Nếu fileName đã được cung cấp, loại bỏ phần mở rộng cũ (nếu có) và thêm extension từ file gốc
+                String baseName = fileName.contains(".")
+                        ? fileName.substring(0, fileName.lastIndexOf("."))
+                        : fileName;
+                uniqueFileName = baseName + "_" + UUID.randomUUID().toString() + extension;
+            }
+
+            // Chọn folder upload
+            String selectFolder = folder == null || folder.trim().isEmpty() ? "root/" : (folder + "/");
+
             // Log thông tin file
             logger.info("Uploading file: {}", uniqueFileName);
-            // Upload với chi tiết log
-            Map<?, ?> uploadResult = cloudinary.uploader()
-                    .upload(file.getBytes(),
-                            ObjectUtils.asMap(
-                                    "folder", selectFolder,
-                                    "public_id", uniqueFileName,
-                                    "overwrite", true
-                            )
-                    );
+
+            // Upload lên Cloudinary
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", selectFolder,
+                            "public_id", uniqueFileName,
+                            "overwrite", true
+                    )
+            );
 
             // Log kết quả upload
             logger.info("Upload successful. Response: {}", uploadResult);
+
             // Trả về URL an toàn
             return uploadResult.get("secure_url").toString();
         } catch (IOException e) {
             logger.error("Error uploading file to Cloudinary", e);
             throw e;
+        } catch (Exception e) {
+            logger.error("Unexpected error during file upload", e);
+            throw new IOException("Failed to upload file", e);
         }
     }
     public void deleteFile(String imageUrl) {
         try {
-            // Extract public_id from the URL
+            // Extract public_id từ URL Cloudinary
             String publicId = extractPublicIdFromUrl(imageUrl);
 
+            // Xóa ảnh từ Cloudinary
             cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            logger.info("Deleted image: {}", publicId);
         } catch (Exception e) {
-            logger.error("Error deleting file from Cloudinary", e);
+            logger.error("Error deleting file from Cloudinary: {}", e.getMessage());
         }
     }
     private String extractPublicIdFromUrl(String url) {
@@ -75,6 +96,7 @@ public class CloudinaryService {
         String fileName = parts[parts.length - 1];
         return fileName.substring(0, fileName.lastIndexOf("."));
     }
+
     /**
      * ✅ Deletes all files in a folder using a prefix match.
      */

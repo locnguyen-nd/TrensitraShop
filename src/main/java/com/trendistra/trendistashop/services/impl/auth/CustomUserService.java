@@ -10,6 +10,7 @@ import com.trendistra.trendistashop.repositories.auth.RoleRepository;
 import com.trendistra.trendistashop.repositories.auth.UserDetailRepository;
 import com.trendistra.trendistashop.services.CloudinaryService;
 import com.trendistra.trendistashop.services.ICustomUserService;
+import com.trendistra.trendistashop.services.VerificationCodeService;
 import com.trendistra.trendistashop.specifications.UserSpecification;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -20,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -44,7 +46,6 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         if(user.isEmpty()){
             throw new UsernameNotFoundException("User Not Found with userName "+username);
         }
-//        System.out.println(user.get().getAuthorities().stream().collect(Collectors.toList()));
         return user.get();
     }
     @Override
@@ -63,22 +64,31 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
     }
 
     @Override
-    public UserDetailDTO updateUser( UserUpdateDTO userUpdateDTO, MultipartFile avatarFile) throws IOException {
-        Optional<UserEntity> optionalUser = userDetailRepository.findById(userUpdateDTO.getId());
-        if (optionalUser.isEmpty()) {
-            throw new ResourceNotFoundEx("User not found with ID: " + userUpdateDTO.getId());
+    @Transactional
+    public UserDetailDTO updateUser(UserUpdateDTO userUpdateDTO, MultipartFile avatarFile) throws IOException {
+        UserEntity user = userDetailRepository.findById(userUpdateDTO.getId())
+                .orElseThrow(() -> new ResourceNotFoundEx("User not found with ID: " + userUpdateDTO.getId()));
+
+        // Xóa ảnh cũ trước khi tải ảnh mới (nếu có ảnh cũ)
+        if (avatarFile != null && !avatarFile.isEmpty() && user.getAvatar() != null) {
+            cloudinaryService.deleteFile(user.getAvatar());
         }
-        UserEntity user = optionalUser.get();
+        // Cập nhật ảnh đại diện nếu có
         if (avatarFile != null && !avatarFile.isEmpty()) {
-            String imageUrl = cloudinaryService.uploadFile(avatarFile, null , "AVATAR");
+            String imageUrl = cloudinaryService.uploadFile(avatarFile, null, "AVATAR");
             user.setAvatar(imageUrl);
         }
-         user.setFirstName(userUpdateDTO.getFirstName());
-         user.setLastName(userUpdateDTO.getLastName());
-         user.setEmail(userUpdateDTO.getEmail());
-         user.setPhoneNumber(userUpdateDTO.getPhoneNumber());
-        return userDetailMapper.convertToDto(userDetailRepository.save(user));
+
+        // Cập nhật thông tin người dùng
+        user.setFirstName(userUpdateDTO.getFirstName());
+        user.setLastName(userUpdateDTO.getLastName());
+        user.setPhoneNumber(userUpdateDTO.getPhoneNumber());
+
+        // Lưu lại dữ liệu
+        UserEntity updatedUser = userDetailRepository.save(user);
+        return userDetailMapper.convertToDto(updatedUser);
     }
+
     @Transactional
     public UserDetailDTO assignRolesToUser(UUID userId, Set<UUID> roleIds) {
         Optional<UserEntity> user = userDetailRepository.findById(userId);
@@ -97,6 +107,10 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         if (userExisting.isEmpty()) {
             throw  new ResourceNotFoundEx("User not found");
         }
+        // Xóa ảnh đại diện nếu có
+        if (userExisting.get().getAvatar() != null && !userExisting.get().getAvatar().isEmpty()) {
+            cloudinaryService.deleteFile(userExisting.get().getAvatar());
+        }
         userDetailRepository.deleteById(id);
     }
     public void deleteOwnAccount() {
@@ -107,6 +121,10 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
             throw new ResourceNotFoundEx("Authenticated user not found.");
         }
         UserEntity currentUser = currentUserOpt.get();
+        if(currentUser.getAvatar() != null && !currentUser.getAvatar().isEmpty()) {
+            cloudinaryService.deleteFile(currentUser.getAvatar());
+        }
         userDetailRepository.deleteById(currentUser.getId());
     }
+
 }

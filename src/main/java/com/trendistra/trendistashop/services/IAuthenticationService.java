@@ -1,6 +1,8 @@
 package com.trendistra.trendistashop.services;
 
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
+import com.trendistra.trendistashop.dto.request.ResetPassword;
+import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
 import com.trendistra.trendistashop.entities.user.UserEntity;
@@ -44,4 +46,6 @@ public interface IAuthenticationService {
     Optional<UserEntity> getUser(String userName);
     public void logout (String token);
     public String refreshToken (String refreshToken);
+    ErrorResponse forgotPassword(String email);
+    ErrorResponse resetPassword(ResetPassword resetPassword);
 }

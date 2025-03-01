@@ -2,6 +2,8 @@ package com.trendistra.trendistashop.services.impl.auth;
 
 import com.trendistra.trendistashop.config.JWTTokenHelper;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
+import com.trendistra.trendistashop.dto.request.ResetPassword;
+import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
 import com.trendistra.trendistashop.entities.user.Cart;
@@ -15,6 +17,8 @@ import com.trendistra.trendistashop.helper.VerificationCodeGenerator;
 import com.trendistra.trendistashop.repositories.auth.UserDetailRepository;
 import com.trendistra.trendistashop.repositories.order.CartRepository;
 import com.trendistra.trendistashop.services.IAuthenticationService;
+import com.trendistra.trendistashop.services.VerificationCodeService;
+import com.trendistra.trendistashop.services.impl.notification.AccountNotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
@@ -53,6 +57,8 @@ public class AuthenticationService implements IAuthenticationService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private AuthorizationService authorizationService;
+    @Autowired
+    private AccountNotificationService accountNotificationService;
     private final Set<String> blacklistedTokens = new HashSet<>();
 
     public Optional<UserEntity> getUser(String userName) {
@@ -102,8 +108,6 @@ public class AuthenticationService implements IAuthenticationService {
         } catch (BadCredentialsException e) {
             log.warn("Xác thực thất bại cho tài khoản: {}", userName);
             throw new AuthenticationFailedException("Tên người dùng hoặc mật khẩu không chính xác");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
         log.error("Xác thực thất bại không rõ lý do cho tài khoản: {}", userName);
         throw new AuthenticationFailedException("Đăng nhập không thành công");
@@ -218,6 +222,45 @@ public class AuthenticationService implements IAuthenticationService {
         }
         return  null;
     }
+
+    @Override
+    public ErrorResponse forgotPassword(String email) {
+        Optional<UserEntity> userOpt = userDetailRepository.findByEmail(email);
+        if (!userOpt.isPresent()) {
+            return new ErrorResponse(404, "Không tìm thấy người dùng với email này");        }
+        UserEntity user = userOpt.get();
+        // Tạo mã xác thực (6 ký tự) và thời gian hết hạn (15 phút)
+        String verificationCode = VerificationCodeGenerator.generateCode();
+        user.setVerificationCode(verificationCode);
+        user.setCodeExpiry(LocalDateTime.now().plusMinutes(15));
+        userDetailRepository.save(user);
+        // Gửi mã qua email sử dụng EmailService đã có
+        emailService.sendMail(user);
+        return new ErrorResponse(200, "Mã xác thực đã được gửi qua email");    }
+
+    @Override
+    public ErrorResponse resetPassword(ResetPassword resetPassword) {
+        Optional<UserEntity> userOpt = userDetailRepository.findByEmail(resetPassword.getEmail());
+        if (!userOpt.isPresent()) {
+            return new ErrorResponse(404, "Không tìm thấy người dùng với email này");        }
+        UserEntity user = userOpt.get();
+        if (user.getVerificationCode() == null || !user.getVerificationCode().equals(resetPassword.getCode())) {
+            return new ErrorResponse (400,"Mã xác thực không hợp lệ");
+        }
+        if (user.getCodeExpiry() == null || user.getCodeExpiry().isBefore(LocalDateTime.now())) {
+            return new ErrorResponse (400,"Mã xác thực đã hết hạn");
+        }
+        // Mã hoá mật khẩu mới và cập nhật
+        user.setPassword(passwordEncoder.encode(resetPassword.getPassword()));
+        // Xóa thông tin mã xác thực sau khi đổi mật khẩu
+        user.setVerificationCode(null);
+        user.setCodeExpiry(null);
+        userDetailRepository.save(user);
+        // gửi thông báo
+        accountNotificationService.notifyPasswordChanged(user.getId());
+        return new ErrorResponse(200, "Đổi mật khẩu thành công!");
+    }
+
     @Override
     public UserEntity createUserWithGoogle(OAuth2User oAuth2User) {
         try {

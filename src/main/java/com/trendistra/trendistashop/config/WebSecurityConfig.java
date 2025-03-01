@@ -44,7 +44,7 @@ public class WebSecurityConfig {
     private JWTTokenHelper jwtTokenHelper;
     @Value("${api.prefix}")
     private String prefix ;
-    @Value("frontend.url")
+    @Value("${frontend.url}")
     private String frontendUrl;
 
     /**
@@ -64,6 +64,7 @@ public class WebSecurityConfig {
             "/api/v1/permissions/**",
             "/api/v1/home/**",
             "/api/v1/collections/**",
+            "/api/v1/notifications/**",
             "/oauth2/**"
     };
     /**
@@ -177,7 +178,7 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(frontendUrl,"/**"));
+        configuration.setAllowedOrigins(Arrays.asList(frontendUrl));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

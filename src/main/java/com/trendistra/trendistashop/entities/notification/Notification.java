@@ -1,9 +1,9 @@
 package com.trendistra.trendistashop.entities.notification;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.trendistra.trendistashop.entities.user.UserEntity;
+import com.trendistra.trendistashop.enums.NotificationStatus;
+import com.trendistra.trendistashop.enums.NotificationType;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,18 +12,35 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
+@Entity(name = "notification")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "notification")
 public class Notification {
     @Id
     @GeneratedValue
     private UUID id;
-    private String type;
+    @Enumerated(EnumType.STRING)
+    private NotificationType type;
     private String message;
-    private UUID recipient; // dành riêng cho người nhận thông báo
-    private LocalDateTime timestamp = LocalDateTime.now();
+    @Enumerated(EnumType.STRING)
+    private NotificationStatus status;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private UserEntity user;
+    private LocalDateTime createdAt;
+    // Reference data - could be an order ID, product ID, etc.
+    private String referenceId;
+
+    // URL for redirection when notification is clicked
+    private String redirectUrl;
+
+    // For notification grouping and filtering
+    private String category;
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        status = NotificationStatus.UNREAD;
+    }
 }

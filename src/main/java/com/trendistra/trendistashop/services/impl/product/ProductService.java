@@ -7,7 +7,6 @@ import com.trendistra.trendistashop.dto.response.SearchSuggestionDTO;
 import com.trendistra.trendistashop.dto.response.VariantDTO;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.product.*;
-import com.trendistra.trendistashop.enums.DiscountType;
 import com.trendistra.trendistashop.enums.ProductTagEnum;
 import com.trendistra.trendistashop.exceptions.InvalidParameterException;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
@@ -20,8 +19,8 @@ import com.trendistra.trendistashop.services.CloudinaryService;
 import com.trendistra.trendistashop.services.IProductService;
 import com.trendistra.trendistashop.specifications.ProductSpecification;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -38,30 +37,31 @@ import java.util.stream.Collectors;
 import static com.trendistra.trendistashop.specifications.ProductSpecification.*;
 
 @Service
+@Slf4j
+@Transactional
 public class ProductService implements IProductService {
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final DiscountRepository discountRepository;
+    private final DiscountService discountService;
+    private final ImageService imageService;
+    private final VariantService variantService;
+    private final CloudinaryService cloudinaryService;
+    private final ModelMapper modelMapper;
+    private final int suggestionLimit;
 
-    @Autowired
-    private CategoryRepository categoryRepository;
+    public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository, DiscountRepository discountRepository, DiscountService discountService, ImageService imageService, VariantService variantService, CloudinaryService cloudinaryService, ModelMapper modelMapper,   @Value("${search.suggestion.limit}") int suggestionLimit) {
+        this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
+        this.discountRepository = discountRepository;
+        this.discountService = discountService;
+        this.imageService = imageService;
+        this.variantService = variantService;
+        this.cloudinaryService = cloudinaryService;
+        this.modelMapper = modelMapper;
+        this.suggestionLimit = suggestionLimit;
+    }
 
-    @Autowired
-    private DiscountRepository discountRepository;
-    @Autowired
-    private DiscountService discountService;
-    @Autowired
-    private ImageService imageService;
-
-    @Autowired
-    private VariantService variantService;
-    @Autowired
-    private CloudinaryService cloudinaryService;
-    private GenerateSlug generateSlug;
-    private GenerateCodeProduct generateCodeProduct;
-    @Autowired
-    private ModelMapper modelMapper;
-    @Value("${search.suggestion.limit}")
-    private int suggestionLimit;
 
     @Override
     public Page<ProductDTO> getAllProduct(Pageable pageable) {
@@ -125,8 +125,8 @@ public class ProductService implements IProductService {
         // Create Product entity
         Product product = Product.builder()
                 .name(productDto.getName())
-                .code(generateCodeProduct.generateCodeProduct()) // auto gen code
-                .slug(generateSlug.generateSlug(productDto.getName())) // auto gen slug
+                .code(GenerateCodeProduct.generateCodeProduct()) // auto gen code
+                .slug(GenerateSlug.generateSlug(productDto.getName())) // auto gen slug
                 .status(productDto.getStatus() != null ? productDto.getStatus() : true)
                 .originPrice(productDto.getOriginPrice())
                 .price(productDto.getPrice())

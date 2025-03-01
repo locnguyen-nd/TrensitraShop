@@ -4,6 +4,7 @@ import com.trendistra.trendistashop.config.PayOsConfig;
 import com.trendistra.trendistashop.config.VietQRConfig;
 import com.trendistra.trendistashop.dto.request.CreateOrder;
 import com.trendistra.trendistashop.dto.request.OrderRequest;
+import com.trendistra.trendistashop.dto.request.OrderStatusChangedEvent;
 import com.trendistra.trendistashop.dto.response.*;
 import com.trendistra.trendistashop.entities.product.Discount;
 import com.trendistra.trendistashop.entities.product.Product;
@@ -20,6 +21,7 @@ import com.trendistra.trendistashop.repositories.order.OrderRepository;
 import com.trendistra.trendistashop.repositories.order.PaymentRepository;
 import com.trendistra.trendistashop.repositories.product.ProductVariantRepository;
 import com.trendistra.trendistashop.services.IOrderService;
+import com.trendistra.trendistashop.services.impl.notification.OrderNotificationService;
 import com.trendistra.trendistashop.services.impl.product.DiscountService;
 import jakarta.transaction.Transactional;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -27,6 +29,7 @@ import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -59,6 +62,8 @@ public class OrderService implements IOrderService {
     @Autowired
     private DiscountService discountService;
     @Autowired
+    private OrderNotificationService orderNotificationService;
+    @Autowired
     private PayOsConfig payOsConfig;
     private final PayOS payOS ;
 
@@ -71,9 +76,17 @@ public class OrderService implements IOrderService {
     public OrderDetailDTO updateOrderStatus(UUID orderId,OrderStatus orderStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundEx("Order not found for ID: " + orderId));
+        // Publish order status changed event
+        orderNotificationService.handleOrderStatusChanged(new OrderStatusChangedEvent(
+                order.getId(),
+                order.getUser().getId(),
+                order.getOrderCoder().toString(),
+                order.getOrderStatus().name(),
+                orderStatus.name()
+        ));
         order.setOrderStatus(orderStatus);
-        if(orderStatus.equals(OrderStatus.SHIPPED)) {
-//            order.getPayment().setPaymentStatus(PaymentStatus.COMPLETED);
+        if(orderStatus.equals(OrderStatus.PROCESSING)) {
+            order.getPayment().setPaymentStatus(PaymentStatus.PAID.name());
         }
         orderRepository.save(order);
         // gửi thôngbaoso qua mail and thông báo đơn hàng
