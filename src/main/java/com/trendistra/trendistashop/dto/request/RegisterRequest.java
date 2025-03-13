@@ -37,4 +37,8 @@ public class RegisterRequest {
     @Size(min = 8, message = "Password phải có ít nhất 8 ký tự")
     private CharSequence password;
 
+    @NotEmpty(message = "Password không được để trống")
+    @Size(min = 8, message = "Password phải có ít nhất 8 ký tự")
+    private CharSequence confirmPassword;
+
 }
