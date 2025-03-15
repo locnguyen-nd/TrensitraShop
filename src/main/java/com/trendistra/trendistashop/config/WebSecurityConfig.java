@@ -1,6 +1,9 @@
 package com.trendistra.trendistashop.config;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.services.impl.auth.PermissionService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,6 +89,26 @@ public class WebSecurityConfig {
                 .cors(cors -> cors.configurationSource(
                         corsConfigurationSource()
                 ))
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json;charset=UTF-8");
+                            TypeResponse<?> errorResponse = ResponseHelper.error(
+                                    "Vui lòng đăng nhập để truy cập",
+                                    401
+                            );
+                            response.getWriter().write(new ObjectMapper().writeValueAsString(errorResponse));
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(403);
+                            response.setContentType("application/json;charset=UTF-8");
+                            TypeResponse<?> errorResponse = ResponseHelper.error(
+                                    "Bạn không có quyền truy cập tài nguyên này",
+                                    403
+                            );
+                            response.getWriter().write(new ObjectMapper().writeValueAsString(errorResponse));
+                        })
+                )
                 .authenticationManager(authenticationManager())
                 // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
                 .authorizeHttpRequests(auth -> {

@@ -54,7 +54,6 @@ public class AuthenticationService implements IAuthenticationService {
     private AuthorizationService authorizationService;
     @Autowired
     private AccountNotificationService accountNotificationService;
-    private final Set<String> blacklistedTokens = new HashSet<>();
 
     public Optional<UserEntity> getUser(String userName) {
 
@@ -146,7 +145,7 @@ public class AuthenticationService implements IAuthenticationService {
                     .lastName(user.getLastName())
                     .email(user.getEmail())
                     .phoneNumber(user.getPhoneNumber())
-                    .enabled(user.isEnabled())
+                    .isEnabled(user.isEnabled())
                     .build();
 
             return ResponseHelper.created(registerResponse, "Đăng ký thành công. Kiểm tra email để kích hoạt tài khoản.");

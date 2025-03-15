@@ -50,6 +50,14 @@ public class ResponseHelper {
         return error(message, 404);
     }
 
+    public static <T> TypeResponse<T> unauthorized(String message) {
+        return error(message, 401);
+    }
+
+    public static <T> TypeResponse<T> forbidden(String message) {
+        return error(message, 403);
+    }
+
     public static <T> TypeResponse<T> serverError(String message) {
         return error(message, 500);
     }

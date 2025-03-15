@@ -14,5 +14,5 @@ public class RegisterResponse {
     private String lastName;
     private String phoneNumber;
     private String email;
-    private boolean enabled;
+    private boolean isEnabled;
 }
