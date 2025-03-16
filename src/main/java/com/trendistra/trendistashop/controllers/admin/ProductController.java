@@ -1,14 +1,14 @@
 package com.trendistra.trendistashop.controllers.admin;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trendistra.trendistashop.docs.product.GetAllProductDocs;
+import com.trendistra.trendistashop.docs.product.GetProductDocs;
 import com.trendistra.trendistashop.dto.request.ProductRequestDTO;
 import com.trendistra.trendistashop.dto.response.ProductDTO;
-import com.trendistra.trendistashop.dto.response.ProductImageDTO;
 import com.trendistra.trendistashop.dto.response.SearchSuggestionDTO;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.services.IProductService;
-import com.trendistra.trendistashop.services.impl.product.ImageService;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,10 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.DataInput;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${api.prefix}/products")
@@ -33,63 +31,76 @@ public class ProductController {
     public ProductController(IProductService iProductService) {
         this.productService = iProductService;
     }
-    // Create Product
+    
+    @Operation(summary = "Tạo sản phẩm")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProductDTO> createProduct(@RequestPart("productRequest") String productRequestJson,
                                                     @RequestPart("images") List<MultipartFile> files) throws IOException {
-        // Deserialize ProductDTO from JSON
         ObjectMapper objectMapper = new ObjectMapper();
         ProductRequestDTO productRequestDTO = objectMapper.readValue(productRequestJson, ProductRequestDTO.class);
         ProductDTO createdProduct = productService.createProductWithImages(productRequestDTO, files);
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
-    // Read All Products
+    
+    @Operation(summary = "Lấy danh sách sản phẩm")
+    @GetAllProductDocs
     @GetMapping
-    public ResponseEntity<Page<ProductDTO>> getAllProducts(
+    public ResponseEntity<TypeResponse<Page<ProductDTO>>> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "30") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ProductDTO> products = productService.getAllProduct(pageable);
-        return ResponseEntity.ok(products);
+        TypeResponse<Page<ProductDTO>> products = productService.getAllProduct(pageable);
+        return ResponseEntity.status(products.getStatusCode()).body(products);
     }
+
+    @Operation(summary = "Tìm kiếm sản phẩm theo tên")
     @GetMapping("/search")
-    public ResponseEntity<Page<ProductDTO>> getProductsByName(
-            @RequestParam(required = false) String name,
+    public ResponseEntity<TypeResponse<Page<ProductDTO>>> getProductsByName(
+            @RequestParam() String name,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "30") int size
 
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ProductDTO> products = productService.searchWithName(name, pageable);
-        return ResponseEntity.ok(products);
+        TypeResponse<Page<ProductDTO>> products = productService.searchWithName(name, pageable);
+        return ResponseEntity.status(products.getStatusCode()).body(products);
     }
-    @GetMapping("/search/suggest")
-    public ResponseEntity<SearchSuggestionDTO> getSuggestions(
+
+    @Operation(summary = "Gợi ý tìm kiếm sản phẩm")
+    @GetMapping("/suggest")
+    public ResponseEntity<TypeResponse<SearchSuggestionDTO>> getSuggestions(
             @RequestParam String keyword) {
-        return ResponseEntity.ok(productService.getSuggestion(keyword));
+        TypeResponse<SearchSuggestionDTO> products = productService.getSuggestion(keyword);
+        return ResponseEntity.status(products.getStatusCode()).body(products);
     }
+
+    @Operation(summary = "Lấy danh sách sản phẩm theo tag")
     @GetMapping("/tag")
-    public ResponseEntity<Page<ProductDTO>> getProductsByTag(
+    public ResponseEntity<TypeResponse<Page<ProductDTO>>> getProductsByTag(
             @RequestParam String tag,
             @RequestParam String genderSlug,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ProductDTO> products = productService.getProductByTag(genderSlug, tag, pageable);
-        return ResponseEntity.ok(products);
-    }
-    @GetMapping("/slug/{slug}")
-    public ResponseEntity <ProductDTO> getProductsBySlug(
-            @PathVariable String slug
-    ) {
-        ProductDTO product = productService.getProductBySlug(slug);
-        return ResponseEntity.ok(product);
+        TypeResponse<Page<ProductDTO>> products = productService.getProductByTag(genderSlug, tag, pageable);
+        return ResponseEntity.status(products.getStatusCode()).body(products);
     }
 
+    @Operation(summary = "Lấy sản phẩm theo slug")
+    @GetProductDocs
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity <TypeResponse<ProductDTO>> getProductsBySlug(
+            @PathVariable String slug
+    ) {
+        TypeResponse<ProductDTO> product = productService.getProductBySlug(slug);
+        return ResponseEntity.status(product.getStatusCode()).body(product);
+    }
+
+    @Operation(summary = "Lọc sản phẩm")
     @GetMapping("/filter")
-    public Page<ProductDTO> getAllProductsWithFilter(
+    public ResponseEntity<TypeResponse<Page<ProductDTO>>> getAllProductsWithFilter(
             @RequestParam(required = false) String categorySlug,
             @RequestParam(required = false) String colorCode,
             @RequestParam(required = false) String sizeValue,
@@ -102,8 +113,8 @@ public class ProductController {
             @RequestParam(defaultValue = "false") boolean ascending
     ) {
         PageRequest pageRequest = createPageRequest(page, size, sortBy , ascending);
-        Page<ProductDTO>products =   productService.filterProduct(categorySlug, genderSlug, colorCode, sizeValue, minPrice, maxPrice, pageRequest);
-        return products;
+        TypeResponse<Page<ProductDTO>> products =   productService.filterProduct(categorySlug, genderSlug, colorCode, sizeValue, minPrice, maxPrice, pageRequest);
+        return ResponseEntity.status(products.getStatusCode()).body(products);
     }
     private PageRequest createPageRequest (int page , int size, String sortBy , Boolean ascending) {
         if(sortBy == null  && ascending.booleanValue() == true) {
@@ -113,12 +124,15 @@ public class ProductController {
             return  PageRequest.of(page, size , sort);
         }
     }
+
+    @Operation(summary = "Lấy sản phẩm theo id")
     @GetMapping("/{id}")
-    public ResponseEntity<ProductDTO> getProductById(@PathVariable UUID id) {
-        ProductDTO product = productService.getProductById(id);
-        return ResponseEntity.ok(product);
+    public ResponseEntity<TypeResponse<ProductDTO>> getProductById(@PathVariable UUID id) {
+        TypeResponse<ProductDTO> product = productService.getProductById(id);
+        return ResponseEntity.status(product.getStatusCode()).body(product);
     }
-    // Update Product
+
+    @Operation(summary = "Cập nhật sản phẩm")
     @PutMapping("/{id}")
     public ResponseEntity<ProductDTO> updateProduct(
             @PathVariable UUID id,
@@ -136,7 +150,8 @@ public class ProductController {
                     .body(null);  // Hoặc trả về một thông báo lỗi chi tiết hơn
         }
     }
-    // Delete Product
+    
+    @Operation(summary = "Xóa sản phẩm")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable UUID id) {
         productService.deleteProduct(id);
@@ -146,7 +161,7 @@ public class ProductController {
         ));
     }
 
-    // Update Product Status
+    @Operation(summary = "Cập nhật trạng thái sản phẩm")
     @PatchMapping("/{id}/status")
     public ResponseEntity<Void> updateProductStatus(
             @PathVariable UUID id,
@@ -156,7 +171,7 @@ public class ProductController {
         return ResponseEntity.ok().build();
     }
 
-    // Update Product Quantities
+    @Operation(summary = "Cập nhật số lượng sản phẩm")
     @PatchMapping("/{id}/quantities")
     public ResponseEntity<Void> updateProductQuantities(
             @PathVariable UUID id,

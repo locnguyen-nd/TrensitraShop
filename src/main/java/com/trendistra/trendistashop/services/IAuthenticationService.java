@@ -5,12 +5,11 @@ import com.trendistra.trendistashop.dto.request.ResetPassword;
 import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.user.UserEntity;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -25,14 +24,14 @@ public interface IAuthenticationService {
      * @param password mật khẩu của người dùng (dưới dạng chuỗi ký tự).
      * @return LoginResponse chứa thông tin user được cấp nếu xác thực thành công.
      */
-    public LoginResponse authenticateUser(String username, CharSequence password);
+    public TypeResponse<LoginResponse> authenticateUser(String username, CharSequence password);
     /**
      * Tạo mới một người dùng trong hệ thống.
      *
      * @param registerRequest đối tượng chứa thông tin đăng ký người dùng.
      * @return RegisterResponse chứa thông tin về kết quả đăng ký.
      */
-    public RegisterResponse createUser(RegisterRequest registerRequest);
+    public TypeResponse<RegisterResponse> createUser(RegisterRequest registerRequest);
 
     /**
      * Xác minh người dùng dựa trên tên đăng nhập.(email)
@@ -40,12 +39,13 @@ public interface IAuthenticationService {
      *
      * @param userName tên đăng nhập của người dùng cần xác minh.
      */
-    public void verifyUser(String userName, String code) ;
+    public TypeResponse<Void> verifyUser(String userName, String token) ;
+    public TypeResponse<Void> resendTokenVerify(String userName);
     public UserEntity createUserWithGoogle(OAuth2User oAuth2User);
 
     Optional<UserEntity> getUser(String userName);
-    public void logout (String token);
-    public String refreshToken (String refreshToken);
-    ErrorResponse forgotPassword(String email);
-    ErrorResponse resetPassword(ResetPassword resetPassword);
+    public TypeResponse<Object> logout (String token);
+    public TypeResponse<Map<String, String>> refreshToken (String refreshToken);
+    TypeResponse<ErrorResponse> forgotPassword(String email);
+    TypeResponse<ErrorResponse> resetPassword(ResetPassword resetPassword);
 }

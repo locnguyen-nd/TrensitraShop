@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class RegisterResponse {
     private String firstName;
     private String lastName;
-    private  String phoneNumber;
+    private String phoneNumber;
     private String email;
-    private boolean enabled;
+    private boolean isEnabled;
 }

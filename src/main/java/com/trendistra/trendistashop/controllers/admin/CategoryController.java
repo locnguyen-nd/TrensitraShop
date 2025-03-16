@@ -1,13 +1,18 @@
 package com.trendistra.trendistashop.controllers.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trendistra.trendistashop.docs.category.GetAllCategoryDocs;
+import com.trendistra.trendistashop.docs.category.GetCategoryDocs;
+import com.trendistra.trendistashop.docs.category.GetGenderDocs;
+import com.trendistra.trendistashop.docs.category.GetListCategoryDocs;
 import com.trendistra.trendistashop.dto.response.CategoryDTO;
 import com.trendistra.trendistashop.dto.response.GenderCategoryGroup;
 import com.trendistra.trendistashop.dto.response.GenderDTO;
-import com.trendistra.trendistashop.entities.category.Gender;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
+import com.trendistra.trendistashop.services.ICategoryService;
 import com.trendistra.trendistashop.services.impl.category.CategoryService;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +35,10 @@ public class CategoryController {
     @Autowired
     private CategoryService categoryService;
 
+    @Autowired
+    private ICategoryService iCategoryService;
+
+    @Operation(summary = "Tạo danh mục")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CategoryDTO> createCategory(
             @RequestPart("category") String categoryDTOJson,
@@ -40,6 +49,8 @@ public class CategoryController {
         CategoryDTO createdCategory = categoryService.createCategory(categoryDTO, imageFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
     }
+
+    @Operation(summary = "Tạo giới tính")
     @PostMapping(value = "/gender", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GenderDTO> createGender(
             @RequestPart ("gender") String genderDTO,
@@ -51,6 +62,7 @@ public class CategoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(genderDTO1);
     }
 
+    @Operation(summary = "Cập nhật danh mục")
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<CategoryDTO> updateCategory(
             @PathVariable UUID id,
@@ -63,6 +75,7 @@ public class CategoryController {
         return ResponseEntity.ok(updatedCategory);
     }
 
+    @Operation(summary = "Xóa danh mục")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteCategory(@PathVariable UUID id) throws IOException {
         categoryService.deleteCategory(id);
@@ -72,39 +85,59 @@ public class CategoryController {
         ));
     }
 
+    @Operation(summary = "Lấy danh mục theo id")
+    @GetCategoryDocs
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryDTO> getCategory(@PathVariable UUID id) {
-        CategoryDTO category = categoryService.getCategoryById(id);
-        return ResponseEntity.ok(category);
+    public ResponseEntity<TypeResponse<CategoryDTO>> getCategory(@PathVariable UUID id) {
+        TypeResponse<CategoryDTO> category = iCategoryService.getCategoryById(id);
+        return ResponseEntity.status(category.getStatusCode()).body(category);
     }
+
+    @Operation(summary = "Lấy danh mục theo slug")
+    @GetCategoryDocs
     @GetMapping("/slug/{slug}")
-    public ResponseEntity<CategoryDTO> getCategoryBySlug(@PathVariable String slug){
-        CategoryDTO category = categoryService.getCategoryBySlug(slug);
-        return ResponseEntity.ok(category);
+    public ResponseEntity<TypeResponse<CategoryDTO>> getCategoryBySlug(@PathVariable String slug){
+        TypeResponse<CategoryDTO> category = iCategoryService.getCategoryBySlug(slug);
+        return ResponseEntity.status(category.getStatusCode()).body(category);
     }
+
+    @Operation(summary = "Lấy danh mục theo id parent")
+    @GetListCategoryDocs
     @GetMapping("/parent/{id}")
-    public ResponseEntity<List<CategoryDTO>> getAllByParent(@PathVariable UUID id) {
-        List<CategoryDTO> categories = categoryService.getAllCategoriesByParenId(id);
-        return ResponseEntity.ok(categories);
+    public ResponseEntity<TypeResponse<List<CategoryDTO>>> getAllByParent(@PathVariable UUID id) {
+        TypeResponse<List<CategoryDTO>> categories = iCategoryService.getAllCategoriesByParentId(id);
+        return ResponseEntity.status(categories.getStatusCode()).body(categories);
     }
+
+    @Operation(summary = "Lấy danh mục theo id giới tính")
+    @GetListCategoryDocs
     @GetMapping("/gender/{id}")
-    public ResponseEntity<List<CategoryDTO>> getAllByGender(@PathVariable UUID id) {
-        List<CategoryDTO> categories = categoryService.getAllCategoriesByGenderId(id);
-        return ResponseEntity.ok(categories);
+    public ResponseEntity<TypeResponse<List<CategoryDTO>>> getAllByGender(@PathVariable UUID id) {
+        TypeResponse<List<CategoryDTO>> categories = iCategoryService.getAllCategoriesByGenderId(id);
+        return ResponseEntity.status(categories.getStatusCode()).body(categories);
     }
+
+    @Operation(summary = "Lấy danh sách tất cả danh mục")
+    @GetAllCategoryDocs
     @GetMapping
-    public ResponseEntity<List<GenderCategoryGroup>>  getAllCategories() {
-        List<GenderCategoryGroup>  groupedCategories = categoryService.getAllCategoriesGroupByGender(null);
-        return ResponseEntity.ok(groupedCategories);
+    public ResponseEntity<TypeResponse<List<GenderCategoryGroup>>>  getAllCategories() {
+        TypeResponse<List<GenderCategoryGroup>> groupedCategories = iCategoryService.getAllCategoriesGroupByGender(null);
+        return ResponseEntity.status(groupedCategories.getStatusCode()).body(groupedCategories);
     }
+
+    @Operation(summary = "Lấy danh sách giới tính")
+    @GetGenderDocs
     @GetMapping("/genders")
-    public ResponseEntity<List<GenderDTO>> getAllGender() {
-        List<GenderDTO> genders = categoryService.getAllGender();
-        return ResponseEntity.ok(genders);
+    public ResponseEntity<TypeResponse<List<GenderDTO>>> getAllGender() {
+        TypeResponse<List<GenderDTO>> genders = iCategoryService.getAllGender();
+        return ResponseEntity.status(genders.getStatusCode()).body(genders);
     }
+
+    @Operation(summary = "Lấy danh mục theo slug giới tính")
+    @GetAllCategoryDocs
     @GetMapping("/gender/slug/{slug}")
-    public ResponseEntity<List<GenderCategoryGroup>> getAllByGenderBySlug(@PathVariable String slug) {
-        List<GenderCategoryGroup> groups = categoryService.getAllCategoriesGroupByGender(slug);
-        return ResponseEntity.ok(groups);
+    public ResponseEntity<TypeResponse<List<GenderCategoryGroup>>> getAllByGenderBySlug(@PathVariable String slug) {
+        TypeResponse<List<GenderCategoryGroup>> groups = iCategoryService.getAllCategoriesGroupByGender(slug);
+        return ResponseEntity.status(groups.getStatusCode()).body(groups);
     }
 }

@@ -1,18 +1,19 @@
 package com.trendistra.trendistashop.services.impl.category;
 
+import com.trendistra.trendistashop.Util.ResponseHelper;
 import com.trendistra.trendistashop.dto.response.CategoryDTO;
-import com.trendistra.trendistashop.dto.response.DiscountDTO;
 import com.trendistra.trendistashop.dto.response.GenderCategoryGroup;
 import com.trendistra.trendistashop.dto.response.GenderDTO;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.category.Gender;
-import com.trendistra.trendistashop.entities.product.Discount;
 import com.trendistra.trendistashop.exceptions.DataAccessException;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.helper.GenerateSlug;
 import com.trendistra.trendistashop.repositories.category.CategoryRepository;
 import com.trendistra.trendistashop.repositories.category.GenderRepository;
 import com.trendistra.trendistashop.services.CloudinaryService;
+import com.trendistra.trendistashop.services.ICategoryService;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,12 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.text.Normalizer;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class CategoryService {
+public class CategoryService implements ICategoryService {
     @Autowired
     private CategoryRepository categoryRepository;
     @Autowired
@@ -36,10 +36,19 @@ public class CategoryService {
     @Autowired
     private ModelMapper modelMapper;
 
-    public List<GenderDTO> getAllGender () {
-        return genderRepository.findAll().stream()
+    public TypeResponse<List<GenderDTO>> getAllGender () {
+        try {
+            List<GenderDTO> categories = genderRepository.findAll().stream()
                 .map(gender -> modelMapper.map(gender, GenderDTO.class)).collect(Collectors.toList());
+            if(categories.isEmpty()) {
+                return ResponseHelper.notFound("Không tìm thấy giới tính");
+            }   
+            return ResponseHelper.ok(categories, "Lấy danh sách giới tính thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi server");
+        }
     }
+
     public GenderDTO createGender(GenderDTO genderDTO, MultipartFile imageGender) throws IOException {
         Boolean existsByName = genderRepository.existsByName(genderDTO.getName());
         if(existsByName) {
@@ -150,19 +159,34 @@ public class CategoryService {
     }
 
     // Lấy category theo ID
-    public CategoryDTO getCategoryById(UUID id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundEx("Category not found"));
-        return convertToDTO(category);
+    public TypeResponse<CategoryDTO> getCategoryById(UUID id) {
+        try {
+            Optional<Category> category = categoryRepository.findById(id);
+            if(category.isEmpty()) {
+                return ResponseHelper.notFound("Không tìm thấy danh mục");
+            }
+            return ResponseHelper.ok(convertToDTO(category.get()), "Lấy danh mục thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi server");
+        }
     }
-    public CategoryDTO getCategoryBySlug(String slug) {
-        Category category = categoryRepository.findBySlug(slug)
-                .orElseThrow(() -> new ResourceNotFoundEx("Category not found"));
-        return convertToDTO(category);
+
+    // Lấy category theo slug
+    public TypeResponse<CategoryDTO> getCategoryBySlug(String slug) {
+        try {
+            Optional<Category> category = categoryRepository.findBySlug(slug);
+            if(category.isEmpty()) {
+                return ResponseHelper.notFound("Không tìm thấy danh mục");
+            }
+            return ResponseHelper.ok(convertToDTO(category.get()), "Lấy danh mục thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi server");
+        }
     }
-    // Lấy tất cả categories
-    public List<GenderCategoryGroup> getAllCategoriesGroupByGender(String genderSlug) {
-        List<Category> categories;
+    // Lấy tất cả categories    
+    public TypeResponse<List<GenderCategoryGroup>> getAllCategoriesGroupByGender(String genderSlug) {
+        try {
+            List<Category> categories;
         if (genderSlug != null && !genderSlug.isEmpty()) {
             categories = categoryRepository.findByGenderSlug(genderSlug); // Giả sử bạn có phương thức findByGenderSlug
         } else {
@@ -182,19 +206,40 @@ public class CategoryService {
                     .collect(Collectors.toList());
             // Đưa vào Map
             result.add(new GenderCategoryGroup(genderDTO, parentCategories));
-        });
-        return result;
+            });
+            return ResponseHelper.ok(result, "Lấy danh sách danh mục thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi server");
+        }
     }
-    public List<CategoryDTO> getAllCategoriesByParenId(UUID parentId) {
-        return categoryRepository.findByParentId(parentId).stream()
+
+    // Lấy tất cả categories theo parentId
+    public TypeResponse<List<CategoryDTO>> getAllCategoriesByParentId(UUID parentId) {
+        try {
+            List<CategoryDTO> categories = categoryRepository.findByParentId(parentId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+            if(categories.isEmpty()) {
+                return ResponseHelper.notFound("Không tìm thấy danh mục");
+            }
+            return ResponseHelper.ok(categories, "Lấy danh sách danh mục thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi server");
+        }
     }
-    public List<CategoryDTO> getAllCategoriesByGenderId(UUID genderId) {
-        return categoryRepository.findByGenderId(genderId).stream()
+
+    // Lấy tất cả categories theo genderId
+    public TypeResponse<List<CategoryDTO>> getAllCategoriesByGenderId(UUID genderId) {
+        try {
+            List<CategoryDTO> categories = categoryRepository.findByGenderId(genderId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+            return ResponseHelper.ok(categories, "Lấy danh sách danh mục thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi server");
+        }
     }
+
     // Trích xuất publicId từ Cloudinary URL
     private String extractPublicIdFromUrl(String url) {
         String[] parts = url.split("/");

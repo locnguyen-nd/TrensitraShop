@@ -59,6 +59,8 @@ public class UserEntity extends BaseEntity implements UserDetails {
     private ProviderEnum provider;
     private String verificationCode;
     private LocalDateTime codeExpiry;
+    private String verificationToken;
+    private LocalDateTime tokenExpiry;
     private boolean enabled = false;
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, orphanRemoval = true)
     @ToString.Exclude

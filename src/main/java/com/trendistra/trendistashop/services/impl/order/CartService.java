@@ -1,13 +1,16 @@
 package com.trendistra.trendistashop.services.impl.order;
 
+import com.trendistra.trendistashop.Util.ResponseHelper;
 import com.trendistra.trendistashop.dto.response.CartDTO;
+import com.trendistra.trendistashop.dto.response.CartResponseDTO;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.user.Cart;
 import com.trendistra.trendistashop.entities.user.CartItem;
 import com.trendistra.trendistashop.entities.user.UserEntity;
-import com.trendistra.trendistashop.exceptions.OrderCreationException;
-import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.repositories.order.CartRepository;
 import com.trendistra.trendistashop.services.ICartService;
+import com.trendistra.trendistashop.services.impl.product.ProductService;
+
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -25,10 +28,12 @@ public class CartService implements ICartService {
     private CartItemService cartItemService;
     @Autowired
     private UserDetailsService userDetailsService;
+    @Autowired
+    private ProductService productService;
 
     @Override
     @Transactional
-    public Cart addProductToCart(CartDTO cart, Principal principal) throws OrderCreationException {
+    public TypeResponse<CartResponseDTO> addProductToCart(CartDTO cart, Principal principal) {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
         Cart userCart = user.getUserCart();
         Optional<CartItem> existingItem = userCart.getCartItems().stream()
@@ -50,40 +55,48 @@ public class CartService implements ICartService {
                             .multiply(new BigDecimal(cart.getQuantity()))));
         }
 
-        return cartRepository.save(userCart);
+        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(userCart), productService), "Cart updated successfully");
     }
 
     @Override
-    public Cart getCartProduct(Principal principal) {
-        UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
-        UUID cartId = user.getUserCart().getId();
-        Optional<Cart> cart = cartRepository.findById(cartId);
-        if (cart.isEmpty()) {
-            throw new ResourceNotFoundEx("Can't found card by id");
+    public TypeResponse<CartResponseDTO> getCartProduct(Principal principal) {
+        try{
+            UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
+            UUID cartId = user.getUserCart().getId();
+            Optional<Cart> cartOpt = cartRepository.findById(cartId);
+            if (cartOpt.isEmpty()) {
+                return ResponseHelper.notFound("Không tìm thấy giỏ hàng");
+            }
+            Cart cart = cartOpt.get();
+            
+            return ResponseHelper.ok(CartResponseDTO.fromEntity(cart, productService), "Lấy giỏ hàng thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi hệ thống: " + e.getMessage());
         }
-        return cart.get();
     }
 
     @Override
     @Transactional
-    public Cart removeProductFromCart(CartDTO cartDTO, Principal principal) {
+    public TypeResponse<CartResponseDTO> removeProductFromCart(CartDTO cartDTO, Principal principal) {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
         Cart cart = user.getUserCart();
         List<CartItem> cartItems = cart.getCartItems();
 
         if (cartItems.isEmpty()) {
-            throw new ResourceNotFoundEx("Cart is empty");
+            return ResponseHelper.notFound("Giỏ hàng trống");
         }
 
-        CartItem itemToUpdate = cartItems.stream()
+        Optional<CartItem> itemToUpdateOpt = cartItems.stream()
                 .filter(item -> item.getProductVariantId().equals(cartDTO.getVariantDTO().getId()))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundEx("Product not found in cart"));
+                .findFirst();
 
+        if (itemToUpdateOpt.isEmpty()) {
+            return ResponseHelper.notFound("Không tìm thấy sản phẩm trong giỏ hàng");
+        }
+        CartItem itemToUpdate = itemToUpdateOpt.get();
         int newQuantity = itemToUpdate.getCartItemQuantity() - cartDTO.getQuantity();
 
         if (newQuantity <= 0) {
-//            cartItems.remove(itemToUpdate);
             cart.getCartItems().remove(itemToUpdate);
             cart.setCartTotal(cart.getCartTotal().subtract(
                     itemToUpdate.getCartProduct().getPrice().multiply(
@@ -99,25 +112,24 @@ public class CartService implements ICartService {
             ));
         }
 
-        return cartRepository.save(cart);
+        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart), productService), "Cập nhật giỏ hàng thành công");
     }
 
 
     @Override
-    public Cart changeQuantity(CartDTO cartDTO, Principal principal, int quantity) {
+    public TypeResponse<Cart> changeQuantity(CartDTO cartDTO, Principal principal, int quantity) {
         return null;
     }
 
     @Override
-    public Cart clearCart(Principal principal) {
+    public TypeResponse<CartResponseDTO> clearCart(Principal principal) {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
         Cart cart = user.getUserCart();
         if (cart.getCartItems().size() == 0) {
-            throw new ResourceNotFoundEx("Cart already empty");
+            return ResponseHelper.notFound("Giỏ hàng đã trống");
         }
-//        List<CartItem> emptyCart = cart.getCartItems();
         cart.getCartItems().clear();
         cart.setCartTotal(BigDecimal.ZERO);
-        return cartRepository.save(cart);
+        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart), productService), "Xóa tất cả sản phẩm khỏi giỏ hàng thành công");
     }
 }
