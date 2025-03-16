@@ -3,7 +3,7 @@ package com.trendistra.trendistashop.services;
 import com.trendistra.trendistashop.dto.request.ProductRequestDTO;
 import com.trendistra.trendistashop.dto.response.ProductDTO;
 import com.trendistra.trendistashop.dto.response.SearchSuggestionDTO;
-import com.trendistra.trendistashop.enums.ProductTagEnum;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,18 +15,18 @@ import java.util.List;
 import java.util.UUID;
 
 public interface IProductService {
-    Page<ProductDTO> getAllProduct(Pageable pageable);
-    Page<ProductDTO> searchWithName(String name,Pageable pageable);
-    SearchSuggestionDTO getSuggestion (String keyword);
+    TypeResponse<Page<ProductDTO>> getAllProduct(Pageable pageable);
+    TypeResponse<Page<ProductDTO>> searchWithName(String name,Pageable pageable);
+    TypeResponse<SearchSuggestionDTO> getSuggestion (String keyword);
     @Transactional
     public ProductDTO createProductWithImages(ProductRequestDTO productDto, List<MultipartFile> files) throws IOException;
-    public ProductDTO getProductById(UUID id);
+    public TypeResponse<ProductDTO> getProductById(UUID id);
 
-    Page<ProductDTO> getProductByTag(String genderSlug , String tag, Pageable pageable);
+    TypeResponse<Page<ProductDTO>> getProductByTag(String genderSlug , String tag, Pageable pageable);
 
-    ProductDTO getProductBySlug(String slug);
+    TypeResponse<ProductDTO> getProductBySlug(String slug);
 
-    Page<ProductDTO> filterProduct(String categorySlug, String genderSlug, String colorCode,
+    TypeResponse<Page<ProductDTO>> filterProduct(String categorySlug, String genderSlug, String colorCode,
                                    String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest);
 
     @Transactional

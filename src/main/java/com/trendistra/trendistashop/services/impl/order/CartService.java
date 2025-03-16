@@ -9,6 +9,8 @@ import com.trendistra.trendistashop.entities.user.CartItem;
 import com.trendistra.trendistashop.entities.user.UserEntity;
 import com.trendistra.trendistashop.repositories.order.CartRepository;
 import com.trendistra.trendistashop.services.ICartService;
+import com.trendistra.trendistashop.services.impl.product.ProductService;
+
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -26,6 +28,8 @@ public class CartService implements ICartService {
     private CartItemService cartItemService;
     @Autowired
     private UserDetailsService userDetailsService;
+    @Autowired
+    private ProductService productService;
 
     @Override
     @Transactional
@@ -51,19 +55,24 @@ public class CartService implements ICartService {
                             .multiply(new BigDecimal(cart.getQuantity()))));
         }
 
-        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(userCart)), "Cart updated successfully");
+        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(userCart), productService), "Cart updated successfully");
     }
 
     @Override
     public TypeResponse<CartResponseDTO> getCartProduct(Principal principal) {
-        System.out.println("getCartProduct"+principal.getName());
-        UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
-        UUID cartId = user.getUserCart().getId();
-        Optional<Cart> cart = cartRepository.findById(cartId);
-        if (cart.isEmpty()) {
-            return ResponseHelper.notFound("Không tìm thấy giỏ hàng");
+        try{
+            UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
+            UUID cartId = user.getUserCart().getId();
+            Optional<Cart> cartOpt = cartRepository.findById(cartId);
+            if (cartOpt.isEmpty()) {
+                return ResponseHelper.notFound("Không tìm thấy giỏ hàng");
+            }
+            Cart cart = cartOpt.get();
+            
+            return ResponseHelper.ok(CartResponseDTO.fromEntity(cart, productService), "Lấy giỏ hàng thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi hệ thống: " + e.getMessage());
         }
-        return ResponseHelper.ok(CartResponseDTO.fromEntity(cart.get()), "Lấy giỏ hàng thành công");
     }
 
     @Override
@@ -103,7 +112,7 @@ public class CartService implements ICartService {
             ));
         }
 
-        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart)), "Cập nhật giỏ hàng thành công");
+        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart), productService), "Cập nhật giỏ hàng thành công");
     }
 
 
@@ -121,6 +130,6 @@ public class CartService implements ICartService {
         }
         cart.getCartItems().clear();
         cart.setCartTotal(BigDecimal.ZERO);
-        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart)), "Xóa tất cả sản phẩm khỏi giỏ hàng thành công");
+        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart), productService), "Xóa tất cả sản phẩm khỏi giỏ hàng thành công");
     }
 }

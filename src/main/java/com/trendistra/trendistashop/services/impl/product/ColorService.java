@@ -1,6 +1,8 @@
 package com.trendistra.trendistashop.services.impl.product;
 
+import com.trendistra.trendistashop.Util.ResponseHelper;
 import com.trendistra.trendistashop.dto.response.ColorDTO;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.product.Color;
 import com.trendistra.trendistashop.repositories.product.ColorRepository;
 import org.modelmapper.ModelMapper;
@@ -8,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -18,10 +21,10 @@ public class ColorService {
     @Autowired
     private ModelMapper modelMapper;
     // Create
-    public ColorDTO createColor(ColorDTO colorDto) {
+    public TypeResponse<ColorDTO> createColor(ColorDTO colorDto) {
         // Check if color with same name already exists
         if (colorRepository.existsByName(colorDto.getName())) {
-            throw new RuntimeException("Color with this name already exists");
+            return ResponseHelper.badRequest("Màu sắc đã tồn tại");
         }
         Color color = Color.builder()
                 .name(colorDto.getName())
@@ -30,39 +33,48 @@ public class ColorService {
                 .build();
 
         Color savedColor = colorRepository.save(color);
-        return modelMapper.map(savedColor, ColorDTO.class);
+        return ResponseHelper.ok(modelMapper.map(savedColor, ColorDTO.class), "Màu sắc đã được tạo thành công");
     }
     // Read All
-    public List<ColorDTO> getAllColors() {
-        return colorRepository.findAll().stream()
-                .map(color ->   modelMapper.map(color, ColorDTO.class))
+    public TypeResponse<List<ColorDTO>> getAllColors() {
+        List<ColorDTO> colors = colorRepository.findAll().stream()
+                .map(color -> modelMapper.map(color, ColorDTO.class))
                 .collect(Collectors.toList());
+        return ResponseHelper.ok(colors, "Màu sắc đã được lấy thành công");
     }
     // Read One
-    public ColorDTO getColorById(UUID id) {
-        Color color = colorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Color not found"));
-
-        return modelMapper.map(color, ColorDTO.class);
+    public TypeResponse<ColorDTO> getColorById(UUID id) {
+        Optional<Color> color = colorRepository.findById(id);
+        if (color.isEmpty()) {
+            return ResponseHelper.notFound("Màu sắc không tồn tại");
+        }
+        return ResponseHelper.ok(modelMapper.map(color.get(), ColorDTO.class), "Màu sắc đã được lấy thành công");
     }
     // Update
-    public ColorDTO updateColor(UUID id, ColorDTO colorDto) {
-        Color existingColor = colorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Color not found"));
+    public TypeResponse<ColorDTO> updateColor(UUID id, ColorDTO colorDto) {
+        Optional<Color>  existingColor = colorRepository.findById(id);
+        if (existingColor.isEmpty()) {
+            return ResponseHelper.notFound("Màu sắc không tồn tại");
+        }
 
+        Color color = existingColor.get();
         // Update name and value
-        existingColor.setName(colorDto.getName());
-        existingColor.setCode(colorDto.getCode());
-        existingColor.setValue(colorDto.getValue());
+        color.setName(colorDto.getName());
+        color.setCode(colorDto.getCode());
+        color.setValue(colorDto.getValue());
 
-        Color updatedColor = colorRepository.save(existingColor);
-        return modelMapper.map(updatedColor, ColorDTO.class);
+        Color updatedColor = colorRepository.save(color);
+        return ResponseHelper.ok(modelMapper.map(updatedColor, ColorDTO.class), "Màu sắc đã được cập nhật thành công");
     }
+    
     // Delete
-    public void deleteColor(UUID id) {
-        Color color = colorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Color not found"));
+    public TypeResponse<Void> deleteColor(UUID id) {
+        Optional<Color> color = colorRepository.findById(id);
+        if (color.isEmpty()) {
+            return ResponseHelper.notFound("Màu sắc không tồn tại");
+        }
 
-        colorRepository.delete(color);
+        colorRepository.delete(color.get());
+        return ResponseHelper.ok(null, "Màu sắc đã được xóa thành công");
     }
 }

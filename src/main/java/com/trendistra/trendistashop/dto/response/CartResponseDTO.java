@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.dto.response;
 
 import com.trendistra.trendistashop.entities.user.Cart;
 import com.trendistra.trendistashop.entities.user.CartItem;
+import com.trendistra.trendistashop.services.impl.product.ProductService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,7 +21,7 @@ public class CartResponseDTO {
     private BigDecimal cartTotal;
     private List<CartItemDTO> items;
 
-    public static CartResponseDTO fromEntity(Cart cart) {
+    public static CartResponseDTO fromEntity(Cart cart, ProductService productService) {
         CartResponseDTO dto = new CartResponseDTO();
         // sắp xếp lại trước khi đua ra cart
         List<CartItem> sortedItems = cart.getCartItems().stream()
@@ -29,7 +30,7 @@ public class CartResponseDTO {
         dto.setId(cart.getId());
         dto.setCartTotal(cart.getCartTotal());
         dto.setItems(sortedItems.stream()
-                .map(CartItemDTO::fromEntity)
+                .map(item -> CartItemDTO.fromEntity(item, productService))
                 .collect(Collectors.toList()));
         return dto;
     }

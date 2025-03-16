@@ -1,14 +1,15 @@
 package com.trendistra.trendistashop.services.impl.product;
 
+import com.trendistra.trendistashop.Util.ResponseHelper;
 import com.trendistra.trendistashop.dto.request.ProductRequestDTO;
 import com.trendistra.trendistashop.dto.response.ProductDTO;
 import com.trendistra.trendistashop.dto.response.ProductImageDTO;
 import com.trendistra.trendistashop.dto.response.SearchSuggestionDTO;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.dto.response.VariantDTO;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.entities.product.*;
 import com.trendistra.trendistashop.enums.ProductTagEnum;
-import com.trendistra.trendistashop.exceptions.InvalidParameterException;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.helper.GenerateCodeProduct;
 import com.trendistra.trendistashop.helper.GenerateSlug;
@@ -62,50 +63,63 @@ public class ProductService implements IProductService {
         this.suggestionLimit = suggestionLimit;
     }
 
+    @Override
+    public TypeResponse<Page<ProductDTO>> getAllProduct(Pageable pageable) {
+       try {
+            Page<Product> productPage = productRepository.findAll(pageable);
+            if(productPage.isEmpty()) {
+                return ResponseHelper.notFound("Không tìm thấy sản phẩm nào");
+            }
+            return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
+       } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi khi lấy danh sách sản phẩm");
+       }
+    }
 
     @Override
-    public Page<ProductDTO> getAllProduct(Pageable pageable) {
-        Page<Product> productPage = productRepository.findAll(pageable);
-        if(productPage.isEmpty()) {
-            throw new ResourceNotFoundEx("Products not found");
+    public TypeResponse<SearchSuggestionDTO> getSuggestion (String keyword) {
+        try {
+            if(keyword == null || keyword.trim().isEmpty()) {
+                return ResponseHelper.ok(new SearchSuggestionDTO(), "Lấy danh sách sản phẩm thành công");
+            }
+            List<Product> products = productRepository.findProductNames(
+                    keyword.toLowerCase().trim(),
+                    PageRequest.of(0, suggestionLimit)
+            );
+            List<String> categorySlugs = categoryRepository.findCategorySlugs(
+                    keyword.toLowerCase().trim(),
+                    PageRequest.of(0, suggestionLimit)
+            );
+            SearchSuggestionDTO result = new SearchSuggestionDTO();
+            result.setProductNames(products.stream()
+                    .map(Product::getName)
+                    .collect(Collectors.toList()));
+            result.setProducts(products.stream()
+                    .map(this::mapToProductDto)
+                    .collect(Collectors.toList()));
+            result.setCategorySlug(categorySlugs);
+            return ResponseHelper.ok(result, "Lấy danh sách sản phẩm thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi khi lấy danh sách sản phẩm thành công");
         }
-        return productPage.map(this::mapToProductDto);
     }
+
     @Override
-    public SearchSuggestionDTO getSuggestion (String keyword) {
-        if(keyword == null || keyword.trim().isEmpty()) {
-            return  new SearchSuggestionDTO();
+    public TypeResponse<Page<ProductDTO>> searchWithName(String keyword, Pageable pageable) {
+        try {
+            if (keyword == null) {
+                return ResponseHelper.badRequest("Tên sản phẩm không được để trống!");
+            }
+            Specification<Product> specification = Specification
+                    .where(hasName(keyword));
+            Page<Product> productPage = productRepository.findAll(specification, pageable);
+            if (productPage.isEmpty()) {
+                return ResponseHelper.notFound(String.format("Không tìm thấy sản phẩm với tên %s ", keyword));
+            }
+            return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi khi tìm kiếm sản phẩm theo tên");
         }
-        List<Product> products = productRepository.findProductNames(
-                keyword.toLowerCase().trim(),
-                PageRequest.of(0, suggestionLimit)
-        );
-        List<String> categorySlugs = categoryRepository.findCategorySlugs(
-                keyword.toLowerCase().trim(),
-                PageRequest.of(0, suggestionLimit)
-        );
-        SearchSuggestionDTO result = new SearchSuggestionDTO();
-        result.setProductNames(products.stream()
-                .map(Product::getName)
-                .collect(Collectors.toList()));
-        result.setProducts(products.stream()
-                .map(this::mapToProductDto)
-                .collect(Collectors.toList()));
-        result.setCategorySlug(categorySlugs);
-        return result;
-    }
-    @Override
-    public Page<ProductDTO> searchWithName(String keyword, Pageable pageable) {
-        if (keyword == null) {
-            throw new InvalidParameterException("You don't trying search with name and slug empty !");
-        }
-        Specification<Product> specification = Specification
-                .where(hasName(keyword));
-        Page<Product> productPage = productRepository.findAll(specification, pageable);
-        if (productPage.isEmpty()) {
-            throw new ResourceNotFoundEx(String.format("Don't find any product with %s ", keyword));
-        }
-        return productPage.map(this::mapToProductDto);
     }
 
     @Override
@@ -115,14 +129,11 @@ public class ProductService implements IProductService {
         if (productRepository.existsByName(productDto.getName())) {
             throw new RuntimeException("Product with this name already exists");
         }
-        // Fetch category
         Category category = categoryRepository.findById(productDto.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundEx("Category not found"));
-        // Fetch discounts
         List<Discount> discounts = productDto.getDiscountIds() != null
                 ? discountRepository.findAllById(productDto.getDiscountIds())
                 : List.of();
-        // Create Product entity
         Product product = Product.builder()
                 .name(productDto.getName())
                 .code(GenerateCodeProduct.generateCodeProduct()) // auto gen code
@@ -141,7 +152,6 @@ public class ProductService implements IProductService {
                 .category(category)
                 .discounts(discounts)
                 .build();
-        // Save Product
         Product savedProduct = productRepository.save(product);
 
         List<ProductVariant> variants = variantService.createProductVariant(
@@ -151,7 +161,7 @@ public class ProductService implements IProductService {
         List<ProductImage> productImages = imageService.uploadImagesByColor(
                 files,
                 productDto.getColorImageMapping(),
-                savedProduct.getId() // id saved
+                savedProduct.getId()
         );
         Optional<ProductImage> thumbnailImage = productImages.stream()
                 .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
@@ -164,36 +174,48 @@ public class ProductService implements IProductService {
     }
 
     @Override
-    public ProductDTO getProductById(UUID id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundEx(String.format("Product not found with %s", id)));
-        product.incrementView(); // tăng view xem sản phẩm
-        return mapToProductDto(product);
-    }
-    @Override
-    public Page<ProductDTO> getProductByTag(String genderSlug , String tag, Pageable pageable) {
-        String tagEnum = tag.toUpperCase();
-        Specification<Product> productSpecification = Specification
-                .where(hasGenderSlug(genderSlug))
-                .and(hasTag(ProductTagEnum.valueOf(tagEnum)));
-        Page<Product> productPage = productRepository.findAll(productSpecification, pageable);
-        if(productPage.isEmpty()) {
-            throw new ResourceNotFoundEx(String.format("Don't find any product with %s and gender %s ", tag, genderSlug));
+    public TypeResponse<ProductDTO> getProductById(UUID id) {
+        try {
+            Optional<Product> productOpt = productRepository.findById(id);
+            if(productOpt.isEmpty()) {
+                return ResponseHelper.notFound("Không tìm thấy sản phẩm với id này");
+            }
+            Product product = productOpt.get();
+            product.incrementView();
+            return ResponseHelper.ok(mapToProductDto(product), "Lấy sản phẩm thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi khi lấy sản phẩm theo id");
         }
-        return productPage.map(this::mapToProductDto);
     }
 
     @Override
-    public ProductDTO getProductBySlug(String slug) {
+    public TypeResponse<Page<ProductDTO>> getProductByTag(String genderSlug , String tag, Pageable pageable) {
+        try {
+            String tagEnum = tag.toUpperCase();
+            Specification<Product> productSpecification = Specification
+                    .where(hasGenderSlug(genderSlug))
+                    .and(hasTag(ProductTagEnum.valueOf(tagEnum)));
+            Page<Product> productPage = productRepository.findAll(productSpecification, pageable);
+            if(productPage.isEmpty()) {
+                return ResponseHelper.notFound(String.format("Không tìm thấy sản phẩm với %s và %s ", tag, genderSlug));
+            }
+            return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi khi lấy sản phẩm theo tag");
+        }
+    }
+
+    @Override
+    public TypeResponse<ProductDTO> getProductBySlug(String slug) {
         Product product = productRepository.findProductsBySlug(slug);
         if(product == null) {
-            throw new ResourceNotFoundEx(String.format("Product not found with %s ", slug));
+            return ResponseHelper.notFound("Không tìm thấy sản phẩm với này");
         }
-        return mapToProductDto(product);
+        return ResponseHelper.ok(mapToProductDto(product), "Lấy sản phẩm thành công");
     }
 
     @Override
-    public Page<ProductDTO> filterProduct(String categorySlug, String genderSlug, String colorCode,
+    public TypeResponse<Page<ProductDTO>> filterProduct(String categorySlug, String genderSlug, String colorCode,
                                           String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest) {
         // Nếu có cate thì kiểm tra xem có parent không nếu có thì search parent chính nó còn nếu kh search chính nó
         Specification<Product> spec = Specification.where(ProductSpecification.hasStatus(true));
@@ -228,10 +250,10 @@ public class ProductService implements IProductService {
         // Tìm kiếm sản phẩm theo điều kiện và phân trang
         Page<Product> productPage = productRepository.findAll(spec, pageRequest);
         if(productPage.isEmpty()) {
-            throw new ResourceNotFoundEx(String.format("Don't find any product with filter"));
+            return ResponseHelper.notFound("Không tìm thấy sản phẩm với điều kiện lọc");
         }
         // Chuyển đổi Page<Product> sang Page<ProductDTO>
-        return productPage.map(this::mapToProductDto);
+        return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
     }
 
     @Transactional
