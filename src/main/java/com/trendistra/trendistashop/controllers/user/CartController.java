@@ -1,16 +1,18 @@
 package com.trendistra.trendistashop.controllers.user;
 
+import com.trendistra.trendistashop.docs.cart.AddToCartDocs;
+import com.trendistra.trendistashop.docs.cart.DeleteCartItemDocs;
+import com.trendistra.trendistashop.docs.cart.GetCartDocs;
+import com.trendistra.trendistashop.docs.cart.ClearCartDocs;
 import com.trendistra.trendistashop.dto.response.CartDTO;
 import com.trendistra.trendistashop.dto.response.CartResponseDTO;
-import com.trendistra.trendistashop.entities.user.Cart;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.exceptions.OrderCreationException;
-import com.trendistra.trendistashop.repositories.order.CartRepository;
 import com.trendistra.trendistashop.services.ICartService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -23,28 +25,36 @@ public class CartController {
     @Autowired
     private ICartService iCartService;
 
+    @Operation(summary = "Thêm sản phẩm vào giỏ hàng")
+    @AddToCartDocs
     @PostMapping(value = "/add")
-    public ResponseEntity<CartResponseDTO> addProductToCart(@RequestBody CartDTO cartDTO, Principal principal) throws OrderCreationException {
-        Cart cart = iCartService.addProductToCart(cartDTO , principal);
-        return new ResponseEntity<>(CartResponseDTO.fromEntity(cart), HttpStatus.CREATED);
+    public ResponseEntity<TypeResponse<CartResponseDTO>> addProductToCart(@RequestBody CartDTO cartDTO, Principal principal) throws OrderCreationException {
+        TypeResponse<CartResponseDTO> cart = iCartService.addProductToCart(cartDTO , principal);
+        return ResponseEntity.status(cart.getStatusCode()).body(cart);
     }
+
+    @Operation(summary = "Lấy danh sách sản phẩm trong giỏ hàng")
+    @GetCartDocs
     @GetMapping
-    public ResponseEntity<CartResponseDTO> getCartProductHandler(Principal principal){
-        Cart cart = iCartService.getCartProduct(principal);
-        return new ResponseEntity<>(CartResponseDTO.fromEntity(cart), HttpStatus.ACCEPTED);
+    public ResponseEntity<TypeResponse<CartResponseDTO>> getCartProductHandler(Principal principal){
+        TypeResponse<CartResponseDTO> cart = iCartService.getCartProduct(principal);
+        return ResponseEntity.status(cart.getStatusCode()).body(cart);
     }
 
-
-    @DeleteMapping(value = "/cart")
-    public ResponseEntity<CartResponseDTO> removeProductFromCartHander(@RequestBody CartDTO cartdto , Principal principal){
-        Cart cart = iCartService.removeProductFromCart(cartdto, principal);
-        return new ResponseEntity<>(CartResponseDTO.fromEntity(cart),HttpStatus.OK);
+    @Operation(summary = "Xóa sản phẩm khỏi giỏ hàng")
+    @DeleteCartItemDocs
+    @DeleteMapping(value = "/delete")
+    public ResponseEntity<TypeResponse<CartResponseDTO>> removeProductFromCartHander(@RequestBody CartDTO cartdto , Principal principal){
+        TypeResponse<CartResponseDTO> cart = iCartService.removeProductFromCart(cartdto, principal);
+        return ResponseEntity.status(cart.getStatusCode()).body(cart);
     }
 
-    @DeleteMapping(value = "/cart/clear")
-    public ResponseEntity<CartResponseDTO> clearCartHandler(Principal principal){
-        Cart cart = iCartService.clearCart(principal);
-        return new ResponseEntity<>(CartResponseDTO.fromEntity(cart), HttpStatus.ACCEPTED);
+    @Operation(summary = "Xóa tất cả sản phẩm khỏi giỏ hàng")
+    @ClearCartDocs
+    @DeleteMapping(value = "/clear")
+    public ResponseEntity<TypeResponse<CartResponseDTO>> clearCartHandler(Principal principal){
+        TypeResponse<CartResponseDTO> cart = iCartService.clearCart(principal);
+        return ResponseEntity.status(cart.getStatusCode()).body(cart);
     }
 
 }
