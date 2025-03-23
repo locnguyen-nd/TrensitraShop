@@ -1,7 +1,6 @@
 package com.trendistra.trendistashop.entities.product;
 
 import com.trendistra.trendistashop.entities.BaseEntity;
-import com.trendistra.trendistashop.entities.category.Category;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

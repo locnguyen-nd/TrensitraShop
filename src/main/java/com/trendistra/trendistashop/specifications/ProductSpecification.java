@@ -8,7 +8,6 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.util.UUID;
 
 public class ProductSpecification {
     public static Specification<Product> hasName(String keyword) {

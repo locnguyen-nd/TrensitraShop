@@ -1,6 +1,5 @@
 package com.trendistra.trendistashop.dto.request;
 
-import com.trendistra.trendistashop.dto.response.*;
 import com.trendistra.trendistashop.enums.ProductTagEnum;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;

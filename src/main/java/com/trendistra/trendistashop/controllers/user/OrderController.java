@@ -1,16 +1,12 @@
 package com.trendistra.trendistashop.controllers.user;
 
-import com.trendistra.trendistashop.dto.payos.Webhook;
-import com.trendistra.trendistashop.dto.payos.WebhookData;
 import com.trendistra.trendistashop.dto.request.CreateOrder;
 import com.trendistra.trendistashop.dto.request.OrderRequest;
 import com.trendistra.trendistashop.dto.response.OrderDetailDTO;
-import com.trendistra.trendistashop.entities.user.Order;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.enums.OrderStatus;
-import com.trendistra.trendistashop.enums.PaymentMethod;
 import com.trendistra.trendistashop.exceptions.OrderCreationException;
 import com.trendistra.trendistashop.services.IOrderService;
-import com.trendistra.trendistashop.services.impl.order.OrderService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,17 +27,17 @@ public class OrderController {
     private final IOrderService orderService;
 
     @GetMapping("/user")
-    public ResponseEntity<List<OrderDetailDTO>> getOrderUser (OrderStatus orderStatus, Principal principal) {
-        List<OrderDetailDTO> orders = orderService.getAllOrder(orderStatus,principal);
-        return new ResponseEntity<>(orders, HttpStatus.OK);
+    public ResponseEntity<TypeResponse<List<OrderDetailDTO>>> getOrderUser (OrderStatus orderStatus, Principal principal) {
+        TypeResponse<List<OrderDetailDTO>> orders = orderService.getAllOrder(orderStatus, principal);
+        return ResponseEntity.status(orders.getStatusCode()).body(orders);
     }
     @PostMapping("/create")
-    public ResponseEntity<OrderDetailDTO> createOrder (@Valid @RequestBody CreateOrder createOrder , Principal principal) throws OrderCreationException {
+    public ResponseEntity<OrderDetailDTO> createOrder(@Valid @RequestBody CreateOrder createOrder , Principal principal) throws OrderCreationException {
         OrderDetailDTO order = orderService.createOrder(createOrder, principal);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
     @PostMapping("/checkout")
-    public ResponseEntity<OrderDetailDTO> createOrder (@Valid  @RequestBody OrderRequest orderRequest , Principal principal) throws OrderCreationException {
+    public ResponseEntity<OrderDetailDTO> createOrder(@Valid  @RequestBody OrderRequest orderRequest , Principal principal) throws OrderCreationException {
         OrderDetailDTO order = orderService.checkoutOrder(orderRequest, principal);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }

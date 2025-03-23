@@ -42,6 +42,8 @@ public class JWTTokenHelper {
     private int expiresIn;// thời gian sống
     @Value("${jwt.auth.refresh_token.expires_in}")
     private int refreshTokenExpiresIn; // Thời gian sống của refresh token (nên dài hơn access token)
+    @Value("${jwt.auth.verification.expires_in}")
+    private int verificationTokenExpiresIn;
     private String header = "Authorization";// Header mặc định chứa token
     private String startAuthHeader = "Bearer ";// Prefix mặc định của token trong header
     private Set<String> backListedToken = Collections.synchronizedSet(new HashSet<>()); // các token đã logout
@@ -318,5 +320,45 @@ public class JWTTokenHelper {
                 return true;
             }
         });
+    }
+
+    /**
+     * Sinh verification token cho người dùng.
+     *
+     * @param userName Email người dùng để tạo token.
+     * @return JWT verification token.
+     */
+    public String generateVerificationToken(String userName) {
+        return Jwts.builder()
+                .issuer(appName)
+                .subject(userName)
+                .issuedAt(new Date())
+                .expiration(new Date(new Date().getTime() + verificationTokenExpiresIn * 1000L))
+                .claim("type", "verification") // Thêm claim để phân biệt loại token
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    /**
+     * Kiểm tra tính hợp lệ của verification token.
+     *
+     * @param token Token cần kiểm tra.
+     * @return true nếu token hợp lệ và chưa hết hạn.
+     */
+    public boolean validateVerificationToken(String token) {
+        if (token == null || token.isEmpty()) {
+            log.warn("Verification token is null or empty");
+            return false;
+        }
+
+        try {
+            Claims claims = getAllClaimsFromToken(token);
+            return claims != null && 
+                   "verification".equals(claims.get("type", String.class)) &&
+                   !isTokenExpired(token);
+        } catch (Exception e) {
+            log.warn("Invalid verification token: " + e.getMessage());
+            return false;
+        }
     }
 }

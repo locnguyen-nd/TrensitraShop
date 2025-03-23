@@ -29,16 +29,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
                         "success": true,
                         "message": "Đăng nhập thành công",
                         "data": {
-                            "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
-                            "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
-                            "user": {
-                                "id": 1,
-                                "firstName": "John",
-                                "lastName": "Doe",
-                                "email": "john.doe@example.com",
-                                "phoneNumber": "0987654321",
-                                "enabled": true
-                            }
+                            "id": "b13c6ab2-882d-4b29-9136-d7d977078d30",
+                            "firstName": "trendista",
+                            "lastName": "trendista",
+                            "phoneNumber": "+0123456789",
+                            "email": "trendista@example.com",
+                            "authorityList": ["ROLE_USER"],
+                            "token": "eyJhbGciOiJIUzI1NiJ9....",
+                            "expiresIn": 86400,
+                            "isEnabled": true
                         },
                         "errors": {},
                         "statusCode": 200

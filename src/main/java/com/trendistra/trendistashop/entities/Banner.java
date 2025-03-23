@@ -3,7 +3,6 @@ package com.trendistra.trendistashop.entities;
 import com.trendistra.trendistashop.enums.BannerTypeEnum;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.web.bind.annotation.GetMapping;
 
 @Entity
 @Table(name = "banners")

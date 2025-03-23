@@ -1,5 +1,4 @@
 package com.trendistra.trendistashop.dto.request;
-import com.trendistra.trendistashop.enums.ProviderEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

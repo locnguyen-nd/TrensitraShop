@@ -1,7 +1,6 @@
 package com.trendistra.trendistashop.controllers.user;
 
 import com.trendistra.trendistashop.dto.response.ChatMessageDTO;
-import com.trendistra.trendistashop.entities.notification.ChatMessage;
 import com.trendistra.trendistashop.services.CloudinaryService;
 import com.trendistra.trendistashop.services.impl.notification.ChatService;
 import org.springframework.beans.factory.annotation.Autowired;

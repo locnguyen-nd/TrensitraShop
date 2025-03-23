@@ -20,5 +20,6 @@ public class LoginResponse {
     private String email;
     private List<Object> authorityList;
     private String token;
+    private int expiresIn;
     private Boolean isEnabled;
 }

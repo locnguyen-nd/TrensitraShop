@@ -9,7 +9,6 @@ import com.trendistra.trendistashop.entities.collection.SubCollection;
 import com.trendistra.trendistashop.services.impl.product.ProductService;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 

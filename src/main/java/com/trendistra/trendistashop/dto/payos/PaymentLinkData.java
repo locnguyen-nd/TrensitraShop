@@ -1,7 +1,6 @@
 package com.trendistra.trendistashop.dto.payos;
 
 import lombok.Data;
-import vn.payos.type.PaymentData;
 import vn.payos.type.Transaction;
 
 import java.util.List;

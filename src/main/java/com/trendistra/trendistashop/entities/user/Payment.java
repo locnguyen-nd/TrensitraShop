@@ -1,15 +1,11 @@
 package com.trendistra.trendistashop.entities.user;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.trendistra.trendistashop.enums.PaymentMethod;
-import com.trendistra.trendistashop.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.UUID;
 
 @Table(name = "payment")

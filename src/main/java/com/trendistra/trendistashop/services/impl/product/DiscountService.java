@@ -7,7 +7,6 @@ import com.trendistra.trendistashop.entities.product.Discount;
 import com.trendistra.trendistashop.entities.product.Product;
 import com.trendistra.trendistashop.entities.user.Order;
 import com.trendistra.trendistashop.enums.DiscountType;
-import com.trendistra.trendistashop.exceptions.DataAccessException;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.helper.GenerateCodeDiscount;
 import com.trendistra.trendistashop.repositories.category.CategoryRepository;
@@ -21,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.io.InvalidClassException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;

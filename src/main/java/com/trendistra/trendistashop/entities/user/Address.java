@@ -3,7 +3,6 @@ package com.trendistra.trendistashop.entities.user;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.security.core.userdetails.User;
 
 import java.util.UUID;
 

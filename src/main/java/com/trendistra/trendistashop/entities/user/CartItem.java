@@ -1,7 +1,6 @@
 package com.trendistra.trendistashop.entities.user;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.entities.product.Product;
 import jakarta.persistence.*;
 import lombok.*;

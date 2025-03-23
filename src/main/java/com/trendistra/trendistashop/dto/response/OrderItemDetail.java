@@ -1,6 +1,5 @@
 package com.trendistra.trendistashop.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.trendistra.trendistashop.entities.product.Product;
 import lombok.AllArgsConstructor;

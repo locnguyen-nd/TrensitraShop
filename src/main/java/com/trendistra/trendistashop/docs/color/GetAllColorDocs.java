@@ -5,6 +5,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.trendistra.trendistashop.dto.response.ColorDTO;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 
 import io.swagger.v3.oas.annotations.media.Content;
@@ -21,7 +22,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
         description = "Lấy danh sách màu thành công",
         content = @Content(
             mediaType = "application/json",
-            schema = @Schema(implementation = TypeResponse.class),
+            schema = @Schema(implementation = ColorDTO.class),
             examples = @ExampleObject(
                 value = """
                     {

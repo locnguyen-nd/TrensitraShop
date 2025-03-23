@@ -3,7 +3,6 @@ package com.trendistra.trendistashop.config;
 import com.corundumstudio.socketio.SocketConfig;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.annotation.SpringAnnotationScanner;
-import com.trendistra.trendistashop.services.impl.notification.SocketIOService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

@@ -41,6 +41,10 @@ public class ProductDTO {
     @NotNull(message = "Category ID is required")
     private UUID categoryId;
     private String categoryName;
+    private String categorySlug;
+    private UUID genderId;
+    private String genderName;
+    private String genderSlug;
     private Boolean isFreeShip;
     @NotNull(message = "Summary ID is required")
     private String summary;
