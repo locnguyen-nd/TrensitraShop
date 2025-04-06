@@ -1,5 +1,6 @@
 package com.trendistra.trendistashop.services;
 import com.trendistra.trendistashop.dto.response.RoleDTO;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.user.PermissionEntity;
 import com.trendistra.trendistashop.entities.user.RoleEntity;
 
@@ -16,8 +17,8 @@ public interface IAuthorizationService {
     List<RoleEntity> getUserRole();
     RoleDTO createRole(RoleDTO roleDTO);
     RoleDTO getRoleById(UUID roleId);
-    RoleDTO getRoleByName (String name);
-    List<RoleDTO> getAllRoles();
+    TypeResponse<RoleDTO> getRoleByName (String name);
+    TypeResponse<List<RoleDTO>> getAllRoles();
     RoleDTO updateRole(UUID roleId , RoleDTO roleDTO);
     void deleteRole(UUID roleId);
     RoleDTO addPermissionsToRole(UUID roleId, Set<UUID> permissionIds);

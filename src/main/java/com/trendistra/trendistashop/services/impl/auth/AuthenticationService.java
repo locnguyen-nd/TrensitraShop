@@ -11,6 +11,7 @@ import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.user.Cart;
 import com.trendistra.trendistashop.entities.user.UserEntity;
 import com.trendistra.trendistashop.entities.user.VerificationAttempt;
+import com.trendistra.trendistashop.enums.GuardType;
 import com.trendistra.trendistashop.enums.ProviderEnum;
 import com.trendistra.trendistashop.exceptions.AuthenticationFailedException;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
@@ -70,7 +71,8 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     /**
-     * Xác thực người dùng bằng username và password, đồng thời sinh token JWT nếu xác thực thành công.
+     * Xác thực người dùng bằng username và password, đồng thời sinh token JWT nếu
+     * xác thực thành công.
      *
      * @param userName Tên đăng nhập của người dùng.
      * @param password Mật khẩu của người dùng.
@@ -79,12 +81,20 @@ public class AuthenticationService implements IAuthenticationService {
      * @throws AuthenticationFailedException Nếu xác thực thất bại.
      */
     @Override
-    public TypeResponse<LoginResponse> authenticateUser(String userName, CharSequence password) {
+    public TypeResponse<LoginResponse> authenticateUser(String userName, CharSequence password, GuardType guard) {
         try {
             Authentication authentication = new UsernamePasswordAuthenticationToken(userName, password);
             Authentication authenticationResponse = this.authenticationManager.authenticate(authentication);
             if (authenticationResponse.isAuthenticated()) {
                 UserEntity user = (UserEntity) authenticationResponse.getPrincipal();
+                if(guard != null && guard == GuardType.ADMIN){
+                    if(user.getRoles().stream().noneMatch(role -> role.getName().equalsIgnoreCase("admin"))){
+                        return ResponseHelper.validationError("email", "Tài khoản không có quyền truy cập");
+                    }
+                }
+                if (user.isLocked()) {
+                    return ResponseHelper.unauthorized("Tài khoản đã bị khóa. Vui lòng liên hệ admin!");
+                }
                 if (!user.isEnabled()) {
                     String verificationToken = jwtTokenHelper.generateVerificationToken(user.getEmail());
                     emailService.sendVerificationEmail(user, verificationToken);
@@ -97,16 +107,17 @@ public class AuthenticationService implements IAuthenticationService {
                         .email(user.getEmail())
                         .phoneNumber(user.getPhoneNumber())
                         .authorityList(user.getRoles().stream()
-                                .map(role -> "ROLE_" + role.getName().toUpperCase())
+                                .map(role -> role.getName())
                                 .collect(Collectors.toList()))
                         .isEnabled(user.isEnabled())
+                        .isLocked(user.isLocked())
                         .token(token)
                         .expiresIn(expiresIn)
                         .build();
                 return ResponseHelper.ok(loginResponse, "Đăng nhập thành công");
             }
         } catch (BadCredentialsException e) {
-            return ResponseHelper.validationError("email","Tên người dùng hoặc mật khẩu không chính xác");
+            return ResponseHelper.validationError("email", "Tên người dùng hoặc mật khẩu không chính xác");
         }
         return ResponseHelper.badRequest("Đăng nhập không thành công");
     }
@@ -114,7 +125,8 @@ public class AuthenticationService implements IAuthenticationService {
     /**
      * Tạo tài khoản người dùng mới và gửi sđt xác minh.
      *
-     * @param request Thông tin đăng ký từ người dùng (họ, tên, email, số điện thoại, mật khẩu).
+     * @param request Thông tin đăng ký từ người dùng (họ, tên, email, số điện
+     *                thoại, mật khẩu).
      * @return Đối tượng RegisterResponse chứa mã phản hồi và thông điệp kết quả.
      * @throws ServerErrorException Nếu có lỗi trong quá trình tạo tài khoản.
      */
@@ -122,10 +134,10 @@ public class AuthenticationService implements IAuthenticationService {
     public TypeResponse<RegisterResponse> createUser(RegisterRequest request) {
         Optional<UserEntity> userExisting = userDetailRepository.findByEmail(request.getEmail());
         if (userExisting.isPresent()) {
-            return ResponseHelper.validationError("email","Tài khoản đã tồn tại");
+            return ResponseHelper.validationError("email", "Tài khoản đã tồn tại");
         }
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            return ResponseHelper.validationError("confirmPassword","Mật khẩu không khớp");
+            return ResponseHelper.validationError("confirmPassword", "Mật khẩu không khớp");
         }
         try {
             UserEntity user = UserEntity.builder()
@@ -136,6 +148,7 @@ public class AuthenticationService implements IAuthenticationService {
                     .password(passwordEncoder.encode(request.getPassword()))
                     .provider(ProviderEnum.MANUAL)
                     .enabled(false)
+                    .locked(false)
                     .roles(authorizationService.getUserRole())
                     .build();
 
@@ -144,15 +157,14 @@ public class AuthenticationService implements IAuthenticationService {
             String verificationToken = jwtTokenHelper.generateVerificationToken(user.getEmail());
 
             VerificationAttempt attempt = VerificationAttempt.builder()
-                .userId(user.getId())
-                .email(user.getEmail())
-                .token(verificationToken)
-                .createdAt(LocalDateTime.now())
-                .build();
+                    .userId(user.getId())
+                    .email(user.getEmail())
+                    .token(verificationToken)
+                    .build();
             verificationAttemptRepository.save(attempt);
-            
+
             emailService.sendVerificationEmail(user, verificationToken);
-            
+
             RegisterResponse registerResponse = RegisterResponse.builder()
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
@@ -161,7 +173,8 @@ public class AuthenticationService implements IAuthenticationService {
                     .isEnabled(user.isEnabled())
                     .build();
 
-            return ResponseHelper.created(registerResponse, "Đăng ký thành công. Kiểm tra email để kích hoạt tài khoản.");
+            return ResponseHelper.created(registerResponse,
+                    "Đăng ký thành công. Kiểm tra email để kích hoạt tài khoản.");
         } catch (Exception e) {
             return ResponseHelper.serverError("Lỗi tạo tài khoản");
         }
@@ -171,7 +184,8 @@ public class AuthenticationService implements IAuthenticationService {
      * Kích hoạt tài khoản người dùng bằng cách xác minh email.
      *
      * @param userName Email của người dùng cần xác minh.
-     * @throws ResourceNotFoundEx Nếu không tìm thấy người dùng với email được cung cấp.
+     * @throws ResourceNotFoundEx Nếu không tìm thấy người dùng với email được cung
+     *                            cấp.
      */
     @Transactional
     @Override
@@ -220,7 +234,8 @@ public class AuthenticationService implements IAuthenticationService {
      * Gửi lại link xác thực .
      *
      * @param userName Email của người dùng cần xác minh.
-     * @throws ResourceNotFoundEx Nếu không tìm thấy người dùng với email được cung cấp.
+     * @throws ResourceNotFoundEx Nếu không tìm thấy người dùng với email được cung
+     *                            cấp.
      */
     @Transactional
     @Override
@@ -237,9 +252,8 @@ public class AuthenticationService implements IAuthenticationService {
             }
 
             int attemptCount = verificationAttemptRepository.countByUserIdAndCreatedAtAfter(
-                user.getId(),
-                LocalDateTime.now().minusHours(12)
-            );
+                    user.getId(),
+                    LocalDateTime.now().minusHours(12));
 
             if (attemptCount >= maxAttempts) {
                 return ResponseHelper.badRequest("Bạn đã gửi quá " + maxAttempts + " lần. Vui lòng thử lại sau 12 giờ");
@@ -247,19 +261,17 @@ public class AuthenticationService implements IAuthenticationService {
 
             String verificationToken = jwtTokenHelper.generateVerificationToken(user.getEmail());
             VerificationAttempt attempt = VerificationAttempt.builder()
-                .userId(user.getId())
-                .email(user.getEmail())
-                .token(verificationToken)
-                .createdAt(LocalDateTime.now())
-                .build();
+                    .userId(user.getId())
+                    .email(user.getEmail())
+                    .token(verificationToken)
+                    .build();
             verificationAttemptRepository.save(attempt);
 
             emailService.sendVerificationEmail(user, verificationToken);
 
-            return ResponseHelper.ok(null, 
-                String.format("Yêu cầu xác thực thành công. Vui lòng kiểm tra email. Bạn còn %d lần gửi", 
-                (maxAttempts - attemptCount - 1))
-            );
+            return ResponseHelper.ok(null,
+                    String.format("Yêu cầu xác thực thành công. Vui lòng kiểm tra email. Bạn còn %d lần gửi",
+                            (maxAttempts - attemptCount - 1)));
 
         } catch (Exception e) {
             log.error("Lỗi gửi lại email xác thực: ", e);
@@ -290,7 +302,7 @@ public class AuthenticationService implements IAuthenticationService {
             String newToken = jwtTokenHelper.refreshToken(refreshToken);
             Map<String, String> tokenData = new HashMap<>();
             tokenData.put("token", newToken);
-            
+
             return ResponseHelper.ok(tokenData, "Làm mới token thành công");
         } catch (Exception e) {
             return ResponseHelper.badRequest("Làm mới token thất bại");
@@ -302,7 +314,7 @@ public class AuthenticationService implements IAuthenticationService {
         try {
             Optional<UserEntity> userOpt = userDetailRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
-                return ResponseHelper.validationError("email","Không tìm thấy người dùng với email này");
+                return ResponseHelper.validationError("email", "Không tìm thấy người dùng với email này");
             }
             UserEntity user = userOpt.get();
             String verificationCode = VerificationCodeGenerator.generateCode();
@@ -323,21 +335,21 @@ public class AuthenticationService implements IAuthenticationService {
         try {
             Optional<UserEntity> userOpt = userDetailRepository.findByEmail(resetPassword.getEmail());
             if (userOpt.isEmpty()) {
-                return ResponseHelper.validationError("email","Không tìm thấy người dùng với email này");
+                return ResponseHelper.validationError("email", "Không tìm thấy người dùng với email này");
             }
             UserEntity user = userOpt.get();
             if (user.getVerificationCode() == null || !user.getVerificationCode().equals(resetPassword.getCode())) {
-                return ResponseHelper.validationError("code","Mã xác thực không hợp lệ");
+                return ResponseHelper.validationError("code", "Mã xác thực không hợp lệ");
             }
             if (user.getCodeExpiry() == null || user.getCodeExpiry().isBefore(LocalDateTime.now())) {
-                return ResponseHelper.validationError("code","Mã xác thực đã hết hạn");
+                return ResponseHelper.validationError("code", "Mã xác thực đã hết hạn");
             }
 
             user.setPassword(passwordEncoder.encode(resetPassword.getPassword()));
             user.setVerificationCode(null);
             user.setCodeExpiry(null);
             userDetailRepository.save(user);
-            
+
             accountNotificationService.notifyPasswordChanged(user.getId());
 
             ErrorResponse errorResponse = new ErrorResponse(200, "Đổi mật khẩu thành công!");

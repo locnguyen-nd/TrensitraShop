@@ -1,6 +1,8 @@
 package com.trendistra.trendistashop.services.impl.auth;
 
+import com.trendistra.trendistashop.Util.ResponseHelper;
 import com.trendistra.trendistashop.dto.response.RoleDTO;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.user.PermissionEntity;
 import com.trendistra.trendistashop.entities.user.RoleEntity;
 import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
@@ -53,17 +55,20 @@ public class AuthorizationService implements IAuthorizationService {
 
         return  modelMapper.map(role, RoleDTO.class);
     }
-    public RoleDTO getRoleByName(String name) {
+    public TypeResponse<RoleDTO> getRoleByName(String name) {
         RoleEntity role = roleRepository.findByName(name);
-        return modelMapper.map(role, RoleDTO.class);
+        if(role == null){
+                ResponseHelper.notFound("Không tìm thấy quyền nào với tên " + name);
+        }
+        return ResponseHelper.ok(modelMapper.map(role, RoleDTO.class), "Lấy danh sách quyền thành công");
     }
 
-    public List<RoleDTO> getAllRoles() {
+    public TypeResponse<List<RoleDTO>> getAllRoles() {
         List<RoleEntity> roles =  roleRepository.findAll();
         List<RoleDTO> roleDTOS = roles.stream().map(
                 role -> modelMapper.map(role, RoleDTO.class)
                 ).collect(Collectors.toList());
-        return roleDTOS;
+        return ResponseHelper.ok(roleDTOS, "Lấy danh sách quyền thành công");
     }
     @Transactional
     public RoleDTO updateRole(UUID id, RoleDTO roleDTO) {

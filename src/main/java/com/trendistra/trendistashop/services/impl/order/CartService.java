@@ -43,7 +43,7 @@ public class CartService implements ICartService {
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
             item.setCartItemQuantity(item.getCartItemQuantity() + cart.getQuantity());
-            item.setCreateAt(new Date());
+            item.setCreatedAt(new Date());
             userCart.setCartTotal(userCart.getCartTotal()
                     .add(item.getCartProduct().getPrice()
                             .multiply(new BigDecimal(cart.getQuantity()))));

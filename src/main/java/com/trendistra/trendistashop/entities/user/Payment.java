@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.entities.user;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.enums.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,7 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Payment {
+public class Payment extends BaseEntity {
     @Id
     @GeneratedValue
     private UUID id;
@@ -37,7 +38,6 @@ public class Payment {
     @Column(columnDefinition = "MEDIUMTEXT")
     private String qrCode;
     private Long transactionId;
-    private LocalDateTime createdAt;
     private LocalDateTime paidAt;
     private String deepLink;
 }

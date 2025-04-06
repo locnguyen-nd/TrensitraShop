@@ -143,7 +143,7 @@ public class AuthController {
             )
         )
         @RequestBody @Valid LoginRequest request) {
-        TypeResponse<LoginResponse> response = iAuthenticationService.authenticateUser(request.getEmail(), request.getPassword());
+        TypeResponse<LoginResponse> response = iAuthenticationService.authenticateUser(request.getEmail(), request.getPassword(), request.getGuard());
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

@@ -3,6 +3,8 @@ package com.trendistra.trendistashop.entities.user;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.trendistra.trendistashop.entities.BaseEntity;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,7 +14,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class VerificationAttempt {
+public class VerificationAttempt extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -25,7 +27,4 @@ public class VerificationAttempt {
 
     @Column(nullable = false)
     private String token;
-
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
 }

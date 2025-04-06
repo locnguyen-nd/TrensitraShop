@@ -9,13 +9,15 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.UUID;
 
+import com.trendistra.trendistashop.entities.BaseEntity;
+
 @Table(name = "Role")
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RoleEntity {
+public class RoleEntity extends BaseEntity {
     @Id
     @GeneratedValue
     private UUID id;

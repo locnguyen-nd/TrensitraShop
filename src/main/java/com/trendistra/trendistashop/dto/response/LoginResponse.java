@@ -22,4 +22,5 @@ public class LoginResponse {
     private String token;
     private int expiresIn;
     private Boolean isEnabled;
+    private Boolean isLocked;
 }

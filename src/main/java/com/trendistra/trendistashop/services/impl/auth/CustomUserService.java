@@ -125,7 +125,9 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         if (userExisting.get().getAvatar() != null && !userExisting.get().getAvatar().isEmpty()) {
             cloudinaryService.deleteFile(userExisting.get().getAvatar());
         }
-        userDetailRepository.deleteById(id);
+        UserEntity user = userExisting.get();
+        user.setLocked(true);
+        userDetailRepository.save(user);
         return ResponseHelper.ok(null, "Xóa người dùng thành công");
     }
 

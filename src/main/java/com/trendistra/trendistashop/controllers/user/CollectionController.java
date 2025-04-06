@@ -220,7 +220,7 @@ public class CollectionController {
 
     @GetMapping
     public ResponseEntity<List<CollectionResponseDTO>> getAllCollections(
-            @RequestParam(defaultValue = "createAt") String sortBy,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String direction) {
 
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);

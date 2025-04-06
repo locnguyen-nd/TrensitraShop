@@ -65,6 +65,6 @@ public class ResponseHelper {
     public static <T> TypeResponse<T> validationError(String key, String message) {
         Map<String, String> errors = new HashMap<>();
         errors.put(key,message);
-        return error("Lỗi dữ liệu đầu vào", 422, errors);
+        return error(message, 422, errors);
     }
 }

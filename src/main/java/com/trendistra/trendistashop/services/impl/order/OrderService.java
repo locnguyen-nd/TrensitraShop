@@ -347,7 +347,6 @@ public class OrderService implements IOrderService {
                     .transactionId(checkoutResponseData.getOrderCode())  // Mã giao dịch từ PayOS
                     .paymentStatus(checkoutResponseData.getStatus())       // Trạng thái trả về từ PayOS
                     .order(order)
-                    .createdAt(LocalDateTime.now())
                     .paidAt(null)
                     .paymentMethod(PaymentMethod.QR)
                     .amount(checkoutResponseData.getAmount())
@@ -360,7 +359,6 @@ public class OrderService implements IOrderService {
                     .transactionId(order.getOrderCoder())         // Mã giao dịch tự sinh cho COD
                     .paymentStatus(String.valueOf(PaymentStatus.CREATED))                   // COD thường được gán trạng thái CREATED ban đầu
                     .order(order)
-                    .createdAt(LocalDateTime.now())
                     .paidAt(null)
                     .paymentMethod(PaymentMethod.COD)
                     .amount(order.getTotalAmount().intValue())
@@ -458,7 +456,6 @@ public class OrderService implements IOrderService {
                     oldPayment.setAmount(checkoutResponseData.getAmount());
                     oldPayment.setQrCode(checkoutResponseData.getQrCode());
                     oldPayment.setDeepLink(checkoutResponseData.getCheckoutUrl());
-                    oldPayment.setCreatedAt(LocalDateTime.now());
                     oldPayment.setPaidAt(LocalDateTime.now().plusMinutes(PayOsConfig.ORDER_TIMEOUT_MINUTES));
                     oldPayment.setOrder(order);
             log.info("New deep link generated: {}", oldPayment);
@@ -476,7 +473,7 @@ public class OrderService implements IOrderService {
 
         return OrderDetailDTO.builder()
                 .id(order.getId())
-                .orderDate(order.getCreateAt())
+                .orderDate(order.getCreatedAt())
                 .discountApply(order.getDiscount() != null ? convertDiscount(order) : null)
                 .orderStatus(order.getOrderStatus())
                 .shipmentNumber(order.getShipmentTrackingNumber())

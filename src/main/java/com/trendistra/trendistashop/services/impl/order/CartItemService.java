@@ -11,7 +11,6 @@ import com.trendistra.trendistashop.repositories.product.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.Objects;
 
 @Service
@@ -44,7 +43,6 @@ public class CartItemService {
                 .productVariantId(cartDTO.getVariantDTO().getId())
                 .productImageId(productImage.getId())
                 .cartItemQuantity(cartDTO.getQuantity())
-                .createAt(new Date())
                 .build();
         return newItem;
     }

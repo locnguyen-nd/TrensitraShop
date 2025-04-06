@@ -49,6 +49,8 @@ public class WebSecurityConfig {
     private String prefix ;
     @Value("${frontend.url}")
     private String frontendUrl;
+    @Value("${admin.frontend.url}")
+    private String adminFrontendUrl;
 
     /**
      * Danh sach các URL không cần phân quyền
@@ -201,7 +203,7 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(frontendUrl));
+        configuration.setAllowedOrigins(Arrays.asList(frontendUrl, adminFrontendUrl));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

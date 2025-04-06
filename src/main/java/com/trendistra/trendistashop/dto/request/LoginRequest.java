@@ -1,5 +1,7 @@
 package com.trendistra.trendistashop.dto.request;
 
+import com.trendistra.trendistashop.enums.GuardType;
+
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,4 +25,5 @@ public class LoginRequest {
     private String email;
     @NotEmpty(message = "Password không được để trống")
     private CharSequence password;
+    private GuardType guard;
 }

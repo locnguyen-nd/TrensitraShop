@@ -37,7 +37,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
                             "authorityList": ["ROLE_USER"],
                             "token": "eyJhbGciOiJIUzI1NiJ9....",
                             "expiresIn": 86400,
-                            "isEnabled": true
+                            "isEnabled": true,
+                            "isLocked": false,
                         },
                         "errors": {},
                         "statusCode": 200
