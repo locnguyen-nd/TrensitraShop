@@ -1,6 +1,8 @@
 package com.trendistra.trendistashop.entities.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.trendistra.trendistashop.entities.BaseEntity;
+
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -13,7 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Cart {
+public class Cart extends BaseEntity {
     @Id
     @GeneratedValue
     private UUID id;

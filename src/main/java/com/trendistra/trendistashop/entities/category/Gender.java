@@ -1,6 +1,8 @@
 package com.trendistra.trendistashop.entities.category;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.trendistra.trendistashop.entities.BaseEntity;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Gender {
+public class Gender extends BaseEntity{
     @Id
     @GeneratedValue
     private UUID id;

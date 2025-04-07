@@ -1,4 +1,5 @@
 package com.trendistra.trendistashop.entities.user;
+import com.trendistra.trendistashop.entities.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PermissionEntity {
+public class PermissionEntity extends BaseEntity {
     @Id
     @GeneratedValue
     private UUID id ;

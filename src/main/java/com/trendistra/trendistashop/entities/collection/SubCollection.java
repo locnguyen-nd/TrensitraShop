@@ -1,5 +1,6 @@
 package com.trendistra.trendistashop.entities.collection;
 
+import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.entities.product.Product;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -18,7 +19,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SubCollection {
+public class SubCollection extends BaseEntity {
     @Id
     @GeneratedValue
     private UUID id;

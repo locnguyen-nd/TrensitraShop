@@ -1,5 +1,6 @@
 package com.trendistra.trendistashop.entities.product;
 
+import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.entities.category.Category;
 import com.trendistra.trendistashop.enums.DiscountType;
 import jakarta.persistence.*;
@@ -20,7 +21,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Discount {
+public class Discount extends BaseEntity {
     @Id
     @GeneratedValue
     private UUID id;

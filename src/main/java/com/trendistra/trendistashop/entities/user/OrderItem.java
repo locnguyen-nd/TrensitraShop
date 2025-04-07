@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.entities.user;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.trendistra.trendistashop.entities.BaseEntity;
 import com.trendistra.trendistashop.entities.product.Product;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OrderItem {
+public class OrderItem extends BaseEntity {
     @Id
     @GeneratedValue
     private UUID id;

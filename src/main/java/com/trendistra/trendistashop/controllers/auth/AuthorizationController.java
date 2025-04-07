@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.controllers.auth;
 
 import com.trendistra.trendistashop.dto.response.RoleDTO;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.user.PermissionEntity;
 import com.trendistra.trendistashop.services.IAuthorizationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,12 +34,14 @@ public class AuthorizationController {
     }
 
     @GetMapping("/name/{name}")
-    public ResponseEntity<RoleDTO> getRoleByName(@PathVariable String name) {
-        return ResponseEntity.ok(roleService.getRoleByName(name));
+    public ResponseEntity<TypeResponse<RoleDTO>> getRoleByName(@PathVariable String name) {
+        TypeResponse<RoleDTO> response = roleService.getRoleByName(name);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
     @GetMapping
-    public ResponseEntity<List<RoleDTO>> getAllRoles() {
-        return ResponseEntity.ok(roleService.getAllRoles());
+    public ResponseEntity<TypeResponse<List<RoleDTO>>> getAllRoles() {
+        TypeResponse<List<RoleDTO>> response = roleService.getAllRoles();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
     @PutMapping("/{id}")
     public ResponseEntity<RoleDTO> updateRole(

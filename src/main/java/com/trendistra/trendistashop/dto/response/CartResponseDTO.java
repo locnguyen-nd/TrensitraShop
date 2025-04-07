@@ -25,7 +25,7 @@ public class CartResponseDTO {
         CartResponseDTO dto = new CartResponseDTO();
         // sắp xếp lại trước khi đua ra cart
         List<CartItem> sortedItems = cart.getCartItems().stream()
-                .sorted(Comparator.comparing(CartItem::getCreateAt).reversed())
+                .sorted(Comparator.comparing(CartItem::getCreatedAt).reversed())
                 .collect(Collectors.toList());
         dto.setId(cart.getId());
         dto.setCartTotal(cart.getCartTotal());

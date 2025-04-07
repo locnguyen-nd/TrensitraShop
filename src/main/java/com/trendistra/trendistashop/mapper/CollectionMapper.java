@@ -40,8 +40,8 @@ public class CollectionMapper {
                         .collect(Collectors.toList()))
                 .subCollections(subCollections)
                 .totalProducts(totalProducts)
-                .createdAt(collection.getCreateAt())
-                .updatedAt(collection.getUpdateAt())
+                .createdAt(collection.getCreatedAt())
+                .updatedAt(collection.getUpdatedAt())
                 .build();
     }
     public SubCollectionResponseDTO mapToSubCollectionDTO(SubCollection subCollection) {

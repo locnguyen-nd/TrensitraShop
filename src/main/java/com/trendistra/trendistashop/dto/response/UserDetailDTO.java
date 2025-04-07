@@ -22,6 +22,7 @@ public class UserDetailDTO {
         private String avatar;
         private String email;
         private boolean enabled;
+        private boolean locked;
         private ProviderEnum provider;
         private List<Object> authorityList;
         private List<Address> addressList;

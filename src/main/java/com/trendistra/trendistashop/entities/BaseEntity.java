@@ -20,33 +20,33 @@ import java.util.TimeZone;
 public class BaseEntity {
     @Column(nullable = false, updatable = false)
     @Temporal(TemporalType.TIMESTAMP)
-    private Date createAt;
+    private Date createdAt;
     @Column(nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
-    private Date updateAt;
+    private Date updatedAt;
     @Column(nullable = false)
     @Temporal(TemporalType.TIMESTAMP)
-    private Date deleteAt;
+    private Date deletedAt;
     @PrePersist
     public void prePersist() {
         TimeZone vietnamTimeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
         Calendar calendar = Calendar.getInstance(vietnamTimeZone);
         Date currentTime = calendar.getTime();
-        this.createAt = currentTime; // Set `createAt` when the entity is first created
-        this.updateAt = currentTime; // Also initialize `updateAt` to the same time
-        this.deleteAt =  currentTime;
+        this.createdAt = currentTime; // Set `createAt` when the entity is first created
+        this.updatedAt = currentTime; // Also initialize `updateAt` to the same time
+        this.deletedAt =  currentTime;
     }
 
     @PreUpdate
     public void preUpdate() {
         TimeZone vietnamTimeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
         Calendar calendar = Calendar.getInstance(vietnamTimeZone);
-        this.updateAt = calendar.getTime(); // Update `updateAt` only when the entity is modified
+        this.updatedAt = calendar.getTime(); // Update `updateAt` only when the entity is modified
     }
     @PreDestroy
     public void preDestroy() {
         TimeZone vietnamTimeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
         Calendar calendar = Calendar.getInstance(vietnamTimeZone);
-        this.deleteAt = calendar.getTime(); // Update `updateAt` only when the entity is modified
+        this.deletedAt = calendar.getTime(); // Update `updateAt` only when the entity is modified
     }
 }

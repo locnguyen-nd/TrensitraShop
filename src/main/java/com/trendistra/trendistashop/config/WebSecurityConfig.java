@@ -47,8 +47,14 @@ public class WebSecurityConfig {
     private JWTTokenHelper jwtTokenHelper;
     @Value("${api.prefix}")
     private String prefix ;
-    @Value("${frontend.url}")
-    private String frontendUrl;
+    @Value("${frontend.dev.url}")
+    private String frontendDevUrl;
+    @Value("${frontend.prod.url}")
+    private String frontendProdUrl;
+    @Value("${admin.dev.url}")
+    private String adminDevUrl;
+    @Value("${admin.prod.url}")
+    private String adminProdUrl;
 
     /**
      * Danh sach các URL không cần phân quyền
@@ -201,7 +207,7 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(frontendUrl));
+        configuration.setAllowedOrigins(Arrays.asList(frontendDevUrl,frontendProdUrl,adminDevUrl,adminProdUrl));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
