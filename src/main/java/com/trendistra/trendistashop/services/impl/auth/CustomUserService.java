@@ -80,8 +80,28 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
 
     @Override
     @Transactional
-    public TypeResponse<UserDetailDTO> updateUser(UserUpdateDTO userUpdateDTO, MultipartFile avatarFile) throws IOException {
+    public TypeResponse<UserDetailDTO> updateUser(UserUpdateDTO userUpdateDTO) {
         Optional<UserEntity> userOpt = userDetailRepository.findById(userUpdateDTO.getId());
+        if (userOpt.isEmpty()) {
+            return ResponseHelper.notFound("Không tìm thấy người dùng");
+        }
+        UserEntity user = userOpt.get();
+
+        try {
+            user.setFirstName(userUpdateDTO.getFirstName());
+            user.setLastName(userUpdateDTO.getLastName());
+
+            UserEntity updatedUser = userDetailRepository.save(user);
+            return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Cập nhật thông tin người dùng thành công");
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi khi cập nhật thông tin người dùng");
+        }
+    }
+
+    @Override
+    @Transactional
+    public TypeResponse<UserDetailDTO> updateAvatarUser(UUID userId, MultipartFile avatarFile) throws IOException {
+        Optional<UserEntity> userOpt = userDetailRepository.findById(userId);
         if (userOpt.isEmpty()) {
             return ResponseHelper.notFound("Không tìm thấy người dùng");
         }
@@ -94,13 +114,8 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
             String imageUrl = cloudinaryService.uploadFile(avatarFile, null, "AVATAR");
             user.setAvatar(imageUrl);
         }
-
-        user.setFirstName(userUpdateDTO.getFirstName());
-        user.setLastName(userUpdateDTO.getLastName());
-        user.setPhoneNumber(userUpdateDTO.getPhoneNumber());
-
         UserEntity updatedUser = userDetailRepository.save(user);
-        return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Cập nhật người dùng thành công");
+        return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Cập nhật ảnh đại diện người dùng thành công");
     }
 
     @Transactional
