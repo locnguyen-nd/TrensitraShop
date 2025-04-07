@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: backend-dev
+    container_name: trendista-backend
     restart: always
     ports:
       - "8080:8080"  # ánh xạ cổng 8080 của Spring Boot với máy chủ local

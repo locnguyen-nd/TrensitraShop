@@ -1,7 +1,5 @@
 package com.trendistra.trendistashop.controllers.user;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trendistra.trendistashop.Util.ResponseHelper;
 import com.trendistra.trendistashop.docs.user.GetProfileDocs;
 import com.trendistra.trendistashop.docs.user.GetUsersDocs;
@@ -42,6 +40,7 @@ public class UserController {
     private UserDetailMapper userDetailMapper;
 
     private ICustomUserService iCustomUserService;
+
     @Autowired
     public UserController(ICustomUserService iCustomUserService) {
         this.iCustomUserService = iCustomUserService;
@@ -79,31 +78,32 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @Operation(summary = "Cập nhật thông tin người dùng")
+    @Operation(summary = "Cập nhật ảnh đại diện người dùng")
     @UpdateUserDocs
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<TypeResponse<UserDetailDTO>> updateUser(@PathVariable UUID id,
-                                    @RequestParam(value = "profile") String updateDTOJson,
+    public ResponseEntity<TypeResponse<UserDetailDTO>> updateAvatarUser(@PathVariable UUID id,
                                     @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) {
         try {
-            if ((updateDTOJson == null || updateDTOJson.isBlank()) && (avatarFile == null || avatarFile.isEmpty())) {
+            if (avatarFile == null || avatarFile.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseHelper.badRequest("Không có dữ liệu để cập nhật"));
             }
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            UserUpdateDTO updateDTO = objectMapper.readValue(updateDTOJson, UserUpdateDTO.class);
-            updateDTO.setId(id);
-
-            TypeResponse<UserDetailDTO> response = iCustomUserService.updateUser(updateDTO, avatarFile);
+            TypeResponse<UserDetailDTO> response = iCustomUserService.updateAvatarUser(id, avatarFile);
             return ResponseEntity.status(response.getStatusCode()).body(response);
 
-        } catch (JsonProcessingException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseHelper.badRequest("Dữ liệu JSON không hợp lệ: " + e.getMessage()));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ResponseHelper.serverError("Lỗi xử lý tệp: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ResponseHelper.serverError("Lỗi hệ thống: " + e.getMessage()));
         }
+    }
+
+    @Operation(summary = "Cập nhật thông tin người dùng")
+    @UpdateUserDocs
+    @PutMapping()
+    public ResponseEntity<TypeResponse<UserDetailDTO>> updateUser(@RequestBody UserUpdateDTO updatedUser) {
+        TypeResponse<UserDetailDTO> response = iCustomUserService.updateUser(updatedUser);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @Operation(summary = "Gán vai trò cho người dùng")
