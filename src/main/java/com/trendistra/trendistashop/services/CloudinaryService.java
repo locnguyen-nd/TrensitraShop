@@ -27,47 +27,39 @@ public class CloudinaryService {
             if (file == null || file.isEmpty()) {
                 throw new IllegalArgumentException("File is empty");
             }
-
-            // Lấy tên file gốc và xử lý an toàn
-            String originalFilename = file.getOriginalFilename();
             String uniqueFileName;
 
-            // Xác định phần mở rộng (extension)
-            String extension = ".jpg"; // Mặc định nếu không có phần mở rộng
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-
-            // Tạo tên file duy nhất
             if (fileName == null || fileName.trim().isEmpty()) {
-                uniqueFileName = folder + "_" + UUID.randomUUID().toString() + extension;
+                uniqueFileName = folder + "_" + UUID.randomUUID().toString();
             } else {
-                // Nếu fileName đã được cung cấp, loại bỏ phần mở rộng cũ (nếu có) và thêm extension từ file gốc
+                // Nếu fileName có chứa extension thì loại bỏ phần extension cũ
                 String baseName = fileName.contains(".")
                         ? fileName.substring(0, fileName.lastIndexOf("."))
                         : fileName;
-                uniqueFileName = baseName + "_" + UUID.randomUUID().toString() + extension;
+                uniqueFileName = baseName + "_" + UUID.randomUUID().toString();
             }
 
             // Chọn folder upload
-            String selectFolder = folder == null || folder.trim().isEmpty() ? "root/" : (folder + "/");
+            String selectFolder = (folder == null || folder.trim().isEmpty()) ? "root/" : (folder + "/");
 
-            // Log thông tin file
             logger.info("Uploading file: {}", uniqueFileName);
-
-            // Upload lên Cloudinary
+            String contentType = file.getContentType();
+            String resourceType = "image";
+            if (contentType != null && contentType.startsWith("video")) {
+                resourceType = "video";
+            }
             Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(),
                     ObjectUtils.asMap(
                             "folder", selectFolder,
                             "public_id", uniqueFileName,
-                            "overwrite", true
+                            "overwrite", true,
+                            "resource_type", resourceType
                     )
             );
 
-            // Log kết quả upload
             logger.info("Upload successful. Response: {}", uploadResult);
 
-            // Trả về URL an toàn
+            // Trả về URL được Cloudinary tạo (sẽ có extension duy nhất)
             return uploadResult.get("secure_url").toString();
         } catch (IOException e) {
             logger.error("Error uploading file to Cloudinary", e);

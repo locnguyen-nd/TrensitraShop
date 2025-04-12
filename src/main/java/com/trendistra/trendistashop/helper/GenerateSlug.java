@@ -4,6 +4,9 @@ import java.text.Normalizer;
 
 public class GenerateSlug {
     public static String generateSlug(String name) {
+        if(name == null || name.isEmpty()) {
+            return "";
+        }
         // Normalize the string and remove diacritical marks (accents)
         String normalized = Normalizer.normalize(name, Normalizer.Form.NFD);
         normalized = normalized.replaceAll("\\p{M}", "");  // Remove accents

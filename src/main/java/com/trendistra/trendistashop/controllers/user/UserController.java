@@ -78,25 +78,25 @@ public class UserController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @Operation(summary = "Cập nhật ảnh đại diện người dùng")
-    @UpdateUserDocs
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<TypeResponse<UserDetailDTO>> updateAvatarUser(@PathVariable UUID id,
-                                    @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) {
-        try {
-            if (avatarFile == null || avatarFile.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseHelper.badRequest("Không có dữ liệu để cập nhật"));
-            }
-
-            TypeResponse<UserDetailDTO> response = iCustomUserService.updateAvatarUser(id, avatarFile);
-            return ResponseEntity.status(response.getStatusCode()).body(response);
-
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ResponseHelper.serverError("Lỗi xử lý tệp: " + e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ResponseHelper.serverError("Lỗi hệ thống: " + e.getMessage()));
-        }
-    }
+//    @Operation(summary = "Cập nhật ảnh đại diện người dùng")
+//    @UpdateUserDocs
+//    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public ResponseEntity<TypeResponse<UserDetailDTO>> updateAvatarUser(@PathVariable UUID id,
+//                                    @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) {
+//        try {
+//            if (avatarFile == null || avatarFile.isEmpty()) {
+//                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseHelper.badRequest("Không có dữ liệu để cập nhật"));
+//            }
+//
+//            TypeResponse<UserDetailDTO> response = iCustomUserService.updateAvatarUser(id, avatarFile);
+//            return ResponseEntity.status(response.getStatusCode()).body(response);
+//
+//        } catch (IOException e) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ResponseHelper.serverError("Lỗi xử lý tệp: " + e.getMessage()));
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ResponseHelper.serverError("Lỗi hệ thống: " + e.getMessage()));
+//        }
+//    }
 
     @Operation(summary = "Cập nhật thông tin người dùng")
     @UpdateUserDocs

@@ -53,11 +53,11 @@ public class Oauth2Controller {
             }
 
             String token = jwtTokenHelper.generateToken(user.get().getUsername());
-            response.sendRedirect("http://localhost:3000/oauth2/callback?token=" + token);
+            response.sendRedirect("http://localhost:4000/oauth2/callback?token=" + token);
 
         } catch (Exception e) {
             System.err.println("Error in OAuth2 success: " + e.getMessage());
-            response.sendRedirect("http://localhost:3000/login?error=true");
+            response.sendRedirect("http://localhost:4000/login?error=true");
         }
     }
 }

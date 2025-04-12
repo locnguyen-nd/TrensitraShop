@@ -10,11 +10,10 @@ import lombok.*;
 @AllArgsConstructor
 @Setter
 @Getter
-public class Banner {
+public class Banner extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String title;
     @Column(nullable = false)
     private String event;

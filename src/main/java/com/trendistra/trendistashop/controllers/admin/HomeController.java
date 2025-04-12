@@ -1,61 +1,77 @@
 package com.trendistra.trendistashop.controllers.admin;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+
+import com.trendistra.trendistashop.docs.cart.examples.CartRequestExamples;
+import com.trendistra.trendistashop.docs.category.UpdateCategoryDocs;
+import com.trendistra.trendistashop.docs.color.CreateColorDocs;
+import com.trendistra.trendistashop.docs.home.examples.BannerRequestExamples;
 import com.trendistra.trendistashop.dto.response.BannerDTO;
-import com.trendistra.trendistashop.services.HomeService;
+import com.trendistra.trendistashop.dto.response.CartDTO;
+import com.trendistra.trendistashop.dto.response.TypeResponse;
+import com.trendistra.trendistashop.services.IHomeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("${api.prefix}/home")
+@RequestMapping("${api.prefix}/banner")
 @CrossOrigin
 @Tag(name = "HomePage")
 public class HomeController {
     @Autowired
-    private HomeService homeService;
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<BannerDTO> createBanner(
-            @RequestPart("bannerDto") String bannerDTOJson,
-            @RequestParam(required = false) MultipartFile imageFile) throws IOException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        BannerDTO bannerDTO = objectMapper.readValue(bannerDTOJson, BannerDTO.class);
-        bannerDTO = homeService.createBanner(bannerDTO, imageFile);
-        return ResponseEntity.ok(bannerDTO);
-    }
-    @GetMapping("/banner/{type}")
-    public ResponseEntity<Map<String, List<BannerDTO>>> getBannerWithType(
+    private IHomeService homeService;
+    @GetMapping("/get-type-group-event/{type}")
+    @Operation(summary = "Lấy danh sách banner theo loại", description = "Lấy danh sách banner theo loại nhóm theo event.")
+    public ResponseEntity <TypeResponse<Map<String, List<BannerDTO>>>> getBannerWithType(
             @PathVariable String type) {
-        Map<String, List<BannerDTO>> banners = homeService.getBannerWithType(type);
-        return ResponseEntity.ok(banners);
+        TypeResponse<Map<String, List<BannerDTO>>> group  = homeService.getBannerWithType(type);
+        return ResponseEntity.status(group.getStatusCode()).body(group);
     }
-    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    @PostMapping("/create")
+    @com.trendistra.trendistashop.docs.banner.CreateBannerDocs
+    @Operation(summary = "Tạo banner", description = "Tạo banner bao gồm ảnh và thông tin khác.")
+    public ResponseEntity<TypeResponse<BannerDTO>> createBanner(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = BannerDTO.class),
+                            examples = @ExampleObject(value = BannerRequestExamples.CREATE_BANNER_REQUEST)
+                    )
+            )
+            @RequestBody BannerDTO bannerDTO) {
+        TypeResponse<BannerDTO> response = homeService.createBanner(bannerDTO);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+    @PutMapping(value = "/update/{id}")
+    @UpdateCategoryDocs
     @Operation(summary = "Cập nhật banner", description = "Cập nhật banner bao gồm ảnh và thông tin khác.")
-    public ResponseEntity<BannerDTO> updateBanner(
+    public ResponseEntity<TypeResponse<BannerDTO>>  updateBanner(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = BannerDTO.class),
+                            examples = @ExampleObject(value = BannerRequestExamples.UPDATE_BANNER_REQUEST)
+                    )
+            )
             @PathVariable Long id,
-            @Parameter(description = "Thông tin banner") @RequestPart("bannerDTO") String bannerDTOJson,
-            @Parameter(description = "Ảnh banner (tuỳ chọn)")
-            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile) throws IOException {
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        BannerDTO bannerDTO = objectMapper.readValue(bannerDTOJson, BannerDTO.class);
-        BannerDTO updatedBanner = homeService.updateBanner(id, bannerDTO, imageFile);
-        return ResponseEntity.ok(updatedBanner);
+            @RequestBody BannerDTO bannerDTO) {
+        TypeResponse<BannerDTO> response = homeService.updateBanner(id, bannerDTO);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/delete/{id}")
     @Operation(summary = "Xóa banner", description = "Xóa banner theo ID.")
-    public ResponseEntity<Void> deleteBanner(@PathVariable Long id) throws IOException {
-        homeService.deleteBanner(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<TypeResponse<Void>> deleteBanner(@PathVariable Long id) {
+        TypeResponse<Void> response = homeService.deleteBanner(id);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 }
