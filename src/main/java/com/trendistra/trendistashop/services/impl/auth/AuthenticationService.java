@@ -183,7 +183,7 @@ public class AuthenticationService implements IAuthenticationService {
     /**
      * Kích hoạt tài khoản người dùng bằng cách xác minh email.
      *
-     * @param userName Email của người dùng cần xác minh.
+     * @param email Email của người dùng cần xác minh.
      * @throws ResourceNotFoundEx Nếu không tìm thấy người dùng với email được cung
      *                            cấp.
      */

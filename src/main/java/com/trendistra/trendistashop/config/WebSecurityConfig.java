@@ -71,10 +71,11 @@ public class WebSecurityConfig {
             "/api/v1/sizes/**",
             "/api/v1/role/**",
             "/api/v1/permissions/**",
-            "/api/v1/home/**",
+            "/api/v1/banner/**",
             "/api/v1/collections/**",
             "/api/v1/notifications/**",
-            "/oauth2/**"
+            "/oauth2/**",
+            "/api/v1/media/**"
     };
     /**
      * Cấu hình bảo mật cho ứng dụng, xác định cách thức xử lý các yêu cầu HTTP.

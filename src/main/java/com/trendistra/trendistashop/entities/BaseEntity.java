@@ -21,10 +21,10 @@ public class BaseEntity {
     @Column(nullable = false, updatable = false)
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
-    @Column(nullable = false)
+    @Column(nullable = true)
     @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt;
-    @Column(nullable = false)
+    @Column(nullable = true)
     @Temporal(TemporalType.TIMESTAMP)
     private Date deletedAt;
     @PrePersist
@@ -33,8 +33,8 @@ public class BaseEntity {
         Calendar calendar = Calendar.getInstance(vietnamTimeZone);
         Date currentTime = calendar.getTime();
         this.createdAt = currentTime; // Set `createAt` when the entity is first created
-        this.updatedAt = currentTime; // Also initialize `updateAt` to the same time
-        this.deletedAt =  currentTime;
+        this.updatedAt = null;
+        this.deletedAt = null;
     }
 
     @PreUpdate

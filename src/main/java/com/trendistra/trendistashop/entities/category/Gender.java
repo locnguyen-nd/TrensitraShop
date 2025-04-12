@@ -25,6 +25,7 @@ public class Gender extends BaseEntity{
     @Column(nullable = false)
     private String name;
     private String slug;
+
     private String imageUrl;
     @OneToMany(mappedBy = "gender", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonProperty("categories")

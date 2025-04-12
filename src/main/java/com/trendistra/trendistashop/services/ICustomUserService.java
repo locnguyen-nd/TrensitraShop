@@ -13,7 +13,7 @@ public interface ICustomUserService {
     TypeResponse<List<UserDetailDTO>> getAllUser();
     TypeResponse<UserDetailDTO> getUserById(UUID id);
     TypeResponse<UserDetailDTO> updateUser( UserUpdateDTO userUpdateDTO);
-    TypeResponse<UserDetailDTO> updateAvatarUser( UUID userId, MultipartFile multipartFile) throws IOException;
+//    TypeResponse<UserDetailDTO> updateAvatarUser( UUID userId, MultipartFile multipartFile) throws IOException;
     TypeResponse<UserDetailDTO> assignRolesToUser(UUID id , Set<UUID> roleIds);
     TypeResponse<Void> deleteUser(UUID id);
     TypeResponse<Void> deleteOwnAccount();

@@ -66,7 +66,6 @@ public class Product extends BaseEntity {
     private List<Discount> discounts = new ArrayList<>();
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductImage> images = new ArrayList<>();
-    // Tăng số lượt xem
     public void incrementView() {
         this.views++;
     }

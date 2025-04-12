@@ -26,7 +26,7 @@ public class ProductVariant {
     @Column (nullable = false)
     private Integer stockQuantity;
     @Column(nullable = false)
-    private String codeVariant; // PVN6014-NSU-XL : Name + colorName  + Size
+    private String codeVariant;
     @ManyToOne
     @JoinColumn(name = "product_id" , nullable = false)
     @JsonIgnore

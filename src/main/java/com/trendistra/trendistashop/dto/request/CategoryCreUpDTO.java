@@ -1,6 +1,7 @@
-package com.trendistra.trendistashop.dto.response;
+package com.trendistra.trendistashop.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,15 +11,17 @@ import org.hibernate.validator.constraints.URL;
 import java.util.UUID;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
-public class GenderDTO {
-    private UUID id ;
+public class CategoryCreUpDTO {
+    @NotNull(message = "Gender ID is required")
+    private UUID gender;
+    private UUID parent;
     @NotBlank(message = "Name is required")
     private String name;
-    private String slug;
     @URL(message = "Image URL must be a valid URL")
     private String imageUrl;
-
+    private String description;
 }
+

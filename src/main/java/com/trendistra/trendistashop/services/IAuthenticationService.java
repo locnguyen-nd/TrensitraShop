@@ -26,14 +26,15 @@ public interface IAuthenticationService {
      * @param password mật khẩu của người dùng (dưới dạng chuỗi ký tự).
      * @return LoginResponse chứa thông tin user được cấp nếu xác thực thành công.
      */
-    public TypeResponse<LoginResponse> authenticateUser(String username, CharSequence password, GuardType guard);
+    TypeResponse<LoginResponse> authenticateUser(String username, CharSequence password, GuardType guard);
+
     /**
      * Tạo mới một người dùng trong hệ thống.
      *
      * @param registerRequest đối tượng chứa thông tin đăng ký người dùng.
      * @return RegisterResponse chứa thông tin về kết quả đăng ký.
      */
-    public TypeResponse<RegisterResponse> createUser(RegisterRequest registerRequest);
+    TypeResponse<RegisterResponse> createUser(RegisterRequest registerRequest);
 
     /**
      * Xác minh người dùng dựa trên tên đăng nhập.(email)
@@ -41,13 +42,19 @@ public interface IAuthenticationService {
      *
      * @param userName tên đăng nhập của người dùng cần xác minh.
      */
-    public TypeResponse<Void> verifyUser(String userName, String token) ;
-    public TypeResponse<Void> resendTokenVerify(String userName);
-    public UserEntity createUserWithGoogle(OAuth2User oAuth2User);
+    TypeResponse<Void> verifyUser(String userName, String token);
+
+    TypeResponse<Void> resendTokenVerify(String userName);
+
+    UserEntity createUserWithGoogle(OAuth2User oAuth2User);
 
     Optional<UserEntity> getUser(String userName);
-    public TypeResponse<Object> logout (String token);
-    public TypeResponse<Map<String, String>> refreshToken (String refreshToken);
+
+    TypeResponse<Object> logout(String token);
+
+    TypeResponse<Map<String, String>> refreshToken(String refreshToken);
+
     TypeResponse<ErrorResponse> forgotPassword(String email);
+
     TypeResponse<ErrorResponse> resetPassword(ResetPassword resetPassword);
 }
