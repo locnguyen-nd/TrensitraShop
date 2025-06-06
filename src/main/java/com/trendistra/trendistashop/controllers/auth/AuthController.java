@@ -19,9 +19,11 @@ import com.trendistra.trendistashop.docs.auth.RegisterDocs;
 import com.trendistra.trendistashop.docs.auth.ResetPasswordDocs;
 import com.trendistra.trendistashop.docs.auth.VerifyEmailDocs;
 import com.trendistra.trendistashop.docs.auth.examples.AuthRequestExamples;
+import com.trendistra.trendistashop.dto.request.ForgotPasswordRequest;
 import com.trendistra.trendistashop.dto.request.LoginRequest;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.request.ResetPassword;
+import com.trendistra.trendistashop.dto.request.VerifyResetPassword;
 import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
@@ -192,11 +194,34 @@ public class AuthController {
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
             content = @Content(
+                schema = @Schema(implementation = RegisterRequest.class),
                 examples = @ExampleObject(value = AuthRequestExamples.FORGOT_PASSWORD_REQUEST)
             )
         )
-        @RequestBody String email) {
-        TypeResponse<ErrorResponse> response = iAuthenticationService.forgotPassword(email);
+        @RequestBody @Valid ForgotPasswordRequest request) {
+        TypeResponse<ErrorResponse> response = iAuthenticationService.forgotPassword(request.getEmail());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    /**
+     * Xác thực email.
+     *
+     * @param request chứa email và mã xác thực.
+     * @return ResponseEntity chứa lỗi nếu dữ liệu không hợp lệ, hoặc không tồn tại.
+     */
+    @Operation(summary = "Xác thực email đặt lại mật khẩu")
+    @ResetPasswordDocs
+    @PostMapping("/verify-reset-password")
+    public ResponseEntity<TypeResponse<ErrorResponse>> verifyResetPassword(
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                schema = @Schema(implementation = ResetPassword.class),
+                examples = @ExampleObject(value = AuthRequestExamples.VERIFY_RESET_PASSWORD_REQUEST)
+            )
+        )
+        @RequestBody @Valid VerifyResetPassword request) {
+        TypeResponse<ErrorResponse> response = iAuthenticationService.verifyResetPassword(request);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

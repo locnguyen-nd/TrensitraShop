@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.services;
 
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.request.ResetPassword;
+import com.trendistra.trendistashop.dto.request.VerifyResetPassword;
 import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
@@ -55,6 +56,8 @@ public interface IAuthenticationService {
     TypeResponse<Map<String, String>> refreshToken(String refreshToken);
 
     TypeResponse<ErrorResponse> forgotPassword(String email);
+
+    TypeResponse<ErrorResponse> verifyResetPassword(VerifyResetPassword request);
 
     TypeResponse<ErrorResponse> resetPassword(ResetPassword resetPassword);
 }

@@ -24,6 +24,7 @@ services:
     restart: always
     ports:
       - "8080:8080"  # ánh xạ cổng 8080 của Spring Boot với máy chủ local
+      - "9093:9093"
     networks:
       - shared-network
     environment:

@@ -4,6 +4,7 @@ import com.trendistra.trendistashop.Util.ResponseHelper;
 import com.trendistra.trendistashop.config.JWTTokenHelper;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.request.ResetPassword;
+import com.trendistra.trendistashop.dto.request.VerifyResetPassword;
 import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
@@ -313,7 +314,7 @@ public class AuthenticationService implements IAuthenticationService {
     public TypeResponse<ErrorResponse> forgotPassword(String email) {
         try {
             Optional<UserEntity> userOpt = userDetailRepository.findByEmail(email);
-            if (userOpt.isEmpty()) {
+            if (!userOpt.isPresent()) {
                 return ResponseHelper.validationError("email", "Không tìm thấy người dùng với email này");
             }
             UserEntity user = userOpt.get();
@@ -323,37 +324,52 @@ public class AuthenticationService implements IAuthenticationService {
             userDetailRepository.save(user);
             emailService.sendMail(user);
 
-            ErrorResponse errorResponse = new ErrorResponse(200, "Mã xác thực đã được gửi qua email");
-            return ResponseHelper.ok(errorResponse, "Gửi mã xác thực thành công");
+            return ResponseHelper.ok(null, "Gửi mã xác thực thành công");
         } catch (Exception e) {
             return ResponseHelper.serverError("Lỗi khi xử lý yêu cầu quên mật khẩu");
         }
     }
 
     @Override
-    public TypeResponse<ErrorResponse> resetPassword(ResetPassword resetPassword) {
+    public TypeResponse<ErrorResponse> verifyResetPassword(VerifyResetPassword request) {
         try {
-            Optional<UserEntity> userOpt = userDetailRepository.findByEmail(resetPassword.getEmail());
+            Optional<UserEntity> userOpt = userDetailRepository.findByEmail(request.getEmail());
             if (userOpt.isEmpty()) {
                 return ResponseHelper.validationError("email", "Không tìm thấy người dùng với email này");
             }
             UserEntity user = userOpt.get();
-            if (user.getVerificationCode() == null || !user.getVerificationCode().equals(resetPassword.getCode())) {
+            if (user.getVerificationCode() == null || !user.getVerificationCode().equals(request.getCode())) {
                 return ResponseHelper.validationError("code", "Mã xác thực không hợp lệ");
             }
             if (user.getCodeExpiry() == null || user.getCodeExpiry().isBefore(LocalDateTime.now())) {
                 return ResponseHelper.validationError("code", "Mã xác thực đã hết hạn");
             }
 
-            user.setPassword(passwordEncoder.encode(resetPassword.getPassword()));
             user.setVerificationCode(null);
             user.setCodeExpiry(null);
             userDetailRepository.save(user);
 
+            return ResponseHelper.ok(null, "Xác thực thành công");
+
+        } catch (Exception e) {
+            return ResponseHelper.serverError("Lỗi xác thực");
+        }
+    }
+
+    @Override
+    public TypeResponse<ErrorResponse> resetPassword(ResetPassword request) {
+        try {
+            Optional<UserEntity> userOpt = userDetailRepository.findByEmail(request.getEmail());
+            if (userOpt.isEmpty()) {
+                return ResponseHelper.validationError("email", "Không tìm thấy người dùng với email này");
+            }
+            UserEntity user = userOpt.get();
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            userDetailRepository.save(user);
+
             accountNotificationService.notifyPasswordChanged(user.getId());
 
-            ErrorResponse errorResponse = new ErrorResponse(200, "Đổi mật khẩu thành công!");
-            return ResponseHelper.ok(errorResponse, "Đổi mật khẩu thành công");
+            return ResponseHelper.ok(null, "Đổi mật khẩu thành công");
 
         } catch (Exception e) {
             return ResponseHelper.serverError("Lỗi khi đặt lại mật khẩu");

@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Repository
 public interface UserDetailRepository extends JpaRepository<UserEntity, UUID>, JpaSpecificationExecutor<UserEntity> {
-    Optional <UserEntity> findByEmail(String username);
+    Optional<UserEntity> findByEmail(String username);
 
     @Modifying
     @Query("UPDATE UserEntity u SET u.verificationCode = null, u.codeExpiry = null WHERE u.codeExpiry < :currentTime AND u.enabled = false")
