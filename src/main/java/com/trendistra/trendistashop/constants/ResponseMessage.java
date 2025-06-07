@@ -31,6 +31,7 @@ public class ResponseMessage {
 
     // response message
     public static final String EMAIL_EXISTS = "email_exists";
+    public static final String CREDENTIALS_DO_NOT_MATCH_RECORD = "credentials_do_not_match_record";
     public static final String PASSWORD_NOT_MATCH = "credentials_not_match";
     public static final String TOKEN_INVALID = "token_invalid";
     public static final String SEND_CODE_SUCCESS = "send_code_success";

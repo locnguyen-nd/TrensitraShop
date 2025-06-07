@@ -13,6 +13,8 @@ ignore-matches:
     match: "PASSWORD_CREATE_SUCCESS"
   - name: "False positive - PASSWORD_UPDATE_SUCCESS"
     match: "PASSWORD_UPDATE_SUCCESS"
+  - name: "False positive - CREDENTIALS_DO_NOT_MATCH_RECORD"
+    match: "CREDENTIALS_DO_NOT_MATCH_RECORD"
   - name: "False positive - INCORRECT_CURRENT_PASSWORD"
     match: "INCORRECT_CURRENT_PASSWORD"
   - name: "False positive - PASSWORD_NOT_MATCH"

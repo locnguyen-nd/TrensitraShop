@@ -119,7 +119,7 @@ public class AuthenticationService implements IAuthenticationService {
                 return ResponseHelper.ok(loginResponse, ResponseMessage.AUTHENTICATED);
             }
         } catch (BadCredentialsException e) {
-            return ResponseHelper.validationError("email", ResponseMessage.PASSWORD_DO_NOT_MATCH_RECORD);
+            return ResponseHelper.validationError("email", ResponseMessage.CREDENTIALS_DO_NOT_MATCH_RECORD);
         }
         return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
     }
