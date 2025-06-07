@@ -5,15 +5,12 @@ import com.trendistra.trendistashop.dto.response.BannerDTO;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.Banner;
 import com.trendistra.trendistashop.enums.BannerTypeEnum;
-import com.trendistra.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistra.trendistashop.repositories.BannerRepository;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -54,9 +51,9 @@ public class HomeService implements IHomeService {
         try {
             List<Banner> banners = bannerRepository.findBannerByTypeAndIsActiveTrue(BannerTypeEnum.valueOf(type));
             List<BannerDTO> bannerDTOS = banners.stream().map(
-                    banner -> mapper.map(banner, BannerDTO.class)
-            ).collect(Collectors.toList());
-            Map<String, List<BannerDTO>> groupedByEvent = bannerDTOS.stream().collect(Collectors.groupingBy(BannerDTO::getEvent));
+                    banner -> mapper.map(banner, BannerDTO.class)).collect(Collectors.toList());
+            Map<String, List<BannerDTO>> groupedByEvent = bannerDTOS.stream()
+                    .collect(Collectors.groupingBy(BannerDTO::getEvent));
             return ResponseHelper.ok(groupedByEvent, "Lấy danh sách banner thành công !");
         } catch (IllegalArgumentException e) {
             return ResponseHelper.badRequest("Loại banner không hợp lệ");

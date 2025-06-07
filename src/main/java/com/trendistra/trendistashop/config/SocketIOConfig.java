@@ -8,14 +8,16 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class SocketIOConfig {
-    @Bean
+    @Bean(destroyMethod = "stop")
     public SocketIOServer socketIOServer() {
         com.corundumstudio.socketio.Configuration config = new com.corundumstudio.socketio.Configuration();
         config.setHostname("localhost");
-        config.setPort(9093); // Đổi sang 9093
+        config.setPort(9093);
+
         SocketConfig socketConfig = new SocketConfig();
         socketConfig.setReuseAddress(true);
         config.setSocketConfig(socketConfig);
+
         return new SocketIOServer(config);
     }
 

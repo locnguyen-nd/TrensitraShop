@@ -15,9 +15,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Size {
+public class Size extends BaseEntity {
     @Id
     @GeneratedValue
-    private UUID id ;
+    private UUID id;
     private String value;
 }

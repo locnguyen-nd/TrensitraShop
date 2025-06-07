@@ -2,6 +2,7 @@ package com.trendistra.trendistashop.services;
 
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.request.ResetPassword;
+import com.trendistra.trendistashop.dto.request.VerifyResetPassword;
 import com.trendistra.trendistashop.dto.response.ErrorResponse;
 import com.trendistra.trendistashop.dto.response.LoginResponse;
 import com.trendistra.trendistashop.dto.response.RegisterResponse;
@@ -16,7 +17,8 @@ import java.util.Optional;
 
 /**
  * Interface cung cấp các dịch vụ liên quan đến người dùng trong hệ thống.
- * Được sử dụng để định nghĩa các hành vi (operations) mà các lớp triển khai cần cung cấp.
+ * Được sử dụng để định nghĩa các hành vi (operations) mà các lớp triển khai cần
+ * cung cấp.
  */
 public interface IAuthenticationService {
     /**
@@ -54,7 +56,11 @@ public interface IAuthenticationService {
 
     TypeResponse<Map<String, String>> refreshToken(String refreshToken);
 
-    TypeResponse<ErrorResponse> forgotPassword(String email);
+    TypeResponse<ErrorResponse> sendCodeResetPassword(String email);
+
+    TypeResponse<ErrorResponse> resendCodeResetPassword(String email);
+
+    TypeResponse<ErrorResponse> verifyResetPassword(VerifyResetPassword request);
 
     TypeResponse<ErrorResponse> resetPassword(ResetPassword resetPassword);
 }

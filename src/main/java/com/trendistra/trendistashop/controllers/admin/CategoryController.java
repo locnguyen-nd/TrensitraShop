@@ -7,7 +7,6 @@ import com.trendistra.trendistashop.dto.response.GenderCategoryGroup;
 import com.trendistra.trendistashop.dto.response.GenderDTO;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.services.ICategoryService;
-import com.trendistra.trendistashop.services.impl.category.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -29,16 +28,16 @@ public class CategoryController {
     @Operation(summary = "Tạo giới tính")
     @PostMapping(value = "/create-gender")
     public ResponseEntity<TypeResponse<GenderDTO>> createGender(
-            @RequestBody @Valid GenderDTO genderDTO ){
+            @RequestBody @Valid GenderDTO genderDTO) {
         TypeResponse<GenderDTO> reponse = iCategoryService.createGender(genderDTO);
         return ResponseEntity.status(reponse.getStatusCode()).body(reponse);
     }
+
     @Operation(summary = "Tạo danh mục")
     @CreateCategoryDocs
     @PostMapping("/create")
     public ResponseEntity<TypeResponse<CategoryDTO>> createCategory(
-            @RequestBody @Valid CategoryCreUpDTO categoryDTO
-    ) {
+            @RequestBody @Valid CategoryCreUpDTO categoryDTO) {
         TypeResponse<CategoryDTO> response = iCategoryService.createCategory(categoryDTO);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -49,13 +48,13 @@ public class CategoryController {
     public ResponseEntity<TypeResponse<CategoryDTO>> updateCategory(
             @PathVariable UUID id,
             @RequestBody @Valid CategoryCreUpDTO category) {
-            TypeResponse<CategoryDTO> response = iCategoryService.updateCategory(id,category);
-            return ResponseEntity.status(response.getStatusCode()).body(response);
+        TypeResponse<CategoryDTO> response = iCategoryService.updateCategory(id, category);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @Operation(summary = "Xóa danh mục")
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<TypeResponse<Void>> deleteCategory(@PathVariable UUID id)  {
+    public ResponseEntity<TypeResponse<Void>> deleteCategory(@PathVariable UUID id) {
         TypeResponse<Void> response = iCategoryService.deleteCategory(id);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -71,7 +70,7 @@ public class CategoryController {
     @Operation(summary = "Lấy danh mục theo slug")
     @GetCategoryDocs
     @GetMapping("/slug/{slug}")
-    public ResponseEntity<TypeResponse<CategoryDTO>> getCategoryBySlug(@PathVariable String slug){
+    public ResponseEntity<TypeResponse<CategoryDTO>> getCategoryBySlug(@PathVariable String slug) {
         TypeResponse<CategoryDTO> category = iCategoryService.getCategoryBySlug(slug);
         return ResponseEntity.status(category.getStatusCode()).body(category);
     }
@@ -95,8 +94,9 @@ public class CategoryController {
     @Operation(summary = "Lấy danh sách tất cả danh mục")
     @GetAllCategoryDocs
     @GetMapping
-    public ResponseEntity<TypeResponse<List<GenderCategoryGroup>>>  getAllCategories() {
-        TypeResponse<List<GenderCategoryGroup>> groupedCategories = iCategoryService.getAllCategoriesGroupByGender(null);
+    public ResponseEntity<TypeResponse<List<GenderCategoryGroup>>> getAllCategories() {
+        TypeResponse<List<GenderCategoryGroup>> groupedCategories = iCategoryService
+                .getAllCategoriesGroupByGender(null);
         return ResponseEntity.status(groupedCategories.getStatusCode()).body(groupedCategories);
     }
 

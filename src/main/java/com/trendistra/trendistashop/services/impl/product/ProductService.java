@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.services.impl.product;
 
 import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.dto.request.ProductRequestDTO;
 import com.trendistra.trendistashop.dto.response.ProductDTO;
 import com.trendistra.trendistashop.dto.response.ProductImageDTO;
@@ -51,7 +52,10 @@ public class ProductService implements IProductService {
     private final ModelMapper modelMapper;
     private final int suggestionLimit;
 
-    public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository, DiscountRepository discountRepository, DiscountService discountService, ImageService imageService, VariantService variantService, CloudinaryService cloudinaryService, ModelMapper modelMapper,   @Value("${search.suggestion.limit}") int suggestionLimit) {
+    public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository,
+            DiscountRepository discountRepository, DiscountService discountService, ImageService imageService,
+            VariantService variantService, CloudinaryService cloudinaryService, ModelMapper modelMapper,
+            @Value("${search.suggestion.limit}") int suggestionLimit) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.discountRepository = discountRepository;
@@ -65,42 +69,48 @@ public class ProductService implements IProductService {
 
     @Override
     public TypeResponse<Page<ProductDTO>> getAllProduct(Pageable pageable) {
-       try {
+        try {
             Page<Product> productPage = productRepository.findAll(pageable);
-            if(productPage.isEmpty()) {
+            if (productPage.isEmpty()) {
                 return ResponseHelper.notFound("Không tìm thấy sản phẩm nào");
             }
             return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
-       } catch (Exception e) {
+        } catch (Exception e) {
             return ResponseHelper.serverError("Lỗi khi lấy danh sách sản phẩm");
-       }
+        }
     }
 
     @Override
-    public TypeResponse<SearchSuggestionDTO> getSuggestion (String keyword) {
+    public TypeResponse<SearchSuggestionDTO> getSuggestion(String keyword) {
         try {
-            if(keyword == null || keyword.trim().isEmpty()) {
-                return ResponseHelper.ok(new SearchSuggestionDTO(), "Lấy danh sách sản phẩm thành công");
+            if (keyword == null || keyword.trim().isEmpty()) {
+                return ResponseHelper.badRequest(ResponseMessage.BAD_REQUEST);
             }
             List<Product> products = productRepository.findProductNames(
                     keyword.toLowerCase().trim(),
-                    PageRequest.of(0, suggestionLimit)
-            );
-            List<String> categorySlugs = categoryRepository.findCategorySlugs(
-                    keyword.toLowerCase().trim(),
-                    PageRequest.of(0, suggestionLimit)
-            );
+                    PageRequest.of(0, suggestionLimit));
+            List<Object[]> categories = categoryRepository.findCategoryNameAndSlugs(keyword,
+                    PageRequest.of(0, suggestionLimit));
+
             SearchSuggestionDTO result = new SearchSuggestionDTO();
-            result.setProductNames(products.stream()
-                    .map(Product::getName)
-                    .collect(Collectors.toList()));
             result.setProducts(products.stream()
                     .map(this::mapToProductDto)
                     .collect(Collectors.toList()));
-            result.setCategorySlug(categorySlugs);
-            return ResponseHelper.ok(result, "Lấy danh sách sản phẩm thành công");
+            result.setCategories(
+                    categories.stream()
+                            .map(c -> {
+                                SearchSuggestionDTO.NameSlugDTO dto = new SearchSuggestionDTO.NameSlugDTO();
+                                dto.setName((String) c[0]);
+                                dto.setSlug((String) c[1]);
+                                return dto;
+                            })
+                            .collect(Collectors.toList()));
+            if (result.getProducts().size() == 0 && result.getCategories().size() == 0) {
+                return ResponseHelper.badRequest(ResponseMessage.PRODUCT_NOT_FOUND);
+            }
+            return ResponseHelper.ok(result, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi khi lấy danh sách sản phẩm thành công");
+            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
         }
     }
 
@@ -124,7 +134,8 @@ public class ProductService implements IProductService {
 
     @Override
     @Transactional
-    public ProductDTO createProductWithImages(ProductRequestDTO productDto, List<MultipartFile> files) throws IOException {
+    public ProductDTO createProductWithImages(ProductRequestDTO productDto, List<MultipartFile> files)
+            throws IOException {
 
         if (productRepository.existsByName(productDto.getName())) {
             throw new RuntimeException("Product with this name already exists");
@@ -156,13 +167,11 @@ public class ProductService implements IProductService {
 
         List<ProductVariant> variants = variantService.createProductVariant(
                 savedProduct,
-                productDto.getVariants()
-        );
+                productDto.getVariants());
         List<ProductImage> productImages = imageService.uploadImagesByColor(
                 files,
                 productDto.getColorImageMapping(),
-                savedProduct.getId()
-        );
+                savedProduct.getId());
         Optional<ProductImage> thumbnailImage = productImages.stream()
                 .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
                 .findFirst();
@@ -177,7 +186,7 @@ public class ProductService implements IProductService {
     public TypeResponse<ProductDTO> getProductById(UUID id) {
         try {
             Optional<Product> productOpt = productRepository.findById(id);
-            if(productOpt.isEmpty()) {
+            if (productOpt.isEmpty()) {
                 return ResponseHelper.notFound("Không tìm thấy sản phẩm với id này");
             }
             Product product = productOpt.get();
@@ -189,14 +198,14 @@ public class ProductService implements IProductService {
     }
 
     @Override
-    public TypeResponse<Page<ProductDTO>> getProductByTag(String genderSlug , String tag, Pageable pageable) {
+    public TypeResponse<Page<ProductDTO>> getProductByTag(String genderSlug, String tag, Pageable pageable) {
         try {
             String tagEnum = tag.toUpperCase();
             Specification<Product> productSpecification = Specification
                     .where(hasGenderSlug(genderSlug))
                     .and(hasTag(ProductTagEnum.valueOf(tagEnum)));
             Page<Product> productPage = productRepository.findAll(productSpecification, pageable);
-            if(productPage.isEmpty()) {
+            if (productPage.isEmpty()) {
                 return ResponseHelper.notFound(String.format("Không tìm thấy sản phẩm với %s và %s ", tag, genderSlug));
             }
             return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
@@ -208,7 +217,7 @@ public class ProductService implements IProductService {
     @Override
     public TypeResponse<ProductDTO> getProductBySlug(String slug) {
         Product product = productRepository.findProductsBySlug(slug);
-        if(product == null) {
+        if (product == null) {
             return ResponseHelper.notFound("Không tìm thấy sản phẩm với này");
         }
         return ResponseHelper.ok(mapToProductDto(product), "Lấy sản phẩm thành công");
@@ -216,8 +225,9 @@ public class ProductService implements IProductService {
 
     @Override
     public TypeResponse<Page<ProductDTO>> filterProduct(String categorySlug, String genderSlug, String colorCode,
-                                          String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest) {
-        // Nếu có cate thì kiểm tra xem có parent không nếu có thì search parent chính nó còn nếu kh search chính nó
+            String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest) {
+        // Nếu có cate thì kiểm tra xem có parent không nếu có thì search parent chính
+        // nó còn nếu kh search chính nó
         Specification<Product> spec = Specification.where(ProductSpecification.hasStatus(true));
 
         // Xử lý bộ lọc theo Category
@@ -225,11 +235,11 @@ public class ProductService implements IProductService {
             Optional<Category> categoryOpt = categoryRepository.findBySlug(categorySlug);
             if (categoryOpt.isPresent() && categoryOpt.get().getParent() == null) {
                 // Nếu category là parent thì tìm theo điều kiện:
-                // Sản phẩm thuộc category có slug = categorySlug OR sản phẩm thuộc category con của category đó
+                // Sản phẩm thuộc category có slug = categorySlug OR sản phẩm thuộc category con
+                // của category đó
                 spec = spec.and((root, query, cb) -> cb.or(
                         cb.equal(root.get("category").get("slug"), categorySlug),
-                        cb.equal(root.get("category").get("parent").get("slug"), categorySlug)
-                ));
+                        cb.equal(root.get("category").get("parent").get("slug"), categorySlug)));
             } else {
                 // Nếu không phải parent thì lọc theo categorySlug của chính category đó
                 spec = spec.and(ProductSpecification.hasCategorySlug(categorySlug));
@@ -249,7 +259,7 @@ public class ProductService implements IProductService {
         }
         // Tìm kiếm sản phẩm theo điều kiện và phân trang
         Page<Product> productPage = productRepository.findAll(spec, pageRequest);
-        if(productPage.isEmpty()) {
+        if (productPage.isEmpty()) {
             return ResponseHelper.notFound("Không tìm thấy sản phẩm với điều kiện lọc");
         }
         // Chuyển đổi Page<Product> sang Page<ProductDTO>
@@ -258,7 +268,8 @@ public class ProductService implements IProductService {
 
     @Transactional
     @Override
-    public ProductDTO updateProduct(UUID productId, ProductRequestDTO productDto, List<MultipartFile> files) throws IOException {
+    public ProductDTO updateProduct(UUID productId, ProductRequestDTO productDto, List<MultipartFile> files)
+            throws IOException {
 
         // Fetch the existing product from the database
         Product existingProduct = productRepository.findById(productId)
@@ -297,8 +308,7 @@ public class ProductService implements IProductService {
             List<ProductImage> productImages = imageService.uploadImagesByColor(
                     files,
                     productDto.getColorImageMapping(),
-                    productId
-            );
+                    productId);
 
             // Set the first image as the featured image
             Optional<ProductImage> thumbnailImage = productImages.stream()
@@ -396,7 +406,6 @@ public class ProductService implements IProductService {
                         productVariant -> convertVariantDTO(productVariant)).toList())
                 .build();
     }
-
 
     private ProductImageDTO covertImageToDTO(ProductImage productImage) {
         return ProductImageDTO.builder()
