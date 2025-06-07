@@ -1,0 +1,5 @@
+ignore-matches:
+  - name: "False positive - token constant"
+    match: "TOKEN_INVALID"
+  - name: "False positive - credentials"
+    match: "CREDENTIALS_DO_NOT_MATCH_RECORD"
