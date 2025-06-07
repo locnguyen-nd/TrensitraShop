@@ -1,4 +1,5 @@
 package com.trendistra.trendistashop.controllers.auth;
+
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,32 +46,27 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final IAuthenticationService iAuthenticationService;
+
     @Autowired
     public AuthController(IAuthenticationService iAuthenticationService) {
         this.iAuthenticationService = iAuthenticationService;
     }
-    
+
     @Autowired
     private JWTTokenHelper jwtTokenHelper;
 
     /**
      * Đăng ký người dùng mới vào hệ thống.
      *
-     * @param request chứa các thông tin người dùng cần đăng ký như tên, email, số điện thoại, mật khẩu.
+     * @param request chứa các thông tin người dùng cần đăng ký như tên, email, số
+     *                điện thoại, mật khẩu.
      * @return ResponseEntity chứa kết quả đăng ký và mã trạng thái.
      */
     @Operation(summary = "Đăng ký tài khoản mới")
     @RegisterDocs
     @PostMapping("/register")
     public ResponseEntity<TypeResponse<RegisterResponse>> register(
-        @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = true,
-            content = @Content(
-                schema = @Schema(implementation = RegisterRequest.class),
-                examples = @ExampleObject(value = AuthRequestExamples.REGISTER_REQUEST)
-            )
-        )
-        @RequestBody @Valid RegisterRequest request) {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = RegisterRequest.class), examples = @ExampleObject(value = AuthRequestExamples.REGISTER_REQUEST))) @RequestBody @Valid RegisterRequest request) {
         TypeResponse<RegisterResponse> response = iAuthenticationService.createUser(request);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -79,20 +75,14 @@ public class AuthController {
      * Xác minh email người dùng thông qua mã xác minh.
      *
      * @param map chứa email và mã xác minh người dùng nhập vào.
-     * @return ResponseEntity với mã trạng thái xác nhận nếu mã xác minh đúng, hoặc lỗi nếu sai.
+     * @return ResponseEntity với mã trạng thái xác nhận nếu mã xác minh đúng, hoặc
+     *         lỗi nếu sai.
      */
     @Operation(summary = "Xác minh email người dùng", description = "Xác thực email thông qua token được gửi qua email")
     @VerifyEmailDocs
     @PostMapping("/verify")
     public ResponseEntity<TypeResponse<Void>> verifyEmail(
-        @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = true,
-            content = @Content(
-                schema = @Schema(implementation = RegisterRequest.class),
-                examples = @ExampleObject(value = AuthRequestExamples.VERIFY_EMAIL_REQUEST)
-            )
-        )
-        @RequestBody Map<String, String> map)  {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = RegisterRequest.class), examples = @ExampleObject(value = AuthRequestExamples.VERIFY_EMAIL_REQUEST))) @RequestBody Map<String, String> map) {
         String email = map.get("email");
         String token = map.get("token");
         if (email == null || token == null) {
@@ -106,19 +96,13 @@ public class AuthController {
      * Gửi lại mã xác minh qua email.
      *
      * @param map chứa email và mã xác minh người dùng nhập vào.
-     * @return ResponseEntity với mã trạng thái xác nhận nếu mã xác minh đúng, hoặc lỗi nếu sai.
+     * @return ResponseEntity với mã trạng thái xác nhận nếu mã xác minh đúng, hoặc
+     *         lỗi nếu sai.
      */
     @Operation(summary = "Gửi lại email xác thực", description = "Gửi lại email xác thực cho tài khoản chưa được kích hoạt")
     @PostMapping("/resend-verify")
     public ResponseEntity<TypeResponse<Void>> resendVerifyEmail(
-        @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = true,
-            content = @Content(
-                schema = @Schema(implementation = RegisterRequest.class),
-                examples = @ExampleObject(value = AuthRequestExamples.RESEND_VERIFY_EMAIL_REQUEST)
-            )
-        )
-        @RequestBody Map<String, String> map)  {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = RegisterRequest.class), examples = @ExampleObject(value = AuthRequestExamples.RESEND_VERIFY_EMAIL_REQUEST))) @RequestBody Map<String, String> map) {
         String email = map.get("email");
         if (email == null) {
             return ResponseEntity.badRequest().build();
@@ -131,21 +115,16 @@ public class AuthController {
      * Đăng nhập người dùng và trả về một JWT token.
      *
      * @param request chứa email và mật khẩu của người dùng cần đăng nhập.
-     * @return ResponseEntity chứa JWT token nếu đăng nhập thành công, hoặc lỗi nếu thông tin không chính xác.
+     * @return ResponseEntity chứa JWT token nếu đăng nhập thành công, hoặc lỗi nếu
+     *         thông tin không chính xác.
      */
     @Operation(summary = "Đăng nhập")
     @LoginDocs
     @PostMapping("/login")
     public ResponseEntity<TypeResponse<LoginResponse>> login(
-        @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = true,
-            content = @Content(
-                schema = @Schema(implementation = RegisterRequest.class),
-                examples = @ExampleObject(value = AuthRequestExamples.LOGIN_REQUEST)
-            )
-        )
-        @RequestBody @Valid LoginRequest request) {
-        TypeResponse<LoginResponse> response = iAuthenticationService.authenticateUser(request.getEmail(), request.getPassword(), request.getGuard());
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = RegisterRequest.class), examples = @ExampleObject(value = AuthRequestExamples.LOGIN_REQUEST))) @RequestBody @Valid LoginRequest request) {
+        TypeResponse<LoginResponse> response = iAuthenticationService.authenticateUser(request.getEmail(),
+                request.getPassword(), request.getGuard());
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -153,12 +132,13 @@ public class AuthController {
      * Đăng xuất người dùng khỏi hệ thống.
      *
      * @param request chứa token được gửi từ header.
-     * @return ResponseEntity chứa JWT token nếu đăng xuất thành công, hoặc lỗi nếu token không hợp lệ.
+     * @return ResponseEntity chứa JWT token nếu đăng xuất thành công, hoặc lỗi nếu
+     *         token không hợp lệ.
      */
     @Operation(summary = "Đăng xuất")
     @LogoutDocs
     @PostMapping("/logout")
-    public ResponseEntity<TypeResponse<Object>> logout (HttpServletRequest request) {
+    public ResponseEntity<TypeResponse<Object>> logout(HttpServletRequest request) {
         String token = jwtTokenHelper.getToken(request);
         if (token == null) {
             return ResponseEntity.badRequest().build();
@@ -166,17 +146,19 @@ public class AuthController {
         TypeResponse<Object> response = iAuthenticationService.logout(token);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-    
+
     /**
      * Làm mới token.
      *
      * @param refreshToken chứa token được gửi từ header.
-     * @return ResponseEntity chứa JWT token mới nếu làm mới thành công, hoặc lỗi nếu token không hợp lệ.
+     * @return ResponseEntity chứa JWT token mới nếu làm mới thành công, hoặc lỗi
+     *         nếu token không hợp lệ.
      */
     @Operation(summary = "Làm mới token")
     @RefreshTokenDocs
     @PostMapping("/refresh-token")
-    public ResponseEntity<TypeResponse<Map<String, String>>> refreshToken (@RequestHeader("Refresh-Token") String refreshToken) {
+    public ResponseEntity<TypeResponse<Map<String, String>>> refreshToken(
+            @RequestHeader("Refresh-Token") String refreshToken) {
         TypeResponse<Map<String, String>> response = iAuthenticationService.refreshToken(refreshToken);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -191,15 +173,23 @@ public class AuthController {
     @ForgotPasswordDocs
     @PostMapping("/forgot-password")
     public ResponseEntity<TypeResponse<ErrorResponse>> forgotPassword(
-        @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = true,
-            content = @Content(
-                schema = @Schema(implementation = RegisterRequest.class),
-                examples = @ExampleObject(value = AuthRequestExamples.FORGOT_PASSWORD_REQUEST)
-            )
-        )
-        @RequestBody @Valid ForgotPasswordRequest request) {
-        TypeResponse<ErrorResponse> response = iAuthenticationService.forgotPassword(request.getEmail());
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = RegisterRequest.class), examples = @ExampleObject(value = AuthRequestExamples.FORGOT_PASSWORD_REQUEST))) @RequestBody @Valid ForgotPasswordRequest request) {
+        TypeResponse<ErrorResponse> response = iAuthenticationService.sendCodeResetPassword(request.getEmail());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    /**
+     * Gửi lại quên mật khẩu.
+     *
+     * @param email chứa email của người dùng cần quên mật khẩu.
+     * @return ResponseEntity chứa lỗi nếu email không tồn tại, hoặc không tồn tại.
+     */
+    @Operation(summary = "Gửi lại mã quên mật khẩu")
+    @ForgotPasswordDocs
+    @PostMapping("/resend-forgot-password")
+    public ResponseEntity<TypeResponse<ErrorResponse>> resendforgotPassword(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = RegisterRequest.class), examples = @ExampleObject(value = AuthRequestExamples.FORGOT_PASSWORD_REQUEST))) @RequestBody @Valid ForgotPasswordRequest request) {
+        TypeResponse<ErrorResponse> response = iAuthenticationService.resendCodeResetPassword(request.getEmail());
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -213,14 +203,7 @@ public class AuthController {
     @ResetPasswordDocs
     @PostMapping("/verify-reset-password")
     public ResponseEntity<TypeResponse<ErrorResponse>> verifyResetPassword(
-        @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = true,
-            content = @Content(
-                schema = @Schema(implementation = ResetPassword.class),
-                examples = @ExampleObject(value = AuthRequestExamples.VERIFY_RESET_PASSWORD_REQUEST)
-            )
-        )
-        @RequestBody @Valid VerifyResetPassword request) {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = ResetPassword.class), examples = @ExampleObject(value = AuthRequestExamples.VERIFY_RESET_PASSWORD_REQUEST))) @RequestBody @Valid VerifyResetPassword request) {
         TypeResponse<ErrorResponse> response = iAuthenticationService.verifyResetPassword(request);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
@@ -235,15 +218,8 @@ public class AuthController {
     @ResetPasswordDocs
     @PostMapping("/reset-password")
     public ResponseEntity<TypeResponse<ErrorResponse>> resetPassword(
-        @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = true,
-            content = @Content(
-                schema = @Schema(implementation = ResetPassword.class),
-                examples = @ExampleObject(value = AuthRequestExamples.RESET_PASSWORD_REQUEST)
-            )
-        )
-        @RequestBody @Valid  ResetPassword request) {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = ResetPassword.class), examples = @ExampleObject(value = AuthRequestExamples.RESET_PASSWORD_REQUEST))) @RequestBody @Valid ResetPassword request) {
         TypeResponse<ErrorResponse> response = iAuthenticationService.resetPassword(request);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-}   
+}

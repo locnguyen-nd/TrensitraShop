@@ -1,6 +1,5 @@
 package com.trendistra.trendistashop.entities.user;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.trendistra.trendistashop.entities.BaseEntity;

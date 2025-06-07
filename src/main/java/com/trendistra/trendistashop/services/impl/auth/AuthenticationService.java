@@ -1,5 +1,6 @@
 package com.trendistra.trendistashop.services.impl.auth;
 
+import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.Util.ResponseHelper;
 import com.trendistra.trendistashop.config.JWTTokenHelper;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
@@ -88,13 +89,13 @@ public class AuthenticationService implements IAuthenticationService {
             Authentication authenticationResponse = this.authenticationManager.authenticate(authentication);
             if (authenticationResponse.isAuthenticated()) {
                 UserEntity user = (UserEntity) authenticationResponse.getPrincipal();
-                if(guard != null && guard == GuardType.ADMIN){
-                    if(user.getRoles().stream().noneMatch(role -> role.getName().equalsIgnoreCase("admin"))){
-                        return ResponseHelper.validationError("email", "Tài khoản không có quyền truy cập");
+                if (guard != null && guard == GuardType.ADMIN) {
+                    if (user.getRoles().stream().noneMatch(role -> role.getName().equalsIgnoreCase("admin"))) {
+                        return ResponseHelper.validationError("email", ResponseMessage.UNAUTHORIZED);
                     }
                 }
                 if (user.isLocked()) {
-                    return ResponseHelper.unauthorized("Tài khoản đã bị khóa. Vui lòng liên hệ admin!");
+                    return ResponseHelper.unauthorized(ResponseMessage.ACCOUNT_LOCKED);
                 }
                 if (!user.isEnabled()) {
                     String verificationToken = jwtTokenHelper.generateVerificationToken(user.getEmail());
@@ -115,12 +116,12 @@ public class AuthenticationService implements IAuthenticationService {
                         .token(token)
                         .expiresIn(expiresIn)
                         .build();
-                return ResponseHelper.ok(loginResponse, "Đăng nhập thành công");
+                return ResponseHelper.ok(loginResponse, ResponseMessage.AUTHENTICATED);
             }
         } catch (BadCredentialsException e) {
-            return ResponseHelper.validationError("email", "Tên người dùng hoặc mật khẩu không chính xác");
+            return ResponseHelper.validationError("email", ResponseMessage.CREDENTIALS_DO_NOT_MATCH_RECORD);
         }
-        return ResponseHelper.badRequest("Đăng nhập không thành công");
+        return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
     }
 
     /**
@@ -135,10 +136,10 @@ public class AuthenticationService implements IAuthenticationService {
     public TypeResponse<RegisterResponse> createUser(RegisterRequest request) {
         Optional<UserEntity> userExisting = userDetailRepository.findByEmail(request.getEmail());
         if (userExisting.isPresent()) {
-            return ResponseHelper.validationError("email", "Tài khoản đã tồn tại");
+            return ResponseHelper.validationError("email", ResponseMessage.EMAIL_EXISTS);
         }
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            return ResponseHelper.validationError("confirmPassword", "Mật khẩu không khớp");
+            return ResponseHelper.validationError("confirmPassword", ResponseMessage.PASSWORD_NOT_MATCH);
         }
         try {
             UserEntity user = UserEntity.builder()
@@ -174,10 +175,9 @@ public class AuthenticationService implements IAuthenticationService {
                     .isEnabled(user.isEnabled())
                     .build();
 
-            return ResponseHelper.created(registerResponse,
-                    "Đăng ký thành công. Kiểm tra email để kích hoạt tài khoản.");
+            return ResponseHelper.created(registerResponse, ResponseMessage.CREATE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi tạo tài khoản");
+            return ResponseHelper.serverError(ResponseMessage.CREATE_FAILED);
         }
     }
 
@@ -193,23 +193,23 @@ public class AuthenticationService implements IAuthenticationService {
     public TypeResponse<Void> verifyUser(String email, String token) {
         try {
             if (!jwtTokenHelper.validateVerificationToken(token)) {
-                return ResponseHelper.badRequest("Link xác thực không hợp lệ hoặc đã hết hạn");
+                return ResponseHelper.badRequest(ResponseMessage.INVALID_OR_EXPIRED_TOKEN);
             }
 
             String tokenEmail = jwtTokenHelper.getUserNameFromToken(token);
             if (!email.equals(tokenEmail)) {
-                return ResponseHelper.badRequest("Token không hợp lệ cho email này");
+                return ResponseHelper.badRequest(ResponseMessage.TOKEN_INVALID);
             }
 
             Optional<UserEntity> userOpt = userDetailRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
-                return ResponseHelper.badRequest("Không tìm thấy người dùng với email này");
+                return ResponseHelper.badRequest(ResponseMessage.USER_NOT_FOUND);
             }
 
             UserEntity user = userOpt.get();
 
             if (user.isEnabled()) {
-                return ResponseHelper.badRequest("Tài khoản đã được kích hoạt trước đó");
+                return ResponseHelper.badRequest(ResponseMessage.ACCOUNT_ALREADY_ACTIVATED);
             }
 
             user.setEnabled(true);
@@ -223,11 +223,10 @@ public class AuthenticationService implements IAuthenticationService {
             }
 
             userDetailRepository.save(user);
-            return ResponseHelper.ok(null, "Xác thực tài khoản thành công");
+            return ResponseHelper.ok(null, ResponseMessage.VERIFICATION_SUCCESS);
 
         } catch (Exception e) {
-            log.error("Lỗi xác thực tài khoản: ", e);
-            return ResponseHelper.serverError("Lỗi xác thực tài khoản");
+            return ResponseHelper.serverError(ResponseMessage.VERIFICATION_FAILED);
         }
     }
 
@@ -244,12 +243,12 @@ public class AuthenticationService implements IAuthenticationService {
         try {
             Optional<UserEntity> userOpt = userDetailRepository.findByEmail(userName);
             if (userOpt.isEmpty()) {
-                return ResponseHelper.validationError("email", "Không tìm thấy người dùng với email này");
+                return ResponseHelper.validationError("email", ResponseMessage.USER_NOT_FOUND);
             }
 
             UserEntity user = userOpt.get();
             if (user.isEnabled()) {
-                return ResponseHelper.validationError("email", "Tài khoản đã được kích hoạt trước đó");
+                return ResponseHelper.validationError("email", ResponseMessage.ACCOUNT_ALREADY_ACTIVATED);
             }
 
             int attemptCount = verificationAttemptRepository.countByUserIdAndCreatedAtAfter(
@@ -257,7 +256,7 @@ public class AuthenticationService implements IAuthenticationService {
                     LocalDateTime.now().minusHours(12));
 
             if (attemptCount >= maxAttempts) {
-                return ResponseHelper.badRequest("Bạn đã gửi quá " + maxAttempts + " lần. Vui lòng thử lại sau 12 giờ");
+                return ResponseHelper.badRequest(ResponseMessage.TOO_MANY_ATTEMPTS);
             }
 
             String verificationToken = jwtTokenHelper.generateVerificationToken(user.getEmail());
@@ -270,33 +269,30 @@ public class AuthenticationService implements IAuthenticationService {
 
             emailService.sendVerificationEmail(user, verificationToken);
 
-            return ResponseHelper.ok(null,
-                    String.format("Yêu cầu xác thực thành công. Vui lòng kiểm tra email. Bạn còn %d lần gửi",
-                            (maxAttempts - attemptCount - 1)));
+            return ResponseHelper.ok(null, ResponseMessage.VERIFICATION_REQUEST_SUCCESS);
 
         } catch (Exception e) {
-            log.error("Lỗi gửi lại email xác thực: ", e);
-            return ResponseHelper.serverError("Lỗi xác thực tài khoản");
+            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
         }
     }
 
     @Override
     public TypeResponse<Object> logout(String token) {
         if (token == null) {
-            return ResponseHelper.badRequest("Token không hợp lệ");
+            return ResponseHelper.badRequest(ResponseMessage.TOKEN_INVALID);
         }
         try {
             jwtTokenHelper.logout(token);
-            return ResponseHelper.ok(null, "Đăng xuất thành công");
+            return ResponseHelper.ok(null, ResponseMessage.LOGOUT_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.badRequest("Đăng xuất thất bại");
+            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
         }
     }
 
     @Override
     public TypeResponse<Map<String, String>> refreshToken(String refreshToken) {
         if (refreshToken == null) {
-            return ResponseHelper.badRequest("Refresh token không hợp lệ");
+            return ResponseHelper.badRequest(ResponseMessage.TOKEN_REFRESH_INVALID);
         }
 
         try {
@@ -304,18 +300,18 @@ public class AuthenticationService implements IAuthenticationService {
             Map<String, String> tokenData = new HashMap<>();
             tokenData.put("token", newToken);
 
-            return ResponseHelper.ok(tokenData, "Làm mới token thành công");
+            return ResponseHelper.ok(tokenData, ResponseMessage.TOKEN_REFRESH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.badRequest("Làm mới token thất bại");
+            return ResponseHelper.serverError(ResponseMessage.TOKEN_REFRESH_FAILURE);
         }
     }
 
     @Override
-    public TypeResponse<ErrorResponse> forgotPassword(String email) {
+    public TypeResponse<ErrorResponse> sendCodeResetPassword(String email) {
         try {
             Optional<UserEntity> userOpt = userDetailRepository.findByEmail(email);
             if (!userOpt.isPresent()) {
-                return ResponseHelper.validationError("email", "Không tìm thấy người dùng với email này");
+                return ResponseHelper.validationError("email", ResponseMessage.USER_NOT_FOUND);
             }
             UserEntity user = userOpt.get();
             String verificationCode = VerificationCodeGenerator.generateCode();
@@ -324,9 +320,29 @@ public class AuthenticationService implements IAuthenticationService {
             userDetailRepository.save(user);
             emailService.sendMail(user);
 
-            return ResponseHelper.ok(null, "Gửi mã xác thực thành công");
+            return ResponseHelper.ok(null, ResponseMessage.SEND_CODE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi khi xử lý yêu cầu quên mật khẩu");
+            return ResponseHelper.serverError(ResponseMessage.SEND_CODE_FAILED);
+        }
+    }
+
+    @Override
+    public TypeResponse<ErrorResponse> resendCodeResetPassword(String email) {
+        try {
+            Optional<UserEntity> userOpt = userDetailRepository.findByEmail(email);
+            if (!userOpt.isPresent()) {
+                return ResponseHelper.validationError("email", ResponseMessage.USER_NOT_FOUND);
+            }
+            UserEntity user = userOpt.get();
+            String verificationCode = VerificationCodeGenerator.generateCode();
+            user.setVerificationCode(verificationCode);
+            user.setCodeExpiry(LocalDateTime.now().plusMinutes(15));
+            userDetailRepository.save(user);
+            emailService.sendMail(user);
+
+            return ResponseHelper.ok(null, ResponseMessage.SEND_CODE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.SEND_CODE_FAILED);
         }
     }
 
@@ -335,24 +351,24 @@ public class AuthenticationService implements IAuthenticationService {
         try {
             Optional<UserEntity> userOpt = userDetailRepository.findByEmail(request.getEmail());
             if (userOpt.isEmpty()) {
-                return ResponseHelper.validationError("email", "Không tìm thấy người dùng với email này");
+                return ResponseHelper.validationError("email", ResponseMessage.USER_NOT_FOUND);
             }
             UserEntity user = userOpt.get();
             if (user.getVerificationCode() == null || !user.getVerificationCode().equals(request.getCode())) {
-                return ResponseHelper.validationError("code", "Mã xác thực không hợp lệ");
+                return ResponseHelper.validationError("code", ResponseMessage.INVALID_OTP_CODE);
             }
             if (user.getCodeExpiry() == null || user.getCodeExpiry().isBefore(LocalDateTime.now())) {
-                return ResponseHelper.validationError("code", "Mã xác thực đã hết hạn");
+                return ResponseHelper.validationError("code", ResponseMessage.EXPIRED_OTP_CODE);
             }
 
             user.setVerificationCode(null);
             user.setCodeExpiry(null);
             userDetailRepository.save(user);
 
-            return ResponseHelper.ok(null, "Xác thực thành công");
+            return ResponseHelper.ok(null, ResponseMessage.VERIFICATION_SUCCESS);
 
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi xác thực");
+            return ResponseHelper.serverError(ResponseMessage.VERIFICATION_FAILED);
         }
     }
 
@@ -361,18 +377,23 @@ public class AuthenticationService implements IAuthenticationService {
         try {
             Optional<UserEntity> userOpt = userDetailRepository.findByEmail(request.getEmail());
             if (userOpt.isEmpty()) {
-                return ResponseHelper.validationError("email", "Không tìm thấy người dùng với email này");
+                return ResponseHelper.validationError("email", ResponseMessage.USER_NOT_FOUND);
             }
             UserEntity user = userOpt.get();
+
+            if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                return ResponseHelper.validationError("password", ResponseMessage.PASSWORD_SAME_AS_OLD);
+            }
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             userDetailRepository.save(user);
 
             accountNotificationService.notifyPasswordChanged(user.getId());
 
-            return ResponseHelper.ok(null, "Đổi mật khẩu thành công");
+            return ResponseHelper.ok(null, ResponseMessage.PASSWORD_UPDATE_SUCCESS);
 
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi khi đặt lại mật khẩu");
+            System.out.println("error: " + e);
+            return ResponseHelper.serverError(ResponseMessage.PASSWORD_UPDATE_FAILURE);
         }
     }
 

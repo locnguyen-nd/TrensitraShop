@@ -22,9 +22,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.*;
 
 @Service
@@ -47,9 +45,9 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
      */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<UserEntity> user= userDetailRepository.findByEmail(username);
-        if(user.isEmpty()){
-            throw new UsernameNotFoundException("User Not Found with userName "+username);
+        Optional<UserEntity> user = userDetailRepository.findByEmail(username);
+        if (user.isEmpty()) {
+            throw new UsernameNotFoundException("User Not Found with userName " + username);
         }
         return user.get();
     }
@@ -59,7 +57,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         try {
             Specification<UserEntity> userEntitySpecification = UserSpecification.hasRoleName("USER");
             List<UserEntity> users = userDetailRepository.findAll(userEntitySpecification);
-            if(users == null || users.isEmpty()) {
+            if (users == null || users.isEmpty()) {
                 return ResponseHelper.notFound("Không tồn tại user");
             }
             return ResponseHelper.ok(userDetailMapper.getUserDtos(users), "Lấy danh sách người dùng thành công");
@@ -89,34 +87,36 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         try {
             user.setFirstName(userUpdateDTO.getFirstName());
             user.setLastName(userUpdateDTO.getLastName());
-            user.setPhoneNumber(userUpdateDTO.getPhoneNumber());
-            user.setAvatar(userUpdateDTO.getAvatar());
             UserEntity updatedUser = userDetailRepository.save(user);
-            return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Cập nhật thông tin người dùng thành công");
+            return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser),
+                    "Cập nhật thông tin người dùng thành công");
         } catch (Exception e) {
             return ResponseHelper.serverError("Lỗi khi cập nhật thông tin người dùng");
         }
     }
 
-//    @Override
-//    @Transactional
-//    public TypeResponse<UserDetailDTO> updateAvatarUser(UUID userId, MultipartFile avatarFile) throws IOException {
-//        Optional<UserEntity> userOpt = userDetailRepository.findById(userId);
-//        if (userOpt.isEmpty()) {
-//            return ResponseHelper.notFound("Không tìm thấy người dùng");
-//        }
-//        UserEntity user = userOpt.get();
-//
-//        if (avatarFile != null && !avatarFile.isEmpty() && user.getAvatar() != null) {
-//            cloudinaryService.deleteFile(user.getAvatar());
-//        }
-//        if (avatarFile != null && !avatarFile.isEmpty()) {
-//            String imageUrl = cloudinaryService.uploadFile(avatarFile, null, "AVATAR");
-//            user.setAvatar(imageUrl);
-//        }
-//        UserEntity updatedUser = userDetailRepository.save(user);
-//        return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Cập nhật ảnh đại diện người dùng thành công");
-//    }
+    // @Override
+    // @Transactional
+    // public TypeResponse<UserDetailDTO> updateAvatarUser(UUID userId,
+    // MultipartFile avatarFile) throws IOException {
+    // Optional<UserEntity> userOpt = userDetailRepository.findById(userId);
+    // if (userOpt.isEmpty()) {
+    // return ResponseHelper.notFound("Không tìm thấy người dùng");
+    // }
+    // UserEntity user = userOpt.get();
+    //
+    // if (avatarFile != null && !avatarFile.isEmpty() && user.getAvatar() != null)
+    // {
+    // cloudinaryService.deleteFile(user.getAvatar());
+    // }
+    // if (avatarFile != null && !avatarFile.isEmpty()) {
+    // String imageUrl = cloudinaryService.uploadFile(avatarFile, null, "AVATAR");
+    // user.setAvatar(imageUrl);
+    // }
+    // UserEntity updatedUser = userDetailRepository.save(user);
+    // return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Cập
+    // nhật ảnh đại diện người dùng thành công");
+    // }
 
     @Transactional
     public TypeResponse<UserDetailDTO> assignRolesToUser(UUID userId, Set<UUID> roleIds) {
@@ -128,7 +128,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
                 .forEach(uniqueRoles::add);
         user.get().setRoles(uniqueRoles);
         UserEntity updatedUser = userDetailRepository.save(user.get());
-            return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Gán vai trò cho người dùng thành công");
+        return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Gán vai trò cho người dùng thành công");
     }
 
     @Override
@@ -155,7 +155,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
             return ResponseHelper.notFound("Không tìm thấy người dùng");
         }
         UserEntity currentUser = currentUserOpt.get();
-        if(currentUser.getAvatar() != null && !currentUser.getAvatar().isEmpty()) {
+        if (currentUser.getAvatar() != null && !currentUser.getAvatar().isEmpty()) {
             cloudinaryService.deleteFile(currentUser.getAvatar());
         }
         userDetailRepository.deleteById(currentUser.getId());
