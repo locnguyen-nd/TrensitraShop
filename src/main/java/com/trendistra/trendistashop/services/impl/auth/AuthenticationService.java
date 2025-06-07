@@ -119,7 +119,7 @@ public class AuthenticationService implements IAuthenticationService {
                 return ResponseHelper.ok(loginResponse, ResponseMessage.AUTHENTICATED);
             }
         } catch (BadCredentialsException e) {
-            return ResponseHelper.validationError("email", ResponseMessage.CREDENTIALS_DO_NOT_MATCH_RECORD);
+            return ResponseHelper.validationError("email", ResponseMessage.PASSWORD_DO_NOT_MATCH_RECORD);
         }
         return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
     }
@@ -139,7 +139,7 @@ public class AuthenticationService implements IAuthenticationService {
             return ResponseHelper.validationError("email", ResponseMessage.EMAIL_EXISTS);
         }
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            return ResponseHelper.validationError("confirmPassword", ResponseMessage.CREDENTIALS_NOT_MATCH);
+            return ResponseHelper.validationError("confirmPassword", ResponseMessage.PASSWORD_NOT_MATCH);
         }
         try {
             UserEntity user = UserEntity.builder()
@@ -382,7 +382,7 @@ public class AuthenticationService implements IAuthenticationService {
             UserEntity user = userOpt.get();
 
             if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                return ResponseHelper.validationError("password", ResponseMessage.CREDENTIALS_SAME_AS_OLD);
+                return ResponseHelper.validationError("password", ResponseMessage.PASSWORD_SAME_AS_OLD);
             }
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             userDetailRepository.save(user);
