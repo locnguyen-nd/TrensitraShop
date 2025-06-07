@@ -13,13 +13,15 @@ public class ResponseMessage {
     public static final String AUTHENTICATED = "authenticated";
     public static final String UNAUTHENTICATED = "unauthenticated";
     public static final String UNAUTHORIZED = "unauthorized";
+    public static final String CREDENTIALS_CREATE_SUCCESS = "credentials_create_success";
+    public static final String CREDENTIALS_UPDATE_SUCCESS = "credentials_update_success";
     public static final String LOGOUT_SUCCESS = "logout_success";
     public static final String LOGOUT_FAILED = "logout_failed";
     public static final String PERMISSION_DENIED = "permission_denied";
     public static final String TOKEN_REFRESH_INVALID = "token_refresh_invalid";
     public static final String TOKEN_REFRESH_SUCCESS = "token_refresh_success";
     public static final String TOKEN_REFRESH_FAILURE = "token_refresh_failure";
-    public static final String INCORRECT_CURRENT_PASSWORD = "incorrect_current_password";
+    public static final String INCORRECT_CURRENT_CREDENTIALS = "incorrect_current_credentials";
     public static final String ACCOUNT_LOCKED = "account_locked";
     public static final String VALIDATION_ERROR = "validation_error";
     public static final String BAD_REQUEST = "bad_request";
@@ -29,10 +31,8 @@ public class ResponseMessage {
 
     // response message
     public static final String EMAIL_EXISTS = "email_exists";
-    public static final String PASSWORD_UPDATE_SUCCESS = "password_update_success";
-    public static final String PASSWORD_UPDATE_FAILURE = "password_update_failure";
     public static final String CREDENTIALS_DO_NOT_MATCH_RECORD = "credentials_do_not_match_record";
-    public static final String PASSWORD_NOT_MATCH = "pasword_not_match";
+    public static final String CREDENTIALS_NOT_MATCH = "credentials_not_match";
     public static final String TOKEN_INVALID = "token_invalid";
     public static final String SEND_CODE_SUCCESS = "send_code_success";
     public static final String SEND_CODE_FAILED = "send_code_failed";
@@ -45,7 +45,7 @@ public class ResponseMessage {
     public static final String VERIFICATION_REQUEST_SUCCESS = "verification_request_success";
     public static final String INVALID_OTP_CODE = "invalid_otp_code";
     public static final String EXPIRED_OTP_CODE = "expired_otp_code";
-    public static final String PASSWORD_SAME_AS_OLD = "password_same_as_old";
+    public static final String CREDENTIALS_SAME_AS_OLD = "credentials_same_as_old";
 
     private ResponseMessage() {
     }

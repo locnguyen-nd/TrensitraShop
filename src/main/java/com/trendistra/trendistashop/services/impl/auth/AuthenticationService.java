@@ -139,7 +139,7 @@ public class AuthenticationService implements IAuthenticationService {
             return ResponseHelper.validationError("email", ResponseMessage.EMAIL_EXISTS);
         }
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            return ResponseHelper.validationError("confirmPassword", ResponseMessage.PASSWORD_NOT_MATCH);
+            return ResponseHelper.validationError("confirmPassword", ResponseMessage.CREDENTIALS_NOT_MATCH);
         }
         try {
             UserEntity user = UserEntity.builder()
@@ -382,18 +382,18 @@ public class AuthenticationService implements IAuthenticationService {
             UserEntity user = userOpt.get();
 
             if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                return ResponseHelper.validationError("password", ResponseMessage.PASSWORD_SAME_AS_OLD);
+                return ResponseHelper.validationError("password", ResponseMessage.CREDENTIALS_SAME_AS_OLD);
             }
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             userDetailRepository.save(user);
 
             accountNotificationService.notifyPasswordChanged(user.getId());
 
-            return ResponseHelper.ok(null, ResponseMessage.PASSWORD_UPDATE_SUCCESS);
+            return ResponseHelper.ok(null, ResponseMessage.UPDATE_SUCCESS);
 
         } catch (Exception e) {
             System.out.println("error: " + e);
-            return ResponseHelper.serverError(ResponseMessage.PASSWORD_UPDATE_FAILURE);
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
         }
     }
 
