@@ -37,7 +37,6 @@ public class ResponseMessage {
     public static final String SEND_CODE_SUCCESS = "send_code_success";
     public static final String SEND_CODE_FAILED = "send_code_failed";
     public static final String INVALID_OR_EXPIRED_TOKEN = "invalid_or_expired_token";
-    public static final String USER_NOT_FOUND = "user_not_found";
     public static final String ACCOUNT_ALREADY_ACTIVATED = "account_already_activated";
     public static final String VERIFICATION_SUCCESS = "verification_success";
     public static final String VERIFICATION_FAILED = "verification_failed";
@@ -46,6 +45,9 @@ public class ResponseMessage {
     public static final String INVALID_OTP_CODE = "invalid_otp_code";
     public static final String EXPIRED_OTP_CODE = "expired_otp_code";
     public static final String PASSWORD_SAME_AS_OLD = "credentials_same_as_old";
+
+    public static final String USER_NOT_FOUND = "user_not_found";
+    public static final String PRODUCT_NOT_FOUND = "product_not_found";
 
     private ResponseMessage() {
     }

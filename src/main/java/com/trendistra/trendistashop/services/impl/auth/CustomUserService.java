@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.services.impl.auth;
 
 import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.dto.request.UserUpdateDTO;
 import com.trendistra.trendistashop.dto.response.UserDetailDTO;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
@@ -58,11 +59,11 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
             Specification<UserEntity> userEntitySpecification = UserSpecification.hasRoleName("USER");
             List<UserEntity> users = userDetailRepository.findAll(userEntitySpecification);
             if (users == null || users.isEmpty()) {
-                return ResponseHelper.notFound("Không tồn tại user");
+                return ResponseHelper.notFound(ResponseMessage.USER_NOT_FOUND);
             }
-            return ResponseHelper.ok(userDetailMapper.getUserDtos(users), "Lấy danh sách người dùng thành công");
+            return ResponseHelper.ok(userDetailMapper.getUserDtos(users), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi hệ thống: " + e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
         }
     }
 
@@ -70,10 +71,10 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
     public TypeResponse<UserDetailDTO> getUserById(UUID id) {
         Optional<UserEntity> userOpt = userDetailRepository.findById(id);
         if (userOpt.isEmpty()) {
-            return ResponseHelper.notFound("Không tìm thấy người dùng");
+            return ResponseHelper.notFound(ResponseMessage.USER_NOT_FOUND);
         }
         UserEntity user = userOpt.get();
-        return ResponseHelper.ok(userDetailMapper.convertToDto(user), "Lấy thông tin người dùng thành công");
+        return ResponseHelper.ok(userDetailMapper.convertToDto(user), ResponseMessage.FETCH_SUCCESS);
     }
 
     @Override
@@ -81,7 +82,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
     public TypeResponse<UserDetailDTO> updateUser(UserUpdateDTO userUpdateDTO) {
         Optional<UserEntity> userOpt = userDetailRepository.findById(userUpdateDTO.getId());
         if (userOpt.isEmpty()) {
-            return ResponseHelper.notFound("Không tìm thấy người dùng");
+            return ResponseHelper.notFound(ResponseMessage.USER_NOT_FOUND);
         }
         UserEntity user = userOpt.get();
         try {
@@ -89,9 +90,9 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
             user.setLastName(userUpdateDTO.getLastName());
             UserEntity updatedUser = userDetailRepository.save(user);
             return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser),
-                    "Cập nhật thông tin người dùng thành công");
+                    ResponseMessage.UPDATE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi khi cập nhật thông tin người dùng");
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
         }
     }
 
@@ -128,22 +129,26 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
                 .forEach(uniqueRoles::add);
         user.get().setRoles(uniqueRoles);
         UserEntity updatedUser = userDetailRepository.save(user.get());
-        return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Gán vai trò cho người dùng thành công");
+        return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), ResponseMessage.UPDATE_SUCCESS);
     }
 
     @Override
     public TypeResponse<Void> deleteUser(UUID id) {
         Optional<UserEntity> userExisting = userDetailRepository.findById(id);
         if (userExisting.isEmpty()) {
-            return ResponseHelper.notFound("Không tìm thấy người dùng");
+            return ResponseHelper.notFound(ResponseMessage.USER_NOT_FOUND);
         }
-        if (userExisting.get().getAvatar() != null && !userExisting.get().getAvatar().isEmpty()) {
-            cloudinaryService.deleteFile(userExisting.get().getAvatar());
+        try {
+            if (userExisting.get().getAvatar() != null && !userExisting.get().getAvatar().isEmpty()) {
+                cloudinaryService.deleteFile(userExisting.get().getAvatar());
+            }
+            UserEntity user = userExisting.get();
+            user.setLocked(true);
+            userDetailRepository.save(user);
+            return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
         }
-        UserEntity user = userExisting.get();
-        user.setLocked(true);
-        userDetailRepository.save(user);
-        return ResponseHelper.ok(null, "Xóa người dùng thành công");
     }
 
     @Override
@@ -152,14 +157,18 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         String currentUsername = authentication.getName();
         Optional<UserEntity> currentUserOpt = userDetailRepository.findByEmail(currentUsername);
         if (currentUserOpt.isEmpty()) {
-            return ResponseHelper.notFound("Không tìm thấy người dùng");
+            return ResponseHelper.notFound(ResponseMessage.USER_NOT_FOUND);
         }
-        UserEntity currentUser = currentUserOpt.get();
-        if (currentUser.getAvatar() != null && !currentUser.getAvatar().isEmpty()) {
-            cloudinaryService.deleteFile(currentUser.getAvatar());
+        try {
+            UserEntity currentUser = currentUserOpt.get();
+            if (currentUser.getAvatar() != null && !currentUser.getAvatar().isEmpty()) {
+                cloudinaryService.deleteFile(currentUser.getAvatar());
+            }
+            userDetailRepository.deleteById(currentUser.getId());
+            return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
         }
-        userDetailRepository.deleteById(currentUser.getId());
-        return ResponseHelper.ok(null, "Xóa tài khoản thành công");
     }
 
 }

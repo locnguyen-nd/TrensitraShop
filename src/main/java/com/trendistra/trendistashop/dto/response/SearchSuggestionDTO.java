@@ -7,6 +7,11 @@ import java.util.List;
 @Data
 public class SearchSuggestionDTO {
     private List<ProductDTO> products;
-    private List<String> productNames;
-    private List<String> categorySlug;
+    private List<NameSlugDTO> categories;
+
+    @Data
+    public static class NameSlugDTO {
+        private String name;
+        private String slug;
+    }
 }

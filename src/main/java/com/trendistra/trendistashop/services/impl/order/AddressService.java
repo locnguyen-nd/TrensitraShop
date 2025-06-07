@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.services.impl.order;
 
 import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.dto.request.AddressRequest;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.user.Address;
@@ -24,7 +25,7 @@ public class AddressService implements IAddressService {
     public TypeResponse<Address> createAddress(AddressRequest addressRequest, Principal principal) {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
         if (user == null) {
-            return ResponseHelper.unauthorized("Vui lòng đăng nhập để tạo địa chỉ");
+            return ResponseHelper.unauthorized(ResponseMessage.UNAUTHORIZED);
         }
         Optional<Address> addressDefaultOpt = addressRepository.findByIsDefaultAddressTrue();
         if (addressDefaultOpt.isPresent()) {
@@ -43,17 +44,17 @@ public class AddressService implements IAddressService {
                 .user(user)
                 .build();
 
-        return ResponseHelper.ok(addressRepository.save(address), "Tạo địa chỉ thành công");
+        return ResponseHelper.ok(addressRepository.save(address), ResponseMessage.CREATE_SUCCESS);
     }
 
     public TypeResponse<Address> updateAddress(AddressRequest addressRequest, Principal principal) {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
         if (user == null) {
-            return ResponseHelper.unauthorized("Vui lòng đăng nhập để cập nhật địa chỉ");
+            return ResponseHelper.unauthorized(ResponseMessage.UNAUTHORIZED);
         }
         Optional<Address> addressOpt = addressRepository.findById(addressRequest.getId());
         if (addressOpt.isEmpty()) {
-            return ResponseHelper.notFound("Địa chỉ không tồn tại");
+            return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
         }
 
         Optional<Address> addressDefaultOpt = addressRepository.findByIsDefaultAddressTrue();
@@ -73,16 +74,16 @@ public class AddressService implements IAddressService {
         address.setPhoneNumber(addressRequest.getPhoneNumber());
         address.setUser(user);
 
-        return ResponseHelper.ok(addressRepository.save(address), "Cập nhật địa chỉ thành công");
+        return ResponseHelper.ok(addressRepository.save(address), ResponseMessage.CREATE_SUCCESS);
 
     }
 
     public TypeResponse<Void> deleteAddress(UUID id, Principal principal) {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
         if (user == null) {
-            return ResponseHelper.notFound("User not fount for delete");
+            return ResponseHelper.notFound(ResponseMessage.UNAUTHORIZED);
         }
         addressRepository.deleteById(id);
-        return ResponseHelper.ok(null, "Xóa địa chỉ thành công");
+        return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
     }
 }
