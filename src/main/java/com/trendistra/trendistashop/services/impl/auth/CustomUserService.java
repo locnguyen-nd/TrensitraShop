@@ -63,7 +63,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
             }
             return ResponseHelper.ok(userDetailMapper.getUserDtos(users), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -147,7 +147,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
             userDetailRepository.save(user);
             return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
+            return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
         }
     }
 
@@ -167,7 +167,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
             userDetailRepository.deleteById(currentUser.getId());
             return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
+            return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
         }
     }
 

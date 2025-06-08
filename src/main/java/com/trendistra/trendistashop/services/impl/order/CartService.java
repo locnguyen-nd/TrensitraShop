@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.services.impl.order;
 
 import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.dto.response.CartDTO;
 import com.trendistra.trendistashop.dto.response.CartResponseDTO;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
@@ -55,23 +56,24 @@ public class CartService implements ICartService {
                             .multiply(new BigDecimal(cart.getQuantity()))));
         }
 
-        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(userCart), productService), "Cart updated successfully");
+        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(userCart), productService),
+                ResponseMessage.UPDATE_SUCCESS);
     }
 
     @Override
     public TypeResponse<CartResponseDTO> getCartProduct(Principal principal) {
-        try{
+        try {
             UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
             UUID cartId = user.getUserCart().getId();
             Optional<Cart> cartOpt = cartRepository.findById(cartId);
             if (cartOpt.isEmpty()) {
-                return ResponseHelper.notFound("Không tìm thấy giỏ hàng");
+                return ResponseHelper.notFound(ResponseMessage.CART_NOT_FOUND);
             }
             Cart cart = cartOpt.get();
-            
-            return ResponseHelper.ok(CartResponseDTO.fromEntity(cart, productService), "Lấy giỏ hàng thành công");
+
+            return ResponseHelper.ok(CartResponseDTO.fromEntity(cart, productService), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi hệ thống: " + e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -83,7 +85,7 @@ public class CartService implements ICartService {
         List<CartItem> cartItems = cart.getCartItems();
 
         if (cartItems.isEmpty()) {
-            return ResponseHelper.notFound("Giỏ hàng trống");
+            return ResponseHelper.notFound(ResponseMessage.CART_EMPTY);
         }
 
         Optional<CartItem> itemToUpdateOpt = cartItems.stream()
@@ -91,7 +93,7 @@ public class CartService implements ICartService {
                 .findFirst();
 
         if (itemToUpdateOpt.isEmpty()) {
-            return ResponseHelper.notFound("Không tìm thấy sản phẩm trong giỏ hàng");
+            return ResponseHelper.notFound(ResponseMessage.CART_EMPTY);
         }
         CartItem itemToUpdate = itemToUpdateOpt.get();
         int newQuantity = itemToUpdate.getCartItemQuantity() - cartDTO.getQuantity();
@@ -100,21 +102,17 @@ public class CartService implements ICartService {
             cart.getCartItems().remove(itemToUpdate);
             cart.setCartTotal(cart.getCartTotal().subtract(
                     itemToUpdate.getCartProduct().getPrice().multiply(
-                            new BigDecimal(itemToUpdate.getCartItemQuantity())
-                    )
-            ));
+                            new BigDecimal(itemToUpdate.getCartItemQuantity()))));
         } else {
             itemToUpdate.setCartItemQuantity(newQuantity);
             cart.setCartTotal(cart.getCartTotal().subtract(
                     itemToUpdate.getCartProduct().getPrice().multiply(
-                            new BigDecimal(cartDTO.getQuantity())
-                    )
-            ));
+                            new BigDecimal(cartDTO.getQuantity()))));
         }
 
-        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart), productService), "Cập nhật giỏ hàng thành công");
+        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart), productService),
+                ResponseMessage.UPDATE_SUCCESS);
     }
-
 
     @Override
     public TypeResponse<Cart> changeQuantity(CartDTO cartDTO, Principal principal, int quantity) {
@@ -126,10 +124,11 @@ public class CartService implements ICartService {
         UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
         Cart cart = user.getUserCart();
         if (cart.getCartItems().size() == 0) {
-            return ResponseHelper.notFound("Giỏ hàng đã trống");
+            return ResponseHelper.notFound(ResponseMessage.CART_EMPTY);
         }
         cart.getCartItems().clear();
         cart.setCartTotal(BigDecimal.ZERO);
-        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart), productService), "Xóa tất cả sản phẩm khỏi giỏ hàng thành công");
+        return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart), productService),
+                ResponseMessage.DELETE_SUCCESS);
     }
 }

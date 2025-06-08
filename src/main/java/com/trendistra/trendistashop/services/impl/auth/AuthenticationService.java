@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -86,7 +87,9 @@ public class AuthenticationService implements IAuthenticationService {
     public TypeResponse<LoginResponse> authenticateUser(String userName, CharSequence password, GuardType guard) {
         try {
             Authentication authentication = new UsernamePasswordAuthenticationToken(userName, password);
+            System.out.println("###########");
             Authentication authenticationResponse = this.authenticationManager.authenticate(authentication);
+            System.out.println("usertest: ");
             if (authenticationResponse.isAuthenticated()) {
                 UserEntity user = (UserEntity) authenticationResponse.getPrincipal();
                 if (guard != null && guard == GuardType.ADMIN) {
@@ -120,6 +123,8 @@ public class AuthenticationService implements IAuthenticationService {
             }
         } catch (BadCredentialsException e) {
             return ResponseHelper.validationError("email", ResponseMessage.CREDENTIALS_DO_NOT_MATCH_RECORD);
+        } catch (DisabledException e) {
+            return ResponseHelper.unauthorized(ResponseMessage.ACCOUNT_NOT_ACTIVATED);
         }
         return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
     }
@@ -285,7 +290,7 @@ public class AuthenticationService implements IAuthenticationService {
             jwtTokenHelper.logout(token);
             return ResponseHelper.ok(null, ResponseMessage.LOGOUT_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
+            return ResponseHelper.serverError(ResponseMessage.LOGOUT_FAILED);
         }
     }
 

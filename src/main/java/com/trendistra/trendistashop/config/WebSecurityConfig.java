@@ -1,8 +1,8 @@
 package com.trendistra.trendistashop.config;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.services.impl.auth.PermissionService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -35,7 +35,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig {
@@ -46,7 +45,7 @@ public class WebSecurityConfig {
     @Autowired
     private JWTTokenHelper jwtTokenHelper;
     @Value("${api.prefix}")
-    private String prefix ;
+    private String prefix;
     @Value("${frontend.dev.url}")
     private String frontendDevUrl;
     @Value("${frontend.prod.url}")
@@ -77,6 +76,7 @@ public class WebSecurityConfig {
             "/oauth2/**",
             "/api/v1/media/**"
     };
+
     /**
      * Cấu hình bảo mật cho ứng dụng, xác định cách thức xử lý các yêu cầu HTTP.
      * - Tắt CSRF.
@@ -94,39 +94,32 @@ public class WebSecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(
-                        corsConfigurationSource()
-                ))
+                        corsConfigurationSource()))
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(401);
                             response.setContentType("application/json;charset=UTF-8");
-                            TypeResponse<?> errorResponse = ResponseHelper.error(
-                                    "Vui lòng đăng nhập để truy cập",
-                                    401
-                            );
+                            TypeResponse<?> errorResponse = ResponseHelper.unauthorized(ResponseMessage.UNAUTHORIZED);
                             response.getWriter().write(new ObjectMapper().writeValueAsString(errorResponse));
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");
-                            TypeResponse<?> errorResponse = ResponseHelper.error(
-                                    "Bạn không có quyền truy cập tài nguyên này",
-                                    403
-                            );
+                            TypeResponse<?> errorResponse = ResponseHelper.forbidden(ResponseMessage.FORBIDDEN);
                             response.getWriter().write(new ObjectMapper().writeValueAsString(errorResponse));
-                        })
-                )
+                        }))
                 .authenticationManager(authenticationManager())
                 // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(publicApis);
-                    permissionMappings.forEach((endPoint , methodMap) -> {
-                       methodMap.forEach((httpMethod, permissions) -> {
-                           String fullUrl = prefix + endPoint;
-//                         System.out.println("Configuring access for URL: " + fullUrl + " with method: " + httpMethod + " and permissions: " + permissions);
-                           auth.requestMatchers(HttpMethod.valueOf(httpMethod), fullUrl)
-                                   .hasAnyAuthority(permissions.toArray(new  String[0]));
-                       });
+                    permissionMappings.forEach((endPoint, methodMap) -> {
+                        methodMap.forEach((httpMethod, permissions) -> {
+                            String fullUrl = prefix + endPoint;
+                            // System.out.println("Configuring access for URL: " + fullUrl + " with method:
+                            // " + httpMethod + " and permissions: " + permissions);
+                            auth.requestMatchers(HttpMethod.valueOf(httpMethod), fullUrl)
+                                    .hasAnyAuthority(permissions.toArray(new String[0]));
+                        });
                     });
                     auth.requestMatchers(
                             "/",
@@ -153,16 +146,18 @@ public class WebSecurityConfig {
                                 response.getWriter().write("Logged out successfully");
                             });
                 })
-//                .oauth2Login(oauth2 -> oauth2
-//                        .defaultSuccessUrl("/oauth2/success", true)
-//                        .userInfoEndpoint(userInfo -> userInfo
-//                                .userService(oAuth2UserService())
-//                        )
-//                )
+                // .oauth2Login(oauth2 -> oauth2
+                // .defaultSuccessUrl("/oauth2/success", true)
+                // .userInfoEndpoint(userInfo -> userInfo
+                // .userService(oAuth2UserService())
+                // )
+                // )
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .addFilterBefore(new JWTAuthenticationFilter(jwtTokenHelper, userDetailsService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JWTAuthenticationFilter(jwtTokenHelper, userDetailsService),
+                        UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
+
     @Bean
     public OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService() {
         DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
@@ -173,6 +168,7 @@ public class WebSecurityConfig {
             return user;
         };
     }
+
     /**
      * Cấu hình WebSecurity để bỏ qua bảo mật cho các API công khai.
      *
@@ -184,7 +180,8 @@ public class WebSecurityConfig {
     }
 
     /**
-     * Cấu hình AuthenticationManager, sử dụng DaoAuthenticationProvider để xác thực người dùng.
+     * Cấu hình AuthenticationManager, sử dụng DaoAuthenticationProvider để xác thực
+     * người dùng.
      *
      * @return AuthenticationManager để xác thực người dùng.
      */
@@ -196,6 +193,7 @@ public class WebSecurityConfig {
 
         return new ProviderManager(daoAuthenticationProvider);
     }
+
     /**
      * Tạo một PasswordEncoder để mã hóa mật khẩu người dùng.
      *
@@ -205,10 +203,11 @@ public class WebSecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(frontendDevUrl,frontendProdUrl,adminDevUrl,adminProdUrl));
+        configuration.setAllowedOrigins(Arrays.asList(frontendDevUrl, frontendProdUrl, adminDevUrl, adminProdUrl));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
