@@ -72,11 +72,11 @@ public class ProductService implements IProductService {
         try {
             Page<Product> productPage = productRepository.findAll(pageable);
             if (productPage.isEmpty()) {
-                return ResponseHelper.notFound("Không tìm thấy sản phẩm nào");
+                return ResponseHelper.notFound(ResponseMessage.PRODUCT_NOT_FOUND);
             }
-            return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
+            return ResponseHelper.ok(productPage.map(this::mapToProductDto), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi khi lấy danh sách sản phẩm");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -110,7 +110,7 @@ public class ProductService implements IProductService {
             }
             return ResponseHelper.ok(result, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError(ResponseMessage.SERVER_ERROR);
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -118,17 +118,17 @@ public class ProductService implements IProductService {
     public TypeResponse<Page<ProductDTO>> searchWithName(String keyword, Pageable pageable) {
         try {
             if (keyword == null) {
-                return ResponseHelper.badRequest("Tên sản phẩm không được để trống!");
+                return ResponseHelper.validationError("keyword", "Tên sản phẩm không được để trống!");
             }
             Specification<Product> specification = Specification
                     .where(hasName(keyword));
             Page<Product> productPage = productRepository.findAll(specification, pageable);
             if (productPage.isEmpty()) {
-                return ResponseHelper.notFound(String.format("Không tìm thấy sản phẩm với tên %s ", keyword));
+                return ResponseHelper.notFound(ResponseMessage.PRODUCT_NOT_FOUND);
             }
-            return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
+            return ResponseHelper.ok(productPage.map(this::mapToProductDto), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi khi tìm kiếm sản phẩm theo tên");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -187,13 +187,13 @@ public class ProductService implements IProductService {
         try {
             Optional<Product> productOpt = productRepository.findById(id);
             if (productOpt.isEmpty()) {
-                return ResponseHelper.notFound("Không tìm thấy sản phẩm với id này");
+                return ResponseHelper.notFound(ResponseMessage.PRODUCT_NOT_FOUND);
             }
             Product product = productOpt.get();
             product.incrementView();
-            return ResponseHelper.ok(mapToProductDto(product), "Lấy sản phẩm thành công");
+            return ResponseHelper.ok(mapToProductDto(product), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi khi lấy sản phẩm theo id");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -208,9 +208,9 @@ public class ProductService implements IProductService {
             if (productPage.isEmpty()) {
                 return ResponseHelper.notFound(String.format("Không tìm thấy sản phẩm với %s và %s ", tag, genderSlug));
             }
-            return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
+            return ResponseHelper.ok(productPage.map(this::mapToProductDto), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi khi lấy sản phẩm theo tag");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -218,9 +218,9 @@ public class ProductService implements IProductService {
     public TypeResponse<ProductDTO> getProductBySlug(String slug) {
         Product product = productRepository.findProductsBySlug(slug);
         if (product == null) {
-            return ResponseHelper.notFound("Không tìm thấy sản phẩm với này");
+            return ResponseHelper.notFound(ResponseMessage.PRODUCT_NOT_FOUND);
         }
-        return ResponseHelper.ok(mapToProductDto(product), "Lấy sản phẩm thành công");
+        return ResponseHelper.ok(mapToProductDto(product), ResponseMessage.FETCH_SUCCESS);
     }
 
     @Override
@@ -260,10 +260,10 @@ public class ProductService implements IProductService {
         // Tìm kiếm sản phẩm theo điều kiện và phân trang
         Page<Product> productPage = productRepository.findAll(spec, pageRequest);
         if (productPage.isEmpty()) {
-            return ResponseHelper.notFound("Không tìm thấy sản phẩm với điều kiện lọc");
+            return ResponseHelper.notFound(ResponseMessage.PRODUCT_NOT_FOUND);
         }
         // Chuyển đổi Page<Product> sang Page<ProductDTO>
-        return ResponseHelper.ok(productPage.map(this::mapToProductDto), "Lấy danh sách sản phẩm thành công");
+        return ResponseHelper.ok(productPage.map(this::mapToProductDto), ResponseMessage.FETCH_SUCCESS);
     }
 
     @Transactional

@@ -27,24 +27,28 @@ public class AddressService implements IAddressService {
         if (user == null) {
             return ResponseHelper.unauthorized(ResponseMessage.UNAUTHORIZED);
         }
-        Optional<Address> addressDefaultOpt = addressRepository.findByIsDefaultAddressTrue();
-        if (addressDefaultOpt.isPresent()) {
-            Address addressDefault = addressDefaultOpt.get();
-            addressDefault.setIsDefaultAddress(false);
-            addressRepository.save(addressDefault);
-        }
-        Address address = Address.builder()
-                .name(addressRequest.getName())
-                .city(addressRequest.getCity())
-                .district(addressRequest.getDistrict())
-                .ward(addressRequest.getWard())
-                .specAddress(addressRequest.getSpecAddress())
-                .phoneNumber(addressRequest.getPhoneNumber())
-                .isDefaultAddress(addressRequest.getIsDefaultAddress())
-                .user(user)
-                .build();
+        try {
+            Optional<Address> addressDefaultOpt = addressRepository.findByIsDefaultAddressTrue();
+            if (addressDefaultOpt.isPresent()) {
+                Address addressDefault = addressDefaultOpt.get();
+                addressDefault.setIsDefaultAddress(false);
+                addressRepository.save(addressDefault);
+            }
+            Address address = Address.builder()
+                    .name(addressRequest.getName())
+                    .city(addressRequest.getCity())
+                    .district(addressRequest.getDistrict())
+                    .ward(addressRequest.getWard())
+                    .specAddress(addressRequest.getSpecAddress())
+                    .phoneNumber(addressRequest.getPhoneNumber())
+                    .isDefaultAddress(addressRequest.getIsDefaultAddress())
+                    .user(user)
+                    .build();
 
-        return ResponseHelper.ok(addressRepository.save(address), ResponseMessage.CREATE_SUCCESS);
+            return ResponseHelper.ok(addressRepository.save(address), ResponseMessage.CREATE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.CREATE_FAILED);
+        }
     }
 
     public TypeResponse<Address> updateAddress(AddressRequest addressRequest, Principal principal) {
@@ -57,25 +61,28 @@ public class AddressService implements IAddressService {
             return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
         }
 
-        Optional<Address> addressDefaultOpt = addressRepository.findByIsDefaultAddressTrue();
-        if (addressDefaultOpt.isPresent()) {
-            Address addressDefault = addressDefaultOpt.get();
-            addressDefault.setIsDefaultAddress(false);
-            addressRepository.save(addressDefault);
+        try {
+            Optional<Address> addressDefaultOpt = addressRepository.findByIsDefaultAddressTrue();
+            if (addressDefaultOpt.isPresent()) {
+                Address addressDefault = addressDefaultOpt.get();
+                addressDefault.setIsDefaultAddress(false);
+                addressRepository.save(addressDefault);
+            }
+
+            Address address = addressOpt.get();
+            address.setCity(addressRequest.getCity());
+            address.setDistrict(addressRequest.getDistrict());
+            address.setWard(addressRequest.getWard());
+            address.setSpecAddress(addressRequest.getSpecAddress());
+            address.setIsDefaultAddress(addressRequest.getIsDefaultAddress());
+            address.setName(addressRequest.getName());
+            address.setPhoneNumber(addressRequest.getPhoneNumber());
+            address.setUser(user);
+
+            return ResponseHelper.ok(addressRepository.save(address), ResponseMessage.UPDATE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
         }
-
-        Address address = addressOpt.get();
-        address.setCity(addressRequest.getCity());
-        address.setDistrict(addressRequest.getDistrict());
-        address.setWard(addressRequest.getWard());
-        address.setSpecAddress(addressRequest.getSpecAddress());
-        address.setIsDefaultAddress(addressRequest.getIsDefaultAddress());
-        address.setName(addressRequest.getName());
-        address.setPhoneNumber(addressRequest.getPhoneNumber());
-        address.setUser(user);
-
-        return ResponseHelper.ok(addressRepository.save(address), ResponseMessage.CREATE_SUCCESS);
-
     }
 
     public TypeResponse<Void> deleteAddress(UUID id, Principal principal) {
@@ -83,7 +90,11 @@ public class AddressService implements IAddressService {
         if (user == null) {
             return ResponseHelper.notFound(ResponseMessage.UNAUTHORIZED);
         }
-        addressRepository.deleteById(id);
-        return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
+        try {
+            addressRepository.deleteById(id);
+            return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
+        }
     }
 }

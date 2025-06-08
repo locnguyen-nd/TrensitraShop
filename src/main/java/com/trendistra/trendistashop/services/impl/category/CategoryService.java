@@ -1,6 +1,7 @@
 package com.trendistra.trendistashop.services.impl.category;
 
 import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.dto.request.CategoryCreUpDTO;
 import com.trendistra.trendistashop.dto.response.CategoryDTO;
 import com.trendistra.trendistashop.dto.response.GenderCategoryGroup;
@@ -38,11 +39,11 @@ public class CategoryService implements ICategoryService {
             List<GenderDTO> categories = genderRepository.findAll().stream()
                     .map(gender -> modelMapper.map(gender, GenderDTO.class)).collect(Collectors.toList());
             if (categories.isEmpty()) {
-                return ResponseHelper.notFound("Không tìm thấy giới tính");
+                return ResponseHelper.notFound(ResponseMessage.GENDER_NOT_FOUND);
             }
-            return ResponseHelper.ok(categories, "Lấy danh sách giới tính thành công");
+            return ResponseHelper.ok(categories, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -50,7 +51,7 @@ public class CategoryService implements ICategoryService {
     public TypeResponse<GenderDTO> createGender(GenderDTO genderDTO) {
         boolean existsByName = genderRepository.existsByName(genderDTO.getName());
         if (existsByName) {
-            return ResponseHelper.badRequest("Gender này đã tông tại");
+            return ResponseHelper.badRequest(ResponseMessage.GENDER_EXISTS);
         }
         try {
             if (genderDTO.getName() != null) {
@@ -61,9 +62,10 @@ public class CategoryService implements ICategoryService {
                     .slug(genderDTO.getSlug())
                     .imageUrl(genderDTO.getImageUrl())
                     .build();
-            return ResponseHelper.created(modelMapper.map(genderRepository.save(gender), GenderDTO.class), "Tạo giới tính thành công");
+            return ResponseHelper.created(modelMapper.map(genderRepository.save(gender), GenderDTO.class),
+                    ResponseMessage.CREATE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.CREATE_FAILED);
         }
     }
 
@@ -75,14 +77,14 @@ public class CategoryService implements ICategoryService {
             if (categoryDTO.getParent() != null) {
                 Category parentCategory = categoryRepository.findById(categoryDTO.getParent()).get();
                 if (parentCategory == null) {
-                    return ResponseHelper.notFound("Không tìm thấy danh mục cha");
+                    return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
                 }
                 category.setParent(parentCategory);
             }
             if (categoryDTO.getGender() != null) {
                 Gender gender = genderRepository.findById(categoryDTO.getGender()).get();
                 if (gender == null) {
-                    return ResponseHelper.notFound("Không tìm thấy danh mục cha");
+                    return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
                 }
                 category.setGender(gender);
             }
@@ -92,9 +94,9 @@ public class CategoryService implements ICategoryService {
             category.setImageUrl(categoryDTO.getImageUrl());
             category.setCreatedAt(new Date());
             Category savedCategory = categoryRepository.save(category);
-            return ResponseHelper.created(convertToDTO(savedCategory), "Tạo danh mục thành công");
+            return ResponseHelper.created(convertToDTO(savedCategory), ResponseMessage.CREATE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.CREATE_FAILED);
         }
     }
 
@@ -105,7 +107,7 @@ public class CategoryService implements ICategoryService {
         try {
             Category existingCategory = categoryRepository.findById(id).get();
             if (existingCategory == null) {
-                return ResponseHelper.notFound("Không tìm thấy danh mục cần cập nhật");
+                return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
             }
             // Cập nhật các trường nếu dữ liệu mới khác dữ liệu cũ
             if (!existingCategory.getName().equals(categoryDTO.getName())) {
@@ -117,22 +119,22 @@ public class CategoryService implements ICategoryService {
             if (categoryDTO.getParent() != null) {
                 Category parentCategory = categoryRepository.findById(categoryDTO.getParent()).get();
                 if (parentCategory == null) {
-                    return ResponseHelper.notFound("Không tìm thấy danh mục cha");
+                    return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
                 }
                 existingCategory.setParent(parentCategory);
             }
             if (categoryDTO.getGender() != null) {
                 Gender gender = genderRepository.findById(categoryDTO.getGender()).get();
                 if (gender == null) {
-                    return ResponseHelper.notFound("Không tìm thấy danh mục cha");
+                    return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
                 }
                 existingCategory.setGender(gender);
             }
             existingCategory.setUpdatedAt(new Date());
             Category updatedCategory = categoryRepository.save(existingCategory);
-            return ResponseHelper.ok(convertToDTO(updatedCategory), "Tạo danh mục thành công");
+            return ResponseHelper.ok(convertToDTO(updatedCategory), ResponseMessage.UPDATE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
         }
     }
 
@@ -143,7 +145,7 @@ public class CategoryService implements ICategoryService {
         try {
             Category category = categoryRepository.findById(id).get();
             if (category == null) {
-                return ResponseHelper.notFound("Không tìm thấy danh mục cần xóa");
+                return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
             }
             if (category.getImageUrl() != null) {
                 cloudinaryService.deleteFile(category.getImageUrl());
@@ -151,9 +153,9 @@ public class CategoryService implements ICategoryService {
             category.preDestroy();
             category.setImageUrl(null);
             categoryRepository.save(category);
-            return ResponseHelper.ok(null, "Xóa danh mục thành công");
+            return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
         }
     }
 
@@ -163,11 +165,11 @@ public class CategoryService implements ICategoryService {
         try {
             Optional<Category> category = categoryRepository.findById(id);
             if (category.isEmpty()) {
-                return ResponseHelper.notFound("Không tìm thấy danh mục");
+                return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
             }
-            return ResponseHelper.ok(convertToDTO(category.get()), "Lấy danh mục thành công");
+            return ResponseHelper.ok(convertToDTO(category.get()), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -177,11 +179,11 @@ public class CategoryService implements ICategoryService {
         try {
             Optional<Category> category = categoryRepository.findBySlug(slug);
             if (category.isEmpty()) {
-                return ResponseHelper.notFound("Không tìm thấy danh mục");
+                return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
             }
-            return ResponseHelper.ok(convertToDTO(category.get()), "Lấy danh mục thành công");
+            return ResponseHelper.ok(convertToDTO(category.get()), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -207,9 +209,9 @@ public class CategoryService implements ICategoryService {
                 // Đưa vào Map
                 result.add(new GenderCategoryGroup(genderDTO, parentCategories));
             });
-            return ResponseHelper.ok(result, "Lấy danh sách danh mục thành công");
+            return ResponseHelper.ok(result, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -221,11 +223,11 @@ public class CategoryService implements ICategoryService {
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
             if (categories.isEmpty()) {
-                return ResponseHelper.notFound("Không tìm thấy danh mục");
+                return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
             }
-            return ResponseHelper.ok(categories, "Lấy danh sách danh mục thành công");
+            return ResponseHelper.ok(categories, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
@@ -236,12 +238,11 @@ public class CategoryService implements ICategoryService {
             List<CategoryDTO> categories = categoryRepository.findByGenderId(genderId).stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
-            return ResponseHelper.ok(categories, "Lấy danh sách danh mục thành công");
+            return ResponseHelper.ok(categories, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
-
 
     // Chuyển đổi giữa Entity và DTO
     private CategoryDTO convertToDTO(Category category) {
@@ -278,7 +279,8 @@ public class CategoryService implements ICategoryService {
 
         // Chuyển đổi danh mục con sang DTO
         List<CategoryDTO> children = new ArrayList<>();
-        childCategories.sort(Comparator.comparingInt(category -> category.getIndexNum() != null ? category.getIndexNum() : Integer.MAX_VALUE));
+        childCategories.sort(Comparator
+                .comparingInt(category -> category.getIndexNum() != null ? category.getIndexNum() : Integer.MAX_VALUE));
         for (int i = 0; i < childCategories.size(); i++) {
             Category child = childCategories.get(i);
             CategoryDTO childDTO = mapToCategoryDTO(child, allCategories);
