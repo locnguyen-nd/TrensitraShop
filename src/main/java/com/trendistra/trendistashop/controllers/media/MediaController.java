@@ -1,7 +1,7 @@
 package com.trendistra.trendistashop.controllers.media;
 
-import com.trendistra.trendistashop.Util.FileValidationUtil;
-import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.utils.FileValidationUtil;
+import com.trendistra.trendistashop.utils.ResponseHelper;
 import com.trendistra.trendistashop.docs.media.MediaDocs;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.services.CloudinaryService;

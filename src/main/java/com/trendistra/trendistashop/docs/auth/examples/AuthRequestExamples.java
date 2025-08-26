@@ -34,7 +34,7 @@ public class AuthRequestExamples {
     public static final String VERIFY_RESET_PASSWORD_REQUEST = """
         {
           "email": "trendista@example.com",
-          "code": "123456",
+          "code": "123456"
         }
     """;
     

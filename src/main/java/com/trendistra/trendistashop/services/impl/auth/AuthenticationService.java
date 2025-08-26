@@ -1,7 +1,7 @@
 package com.trendistra.trendistashop.services.impl.auth;
 
 import com.trendistra.trendistashop.constants.ResponseMessage;
-import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.utils.ResponseHelper;
 import com.trendistra.trendistashop.config.JWTTokenHelper;
 import com.trendistra.trendistashop.dto.request.RegisterRequest;
 import com.trendistra.trendistashop.dto.request.ResetPassword;
@@ -87,9 +87,7 @@ public class AuthenticationService implements IAuthenticationService {
     public TypeResponse<LoginResponse> authenticateUser(String userName, CharSequence password, GuardType guard) {
         try {
             Authentication authentication = new UsernamePasswordAuthenticationToken(userName, password);
-            System.out.println("###########");
             Authentication authenticationResponse = this.authenticationManager.authenticate(authentication);
-            System.out.println("usertest: ");
             if (authenticationResponse.isAuthenticated()) {
                 UserEntity user = (UserEntity) authenticationResponse.getPrincipal();
                 if (guard != null && guard == GuardType.ADMIN) {

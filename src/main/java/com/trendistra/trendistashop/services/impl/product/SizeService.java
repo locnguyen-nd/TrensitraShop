@@ -1,6 +1,6 @@
 package com.trendistra.trendistashop.services.impl.product;
 
-import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.utils.ResponseHelper;
 import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.product.Size;

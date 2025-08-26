@@ -1,6 +1,6 @@
 package com.trendistra.trendistashop.services.impl.auth;
 
-import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.utils.ResponseHelper;
 import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.dto.request.UserUpdateDTO;
 import com.trendistra.trendistashop.dto.response.UserDetailDTO;

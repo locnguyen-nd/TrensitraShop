@@ -38,7 +38,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
                             "token": "eyJhbGciOiJIUzI1NiJ9....",
                             "expiresIn": 86400,
                             "isEnabled": true,
-                            "isLocked": false,
+                            "isLocked": false
                         },
                         "errors": {},
                         "statusCode": 200

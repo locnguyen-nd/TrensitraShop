@@ -1,4 +1,4 @@
-package com.trendistra.trendistashop.Util;
+package com.trendistra.trendistashop.utils;
 
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 

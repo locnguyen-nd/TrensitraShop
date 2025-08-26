@@ -1,6 +1,6 @@
 package com.trendistra.trendistashop.controllers.user;
 
-import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.utils.ResponseHelper;
 import com.trendistra.trendistashop.docs.user.GetProfileDocs;
 import com.trendistra.trendistashop.docs.user.GetUsersDocs;
 import com.trendistra.trendistashop.docs.user.UpdateUserDocs;

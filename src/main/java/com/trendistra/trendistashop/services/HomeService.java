@@ -1,6 +1,6 @@
 package com.trendistra.trendistashop.services;
 
-import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.utils.ResponseHelper;
 import com.trendistra.trendistashop.dto.response.BannerDTO;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.entities.Banner;

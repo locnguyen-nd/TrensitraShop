@@ -1,4 +1,4 @@
-package com.trendistra.trendistashop.Util;
+package com.trendistra.trendistashop.utils;
 
 import org.springframework.web.multipart.MultipartFile;
 import java.util.Arrays;

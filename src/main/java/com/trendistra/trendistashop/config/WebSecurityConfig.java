@@ -1,7 +1,7 @@
 package com.trendistra.trendistashop.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.trendistra.trendistashop.Util.ResponseHelper;
+import com.trendistra.trendistashop.utils.ResponseHelper;
 import com.trendistra.trendistashop.constants.ResponseMessage;
 import com.trendistra.trendistashop.dto.response.TypeResponse;
 import com.trendistra.trendistashop.services.impl.auth.PermissionService;
