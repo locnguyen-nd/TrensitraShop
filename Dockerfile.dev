@@ -1,0 +1,33 @@
+# Development Dockerfile with hot reload
+FROM maven:3.9.6-eclipse-temurin-17
+
+# Install curl and wget for healthcheck
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl wget inotify-tools \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy pom.xml first to take advantage of Docker layer caching
+COPY pom.xml .
+
+# Download dependencies with retry mechanism
+RUN mvn -q -DskipTests dependency:go-offline -B || \
+    (sleep 10 && mvn -q -DskipTests dependency:go-offline -B)
+
+# Copy source code
+COPY src ./src
+    
+# Dev helper script
+COPY scripts/init-dev.sh /usr/local/bin/dev.sh
+RUN chmod +x /usr/local/bin/dev.sh
+
+# Expose ports
+EXPOSE 8080 5005
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Run app in dev mode with hot reload
+CMD ["dev.sh"]

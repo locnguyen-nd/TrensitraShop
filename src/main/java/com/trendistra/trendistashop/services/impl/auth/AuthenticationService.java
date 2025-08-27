@@ -86,6 +86,7 @@ public class AuthenticationService implements IAuthenticationService {
     @Override
     public TypeResponse<LoginResponse> authenticateUser(String userName, CharSequence password, GuardType guard) {
         try {
+            System.out.println("%%%%%%%%%");
             Authentication authentication = new UsernamePasswordAuthenticationToken(userName, password);
             Authentication authenticationResponse = this.authenticationManager.authenticate(authentication);
             if (authenticationResponse.isAuthenticated()) {

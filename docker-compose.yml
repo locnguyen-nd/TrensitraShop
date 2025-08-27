@@ -1,44 +1,54 @@
-version: '3.8'
 services:
   mysql:
     image: mysql:8.0
     container_name: mysql-container
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: Nguyenloc2002
-      MYSQL_DATABASE: trendista_database
-      MYSQL_PASSWORD: Nguyenloc2002
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: trendista
+      MYSQL_PASSWORD: root
     ports:
-      - "3308:3306"  # ánh xạ cổng 3306 của MySQL với máy chủ local
+      - "3308:3306"
     networks:
-      - shared-network
+      - trendista-network
     volumes:
-      - mysql_data:/var/lib/mysql  # lưu trữ dữ liệu MySQL
-      - ./init-scripts:/docker-entrypoint-initdb.d  # Mount thư mục chứa init script
+      - mysql_data:/var/lib/mysql
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+      interval: 15s
 
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: trendista-backend
-    restart: always
+    restart: unless-stopped
     ports:
-      - "8080:8080"  # ánh xạ cổng 8080 của Spring Boot với máy chủ local
+      - "8080:8080"
       - "9093:9093"
     networks:
-      - shared-network
+      - trendista-network
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/trendista_database  # sử dụng tên dịch vụ MySQL trong docker-compose
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/trendista
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: Nguyenloc2002
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC -Djava.security.egd=file:/dev/./urandom"
     depends_on:
-      - mysql  # đảm bảo MySQL khởi động trước
-    entrypoint: ["java", "-jar", "/app/TrendistaShop.jar"]
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
-  shared-network:
-    name: shared-network
-    driver: bridge
+  trendista-network: {}
 
 volumes:
   mysql_data:
