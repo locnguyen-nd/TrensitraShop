@@ -1,33 +1,42 @@
-# Development Dockerfile with hot reload
-FROM maven:3.9.6-eclipse-temurin-17
+FROM openjdk:17-jdk-slim
 
-# Install curl and wget for healthcheck
-RUN apt-get update \
- && apt-get install -y --no-install-recommends curl wget inotify-tools \
- && rm -rf /var/lib/apt/lists/*
+# Install curl and inotify-tools for file monitoring
+RUN apt-get update && apt-get install -y curl inotify-tools && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy pom.xml first to take advantage of Docker layer caching
-COPY pom.xml .
+# Copy Maven wrapper and pom.xml first for better caching
+COPY mvnw pom.xml ./
+COPY .mvn .mvn
 
-# Download dependencies with retry mechanism
-RUN mvn -q -DskipTests dependency:go-offline -B || \
-    (sleep 10 && mvn -q -DskipTests dependency:go-offline -B)
+# Make maven wrapper executable
+RUN chmod +x ./mvnw
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline -B
 
 # Copy source code
 COPY src ./src
-    
-# Dev helper script
-COPY scripts/init-dev.sh /usr/local/bin/dev.sh
-RUN chmod +x /usr/local/bin/dev.sh
+
+# Initial compilation
+RUN ./mvnw compile -B
+
+# Copy and make hot reload script executable
+COPY scripts/hotreload.sh /app/hotreload.sh
+RUN chmod +x /app/hotreload.sh
 
 # Expose ports
-EXPOSE 8080 5005
+EXPOSE 8080 35729
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
+# Set environment variables for development
+ENV SPRING_PROFILES_ACTIVE=dev
+ENV MAVEN_OPTS="-Dmaven.repo.local=/root/.m2/repository"
 
-# Run app in dev mode with hot reload
-CMD ["dev.sh"]
+# Configure JVM arguments for optimal development
+ENV JAVA_OPTS="-Xms512m -Xmx1024m \
+    -XX:TieredStopAtLevel=1 \
+    -XX:+UseParallelGC \
+    -Djava.security.egd=file:/dev/./urandom"
+
+# Use the improved hot reload script
+CMD ["/app/hotreload.sh"]

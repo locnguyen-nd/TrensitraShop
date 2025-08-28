@@ -1,27 +1,27 @@
 #!/bin/bash
 # Script to run Docker for Trendista Backend
-echo "Start Trendista Backend with Docker..."
+echo "🚀 Start Trendista Backend with Docker..."
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
-    echo "Docker is not running. Please start Docker first."
+    echo "❌ Docker is not running. Please start Docker first."
     exit 1
 fi
 
 # Stop and delete old containers if any
-echo "Cleaning up old containers..."
-docker-compose down -v
+echo "🛑 Stopping existing containers..."
+docker-compose -p trendista down -v
 
-# Delete old images if any
-echo "Deleting old images..."
-docker-compose down --rmi all
+# Cleaning old images if any
+echo "🧹 Cleaning old images..."
+docker-compose -p trendista down --rmi all
 
 # Build and run
-echo "Building and starting services..."
+echo "🔨 Building and starting services..."
 docker-compose -p trendista up --build -d
 
 # Wait for services to start
-echo "Waiting for services to start..."
+echo "⏳ Waiting for services to start..."
 sleep 20
 
 # Check status

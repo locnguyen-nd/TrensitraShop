@@ -73,6 +73,7 @@ public class WebSecurityConfig {
             "/api/v1/banner/**",
             "/api/v1/collections/**",
             "/api/v1/notifications/**",
+            "/api/v1/test/**",
             "/oauth2/**",
             "/api/v1/media/**"
     };
@@ -115,8 +116,6 @@ public class WebSecurityConfig {
                     permissionMappings.forEach((endPoint, methodMap) -> {
                         methodMap.forEach((httpMethod, permissions) -> {
                             String fullUrl = prefix + endPoint;
-                            // System.out.println("Configuring access for URL: " + fullUrl + " with method:
-                            // " + httpMethod + " and permissions: " + permissions);
                             auth.requestMatchers(HttpMethod.valueOf(httpMethod), fullUrl)
                                     .hasAnyAuthority(permissions.toArray(new String[0]));
                         });
