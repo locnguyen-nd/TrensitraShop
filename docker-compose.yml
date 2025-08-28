@@ -27,8 +27,6 @@ services:
     ports:
       - "${SERVER_PORT:-8080}:8080"
       - "9093:9093"
-    networks:
-      - trendista-network
     environment:
       # Database
       SPRING_DATASOURCE_URL: jdbc:mysql://${DB_HOST:-mysql}:${DB_PORT:-3306}/${DB_NAME:-trendista}
