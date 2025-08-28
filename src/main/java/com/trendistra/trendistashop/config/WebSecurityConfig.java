@@ -75,7 +75,8 @@ public class WebSecurityConfig {
             "/api/v1/notifications/**",
             "/api/v1/test/**",
             "/oauth2/**",
-            "/api/v1/media/**"
+            "/api/v1/media/**",
+            "/actuator/health/**"
     };
 
     /**
