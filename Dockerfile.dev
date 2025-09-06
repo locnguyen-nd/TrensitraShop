@@ -1,0 +1,42 @@
+FROM openjdk:17-jdk-slim
+
+# Install curl and inotify-tools for file monitoring
+RUN apt-get update && apt-get install -y curl inotify-tools && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy Maven wrapper and pom.xml first for better caching
+COPY mvnw pom.xml ./
+COPY .mvn .mvn
+
+# Make maven wrapper executable
+RUN chmod +x ./mvnw
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
+COPY src ./src
+
+# Initial compilation
+RUN ./mvnw compile -B
+
+# Copy and make hot reload script executable
+COPY scripts/hotreload.sh /app/hotreload.sh
+RUN chmod +x /app/hotreload.sh
+
+# Expose ports
+EXPOSE 8080 35729
+
+# Set environment variables for development
+ENV SPRING_PROFILES_ACTIVE=dev
+ENV MAVEN_OPTS="-Dmaven.repo.local=/root/.m2/repository"
+
+# Configure JVM arguments for optimal development
+ENV JAVA_OPTS="-Xms512m -Xmx1024m \
+    -XX:TieredStopAtLevel=1 \
+    -XX:+UseParallelGC \
+    -Djava.security.egd=file:/dev/./urandom"
+
+# Use the improved hot reload script
+CMD ["/app/hotreload.sh"]

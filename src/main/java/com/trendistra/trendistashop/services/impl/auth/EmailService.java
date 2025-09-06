@@ -22,6 +22,9 @@ public class EmailService {
     @Value("${frontend.dev.url}")
     private String frontendUrl;
 
+    @Value("${spring.mail.backup-email}")
+    private String backupEmail;
+
     /**
      * Gửi email xác minh đến người dùng.
      *
@@ -37,7 +40,6 @@ public class EmailService {
         mailContent += "Please enter this code to verify your email.,\n\n";
         mailContent += "Best regards,\n";
         mailContent += senderName;
-        String backupEmail = "hoainamadm@gmail.com"; // gửi code đến Nam
         try {
             SimpleMailMessage mailMessage = new SimpleMailMessage();
             mailMessage.setFrom(sender);
@@ -65,14 +67,10 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(mailContent, true); // true để enable HTML
             
-            System.out.println("Sending email to: " + user.getEmail());
-            System.out.println("Content: " + mailContent);
-            
             javaMailSender.send(message);
             return "Email Sent";
         } catch (MessagingException e) {
             e.printStackTrace();
-            System.out.println("Error sending email: " + e.getMessage());
             return "Error while Sending Mail: " + e.getMessage();
         }
     }
