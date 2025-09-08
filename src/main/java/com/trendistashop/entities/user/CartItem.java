@@ -1,0 +1,45 @@
+package com.trendistashop.entities.user;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.trendistashop.entities.product.Product;
+import com.trendistashop.entities.BaseEntity;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.UUID;
+
+@Table(name = "cart-item")
+@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class CartItem extends BaseEntity {
+    @Id
+    @GeneratedValue
+    private UUID id;
+    @ManyToOne
+    @JoinColumn(name = "cart_id")
+    @JsonIgnore
+    @EqualsAndHashCode.Exclude
+    private Cart cart;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    @JsonIgnoreProperties(value = {
+            "id",
+            "user",
+            "name"
+    })
+    private Product cartProduct;
+    private UUID productVariantId;
+    private UUID productImageId;
+    private Integer cartItemQuantity;
+
+    @Override
+    public String toString() {
+        return "CartItem(id=" + id.toString() +
+                ", productVariantId=" + productVariantId +
+                ", quantity=" + cartItemQuantity + ")";
+    }
+}
