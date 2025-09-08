@@ -1,11 +1,9 @@
 package com.trendistashop.controllers.admin;
-
-import com.trendistashop.docs.auth.examples.AuthRequestExamples;
 import com.trendistashop.docs.example.DiscountRequestExamples;
 import com.trendistashop.dto.request.DiscountRequest;
-import com.trendistashop.dto.request.RegisterRequest;
 import com.trendistashop.dto.response.DiscountApply;
 import com.trendistashop.dto.response.DiscountDTO;
+import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.services.impl.product.DiscountService;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -16,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +28,7 @@ public class DiscountController {
     private DiscountService discountService;
     // Create
     @PostMapping
-    public ResponseEntity<DiscountDTO> createDiscount(
+    public ResponseEntity<TypeResponse<DiscountDTO>> createDiscount(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     content = @Content(schema = @Schema(implementation = DiscountRequest.class),
@@ -53,42 +50,34 @@ public class DiscountController {
             @RequestParam(value = "categoryIds",required = false) List<UUID> categoryIds,
             @RequestParam(value = "productIds", required = false) List<UUID> productIds
     )  {
-        DiscountDTO createdDiscount = discountService
+        TypeResponse<DiscountDTO> createdDiscount = discountService
                 .createDiscount(discountDto, categoryIds, productIds);
-        return new ResponseEntity<>(createdDiscount, HttpStatus.CREATED);
+        return ResponseEntity.status(createdDiscount.getStatusCode()).body(createdDiscount);
     }
 
     @PutMapping(value = "/apply")
-    public ResponseEntity<?> applyDiscount(
+    public ResponseEntity<TypeResponse<DiscountApply>> applyDiscount(
             @RequestParam String discountCode,
-            @RequestParam UUID orderId
-            ) {
-        DiscountApply discountDTO = discountService.applyDiscountToOrder(discountCode, orderId);
-        // Check if discount was successfully applied
-        if(discountDTO == null) {
-            return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Discount can not apply for this order");
-        }
-        return new ResponseEntity<>(discountDTO, HttpStatus.OK);
+            @RequestParam UUID orderId) {
+        TypeResponse<DiscountApply> discountDTO = discountService.applyDiscountToOrder(discountCode, orderId);
+        return ResponseEntity.status(discountDTO.getStatusCode()).body(discountDTO);
     }
     @GetMapping
-    public ResponseEntity <?> getAllDiscount(){
-        List<DiscountDTO> discountDTOS = discountService.getAllDiscount();
-        if(discountDTOS.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No have discount");
-        }
-        return new ResponseEntity<>(discountDTOS, HttpStatus.OK);
+    public ResponseEntity<TypeResponse<List<DiscountDTO>>> getAllDiscount(){
+        TypeResponse<List<DiscountDTO>> discountDTOS = discountService.getAllDiscount();
+        return ResponseEntity.status(discountDTOS.getStatusCode()).body(discountDTOS);
     }
     // Read One
     @GetMapping("/{id}")
-    public ResponseEntity<DiscountDTO> getDiscountById(@PathVariable UUID id) {
-        DiscountDTO discount = discountService.getDiscountById(id);
-        return ResponseEntity.ok(discount);
+    public ResponseEntity<TypeResponse<DiscountDTO>> getDiscountById(@PathVariable UUID id) {
+        TypeResponse<DiscountDTO> discount = discountService.getDiscountById(id);
+        return ResponseEntity.status(discount.getStatusCode()).body(discount);
     }
 
     // Update
     @PutMapping(value = "/{id}")
-    public ResponseEntity<DiscountDTO> updateDiscount(@PathVariable("id") UUID id,
-                                                      @io.swagger.v3.oas.annotations.parameters.RequestBody(
+    public ResponseEntity<TypeResponse<DiscountDTO>> updateDiscount(@PathVariable("id") UUID id,
+                                                                  @io.swagger.v3.oas.annotations.parameters.RequestBody(
                                                               required = true,
                                                               content = @Content(schema = @Schema(implementation = DiscountRequest.class),
                                                                       examples = {
@@ -106,37 +95,38 @@ public class DiscountController {
                                                               )
                                                       )
                                                       @RequestBody @Valid DiscountRequest discountDto,
-                                                      @RequestParam(value = "categoryIds", required = false) List<UUID> categoryIds,
-                                                      @RequestParam(value = "productIds", required = false) List<UUID> productIds){
-        return new ResponseEntity<>(discountService.updateDiscount(id, discountDto, categoryIds, productIds), HttpStatus.OK);
+                                                                  @RequestParam(value = "categoryIds", required = false) List<UUID> categoryIds,
+                                                                  @RequestParam(value = "productIds", required = false) List<UUID> productIds){
+        TypeResponse<DiscountDTO> updatedDiscount = discountService.updateDiscount(id, discountDto, categoryIds, productIds);
+        return ResponseEntity.status(updatedDiscount.getStatusCode()).body(updatedDiscount);
     }
 
     // Delete
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteDiscount(@PathVariable UUID id) {
-        discountService.deleteDiscount(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<TypeResponse<Void>> deleteDiscount(@PathVariable UUID id) {
+        TypeResponse<Void>  response =  discountService.deleteDiscount(id);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     // Toggle Discount Status
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<Void> toggleDiscountStatus(
+    @PutMapping("/{id}/status")
+    public ResponseEntity<TypeResponse<Void>> toggleDiscountStatus(
             @PathVariable UUID id,
             @RequestParam boolean status
     ) {
-        discountService.setDiscountStatus(id, status);
-        return ResponseEntity.ok().build();
+        TypeResponse<Void> response = discountService.setDiscountStatus(id, status);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-    @PostMapping("/create-product/apply")
+    @PutMapping("/create-product/apply")
     public ResponseEntity<Map<String,BigDecimal>> applyDiscountToNewProduct(
             @RequestParam String discountCode,
             @RequestParam BigDecimal price
     ) {
-        BigDecimal priceAfterDiscount = discountService.applyDiscountToNewProduct(discountCode, price);
+        BigDecimal priceAfterDiscount = discountService.applyDiscountToNewProduct(discountCode, price).getData();
         if(priceAfterDiscount == null) {
             return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
-        Map<String, BigDecimal> discountDTO = Map.of("priceAfterDiscount", priceAfterDiscount);
-        return new ResponseEntity<>(discountDTO, HttpStatus.OK);
+        Map<String, BigDecimal> discount = Map.of("priceAfter", priceAfterDiscount);
+        return ResponseEntity.ok(discount);
     }
 }

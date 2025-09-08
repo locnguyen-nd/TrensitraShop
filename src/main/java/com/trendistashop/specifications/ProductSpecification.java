@@ -32,7 +32,7 @@ public class ProductSpecification {
     public static Specification<Product> hasCategorySlug(String slug) {
         return (root, query, criteriaBuilder) -> {
             if (slug == null) {
-                return criteriaBuilder.conjunction(); // Không thêm điều kiện nếu categoryId là null
+                return criteriaBuilder.conjunction();
             }
             return criteriaBuilder.equal(root.get("category").get("slug"), slug);
         };
@@ -74,10 +74,17 @@ public class ProductSpecification {
             return criteriaBuilder.equal(variantJoin.get("size").get("value"), value);
         };
     }
-    public static  Specification<Product> hasStatus(Boolean status) {
-        return ((root, query, criteriaBuilder) ->
-             criteriaBuilder.equal(root.get("status"), status)
-        );
+    public static Specification<Product> hasStatus(Boolean status) {
+        return (root, query, criteriaBuilder) -> {
+            if (Boolean.TRUE.equals(status)) {
+                return criteriaBuilder.equal(root.get("status"), true);
+            } else {
+                return criteriaBuilder.or(
+                        criteriaBuilder.equal(root.get("status"), false),
+                        criteriaBuilder.isNull(root.get("status"))
+                );
+            }
+        };
     }
     public static  Specification<Product> hasTag(Enum tag) {
         return ((root, query, criteriaBuilder) ->

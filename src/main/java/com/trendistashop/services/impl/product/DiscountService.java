@@ -1,8 +1,10 @@
 package com.trendistashop.services.impl.product;
 
+import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.dto.request.DiscountRequest;
 import com.trendistashop.dto.response.DiscountApply;
 import com.trendistashop.dto.response.DiscountDTO;
+import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.entities.category.Category;
 import com.trendistashop.entities.product.Discount;
 import com.trendistashop.entities.product.Product;
@@ -15,6 +17,7 @@ import com.trendistashop.repositories.order.OrderRepository;
 import com.trendistashop.repositories.product.DiscountRepository;
 import com.trendistashop.repositories.product.ProductRepository;
 import com.trendistashop.services.CloudinaryService;
+import com.trendistashop.utils.ResponseHelper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,9 +43,9 @@ public class DiscountService {
 
     // Create
     @Transactional
-    public DiscountDTO createDiscount(DiscountRequest discountDto,
-                                      List<UUID> categoryTds,
-                                      List<UUID> productIds)  {
+    public TypeResponse<DiscountDTO> createDiscount(DiscountRequest discountDto,
+                                       List<UUID> categoryTds,
+                                       List<UUID> productIds)  {
         // Check if discount with same name already exists
 
         if (discountDto.getCode() == null || discountDto.getCode().isBlank()) {
@@ -81,7 +84,7 @@ public class DiscountService {
             products.forEach(product -> product.getDiscounts().add(createDiscount));
             productRepository.saveAll(products);
         }
-        return mapToDiscountDto(createDiscount);
+        return ResponseHelper.ok(mapToDiscountDto(createDiscount), ResponseMessage.FETCH_SUCCESS);
     }
 
     private DiscountRequest validateDiscount(DiscountRequest discountDTO) {
@@ -112,184 +115,217 @@ public class DiscountService {
     }
 
     // Read One
-    public DiscountDTO getDiscountById(UUID id) {
-        Discount discount = discountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
-
-        return mapToDiscountDto(discount);
+    public TypeResponse<DiscountDTO> getDiscountById(UUID id) {
+        try {
+            Discount discount = discountRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
+            DiscountDTO discountDTO = mapToDiscountDto(discount);
+            return ResponseHelper.ok(discountDTO, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
     }
 
-    public List<DiscountDTO> getAllDiscount() {
-        List<Discount> discounts = discountRepository.findAll();
-        return discounts.stream().map(this::mapToDiscountDto).collect(Collectors.toList());
+    public TypeResponse<List<DiscountDTO>> getAllDiscount() {
+        try {
+            List<Discount> discounts = discountRepository.findAll();
+            List result =  discounts.stream().map(this::mapToDiscountDto).collect(Collectors.toList());
+            return ResponseHelper.ok(result, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
+
     }
 
     // Update
     @Transactional
-    public DiscountDTO updateDiscount(UUID id,
+    public TypeResponse<DiscountDTO> updateDiscount(UUID id,
                                       DiscountRequest discountDto,
                                       List<UUID> categoryTds,
                                       List<UUID> productIds)  {
+        try {
+            // Validate dates
+            discountDto = validateDiscount(discountDto);
+            // Find existing discount
+            Discount existingDiscount = discountRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx("Discount not found with id: " + id));
+            // Update discount
+            existingDiscount.setCode(discountDto.getCode());
+            existingDiscount.setDescription(discountDto.getDescription());
+            existingDiscount.setDiscountType(discountDto.getDiscountType());
+            existingDiscount.setDiscountApply(discountDto.getDiscountApply());
+            existingDiscount.setDiscountValue(discountDto.getDiscountValue());
+            existingDiscount.setMaxDiscountValue(discountDto.getMaxDiscountValue());
+            existingDiscount.setMinOrderValue(discountDto.getMinOrderValue());
+            existingDiscount.setStartDate(discountDto.getStartDate());
+            existingDiscount.setEndDate(discountDto.getEndDate());
+            existingDiscount.setIsActive(discountDto.getIsActive() != null ? discountDto.getIsActive() : true);
+            // Upload ảnh
+            if (existingDiscount.getFrame() != null && !existingDiscount.getFrame().equals(discountDto.getFrame())) {
+                cloudinaryService.deleteFile(existingDiscount.getFrame());
+            } else {
+                existingDiscount.setFrame(discountDto.getFrame());
+            }
+            Discount updatedDiscount = discountRepository.save(existingDiscount);
+            // For Categories
+            if (categoryTds != null && !categoryTds.isEmpty()) {
+                List<Category> categories = categoryRepository.findAllById(categoryTds);
+                // Remove old relationships
+                List<Category> oldCategories = categoryRepository.findAll().stream()
+                        .filter(category -> category.getDiscounts().contains(existingDiscount))
+                        .collect(Collectors.toList());
+                oldCategories.forEach(category -> category.getDiscounts().remove(existingDiscount));
+                categoryRepository.saveAll(oldCategories);
 
-        // Validate dates
-        discountDto = validateDiscount(discountDto);
-        // Find existing discount
-        Discount existingDiscount = discountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundEx("Discount not found with id: " + id));
-        // Update discount
-        existingDiscount.setCode(discountDto.getCode());
-        existingDiscount.setDescription(discountDto.getDescription());
-        existingDiscount.setDiscountType(discountDto.getDiscountType());
-        existingDiscount.setDiscountApply(discountDto.getDiscountApply());
-        existingDiscount.setDiscountValue(discountDto.getDiscountValue());
-        existingDiscount.setMaxDiscountValue(discountDto.getMaxDiscountValue());
-        existingDiscount.setMinOrderValue(discountDto.getMinOrderValue());
-        existingDiscount.setStartDate(discountDto.getStartDate());
-        existingDiscount.setEndDate(discountDto.getEndDate());
-        existingDiscount.setIsActive(discountDto.getIsActive() != null ? discountDto.getIsActive() : true);
-        // Upload ảnh
-        if (existingDiscount.getFrame() != null && !existingDiscount.getFrame().equals(discountDto.getFrame())) {
-            cloudinaryService.deleteFile(extractPublicIdFromUrl(existingDiscount.getFrame()));
-        } else {
-        existingDiscount.setFrame(discountDto.getFrame());
+                categories.forEach(category -> category.getDiscounts().add(updatedDiscount));
+                categoryRepository.saveAll(categories);
+            } else {
+                List<Category> oldCategories = categoryRepository.findAll().stream()
+                        .filter(category -> category.getDiscounts().contains(existingDiscount))
+                        .collect(Collectors.toList());
+                oldCategories.forEach(category -> category.getDiscounts().remove(existingDiscount));
+                categoryRepository.saveAll(oldCategories);
+            }
+
+            // For Products
+            if (productIds != null && !productIds.isEmpty()) {
+                List<Product> products = productRepository.findAllById(productIds);
+                List<Product> oldProducts = productRepository.findAll().stream()
+                        .filter(product -> product.getDiscounts().contains(existingDiscount))
+                        .collect(Collectors.toList());
+                oldProducts.forEach(product -> product.getDiscounts().remove(existingDiscount));
+                productRepository.saveAll(oldProducts);
+
+                products.forEach(product -> product.getDiscounts().add(updatedDiscount));
+                productRepository.saveAll(products);
+            } else {
+                List<Product> oldProducts = productRepository.findAll().stream()
+                        .filter(product -> product.getDiscounts().contains(existingDiscount))
+                        .collect(Collectors.toList());
+                oldProducts.forEach(product -> product.getDiscounts().remove(existingDiscount));
+                productRepository.saveAll(oldProducts);
+            }
+            return ResponseHelper.created(mapToDiscountDto(updatedDiscount), ResponseMessage.UPDATE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.badRequest(ResponseMessage.UPDATE_FAILED);
         }
-        Discount updatedDiscount = discountRepository.save(existingDiscount);
-        // For Categories
-        if (categoryTds != null && !categoryTds.isEmpty()) {
-            List<Category> categories = categoryRepository.findAllById(categoryTds);
-            // Remove old relationships
-            List<Category> oldCategories = categoryRepository.findAll().stream()
-                    .filter(category -> category.getDiscounts().contains(existingDiscount))
-                    .collect(Collectors.toList());
-            oldCategories.forEach(category -> category.getDiscounts().remove(existingDiscount));
-            categoryRepository.saveAll(oldCategories);
-
-            categories.forEach(category -> category.getDiscounts().add(updatedDiscount));
-            categoryRepository.saveAll(categories);
-        } else {
-            List<Category> oldCategories = categoryRepository.findAll().stream()
-                    .filter(category -> category.getDiscounts().contains(existingDiscount))
-                    .collect(Collectors.toList());
-            oldCategories.forEach(category -> category.getDiscounts().remove(existingDiscount));
-            categoryRepository.saveAll(oldCategories);
-        }
-
-        // For Products
-        if (productIds != null && !productIds.isEmpty()) {
-            List<Product> products = productRepository.findAllById(productIds);
-            List<Product> oldProducts = productRepository.findAll().stream()
-                    .filter(product -> product.getDiscounts().contains(existingDiscount))
-                    .collect(Collectors.toList());
-            oldProducts.forEach(product -> product.getDiscounts().remove(existingDiscount));
-            productRepository.saveAll(oldProducts);
-
-            products.forEach(product -> product.getDiscounts().add(updatedDiscount));
-            productRepository.saveAll(products);
-        } else {
-            List<Product> oldProducts = productRepository.findAll().stream()
-                    .filter(product -> product.getDiscounts().contains(existingDiscount))
-                    .collect(Collectors.toList());
-            oldProducts.forEach(product -> product.getDiscounts().remove(existingDiscount));
-            productRepository.saveAll(oldProducts);
-        }
-        return mapToDiscountDto(updatedDiscount);
 
     }
 
     // Delete
-    public void deleteDiscount(UUID id) {
-        Discount discount = discountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
-        for(Product product : discount.getProducts()) {
-            product.getDiscounts().remove(discount);
+    public TypeResponse<Void> deleteDiscount(UUID id) {
+        try {
+            Discount discount = discountRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
+            for (Product product : discount.getProducts()) {
+                product.getDiscounts().remove(discount);
+            }
+            for (Category category : discount.getCategories()) {
+                category.getDiscounts().remove(discount);
+            }
+            discountRepository.save(discount);
+            cloudinaryService.deleteFile(discount.getFrame());
+            discountRepository.delete(discount);
+            return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
         }
-        for (Category category : discount.getCategories()) {
-            category.getDiscounts().remove(discount);
-        }
-        discountRepository.save(discount);
-        discountRepository.delete(discount);
     }
 
 
     // Additional method to manage discount activation
-    public void setDiscountStatus(UUID id, boolean status) {
-        Discount discount = discountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
-        discount.setIsActive(status);
-        discountRepository.save(discount);
+    public TypeResponse<Void> setDiscountStatus(UUID id, boolean status) {
+        try{
+            Discount discount = discountRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
+            discount.setIsActive(status);
+            discountRepository.save(discount);
+            return ResponseHelper.ok(null, ResponseMessage.UPDATE_SUCCESS);
+        } catch (Exception e){
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
+        }
     }
 
-    public DiscountApply applyDiscountToOrder(String discountCode, UUID orderId) {
-        Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
-        Order order = orderRepository.findById(orderId).get();
-        if (discountOptional == null || order == null) {
-            throw new ResourceNotFoundEx("Discount or Order not found with code and id: " + discountCode + orderId);
-        }
-        // nếu có rồi thì kh add nữa
-        if (order.getDiscount() != null && order.getDiscount().getCode().equals(discountCode)) {
-            return null;
-        }
-        if (!discountOptional.getIsActive()
-                || LocalDateTime.now().isBefore(discountOptional.getStartDate())
-                || LocalDateTime.now().isAfter(discountOptional.getEndDate())) {
-            return null;
-        }
-        // check minimum order value
-        if (order.getTotalAmount().compareTo(discountOptional.getMinOrderValue()) < 0) {
-            return null;
-        }
-        // Calculate discount amount
-        BigDecimal discountAmount = calculateDiscountAmount(discountOptional, order.getTotalAmount());
-        BigDecimal originPrice = order.getOrderItems().stream()
-                .findFirst()
-                .map(orderItem -> orderItem.getProduct().getOriginPrice())
-                .orElse(BigDecimal.ZERO);
+    public TypeResponse<DiscountApply> applyDiscountToOrder(String discountCode, UUID orderId) {
+        try {
+            Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
+            Order order = orderRepository.findById(orderId).get();
+            if (discountOptional == null || order == null) {
+                throw new ResourceNotFoundEx("Discount or Order not found with code and id: " + discountCode + orderId);
+            }
+            if (order.getDiscount() != null && order.getDiscount().getCode().equals(discountCode)) {
+                return null;
+            }
+            if (!discountOptional.getIsActive()
+                    || LocalDateTime.now().isBefore(discountOptional.getStartDate())
+                    || LocalDateTime.now().isAfter(discountOptional.getEndDate())) {
+                return null;
+            }
+            if (discountOptional.getDiscountApply() == com.trendistashop.enums.DiscountApply.ORDER
+                    && order.getTotalAmount().compareTo(discountOptional.getMinOrderValue()) < 0) {
+                return null;
+            }
+            // Calculate discount amount
+            BigDecimal discountAmount = calculateDiscountAmount(discountOptional, order.getTotalAmount());
+            BigDecimal originPrice = order.getOrderItems().stream()
+                    .findFirst()
+                    .map(orderItem -> orderItem.getProduct().getOriginPrice())
+                    .orElse(BigDecimal.ZERO);
 
-        BigDecimal saved = originPrice.subtract(discountAmount);
-        DiscountApply discountApply = DiscountApply.builder()
-                .code(discountOptional.getCode())
-                .valueApply(discountAmount)
-                .saved(saved)
-                .build();
-        order.setDiscount(discountOptional);
-        orderRepository.save(order);
-        return discountApply;
-    }
-    public BigDecimal applyDiscountToNewProduct(String discountCode, BigDecimal price) {
-        Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
-        if (discountOptional == null) {
-            throw new ResourceNotFoundEx("Discount not found with code: " + discountCode);
+            BigDecimal saved = originPrice.subtract(discountAmount);
+            DiscountApply discountApply = DiscountApply.builder()
+                    .code(discountOptional.getCode())
+                    .valueApply(discountAmount)
+                    .saved(saved)
+                    .build();
+            order.setDiscount(discountOptional);
+            orderRepository.save(order);
+            return ResponseHelper.ok(discountApply, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
-        if (!discountOptional.getIsActive()
-                || LocalDateTime.now().isBefore(discountOptional.getStartDate())
-                || LocalDateTime.now().isAfter(discountOptional.getEndDate())) {
-            return price;
-        }
-        // check minimum order value
-        if (price.compareTo(discountOptional.getMinOrderValue()) < 0) {
-            return price;
-        }
-        // Calculate discount amount
-        BigDecimal discountAmount = calculateDiscountAmount(discountOptional, price);
-        BigDecimal priceAfterDiscount = price.subtract(discountAmount);
-        return priceAfterDiscount;
     }
 
-    private BigDecimal calculateDiscountAmount(Discount discount, BigDecimal orderTotal) {
+    public TypeResponse<BigDecimal> applyDiscountToNewProduct(String discountCode, BigDecimal price) {
+        try {
+            Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
+            if (discountOptional == null) {
+                throw new ResourceNotFoundEx("Discount not found with code: " + discountCode);
+            }
+            if (!discountOptional.getIsActive()
+                    || LocalDateTime.now().isBefore(discountOptional.getStartDate())
+                    || LocalDateTime.now().isAfter(discountOptional.getEndDate())) {
+                return ResponseHelper.ok(price, ResponseMessage.FETCH_SUCCESS);
+            }
+            BigDecimal discountAmount = calculateDiscountAmount(discountOptional, price);
+            BigDecimal priceAfterDiscount = price.subtract(discountAmount);
+            return ResponseHelper.ok(priceAfterDiscount.max(BigDecimal.ZERO), ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
+    }
+
+
+    private BigDecimal calculateDiscountAmount(Discount discount, BigDecimal price) {
         BigDecimal discountAmount;
-        switch (discount.getDiscountType()) {
-            case AMOUNT:
+        if (discount.getDiscountApply() == com.trendistashop.enums.DiscountApply.PRODUCT) {
+            if (discount.getDiscountType() == DiscountType.PERCENT) {
+                discountAmount = price.multiply(discount.getDiscountValue().divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP));
+            } else {
                 discountAmount = discount.getDiscountValue();
-                break;
-            case PERCENT:
-                discountAmount = orderTotal.multiply(discount.getDiscountValue().divide(BigDecimal.valueOf(100)));
-                // Apply max discount if applicable
+            }
+        } else {
+            if (price.compareTo(discount.getMinOrderValue()) < 0) {
+                return BigDecimal.ZERO;
+            }
+            if (discount.getDiscountType() == DiscountType.PERCENT) {
+                discountAmount = price.multiply(discount.getDiscountValue().divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP));
                 if (discount.getMaxDiscountValue() != null) {
                     discountAmount = discountAmount.min(discount.getMaxDiscountValue());
                 }
-                break;
-            default:
-                discountAmount = BigDecimal.ZERO;
+            } else {
+                discountAmount = discount.getDiscountValue();
+            }
         }
         return discountAmount;
     }
@@ -385,9 +421,11 @@ public class DiscountService {
             finalPrice = calculateFixedDiscount(basePrice, discount.getDiscountValue());
             discountValue = calculateEffectiveDiscountPercentage(basePrice, discount.getDiscountValue());
         }
-
-        finalPrice = applyMaxDiscountLimit(basePrice, finalPrice, discount);
-        product.setPrice(finalPrice.max(BigDecimal.ZERO));
+        if(com.trendistashop.enums.DiscountApply.PRODUCT.equals(discount.getDiscountApply()))
+        {
+            product.setPrice(finalPrice.max(BigDecimal.ZERO));
+        }
+         discountValue = applyMaxDiscountLimit(basePrice, finalPrice, discount);
 
         return discountValue;
     }
@@ -421,11 +459,5 @@ public class DiscountService {
     private void updateProductPrice(Product product) {
         productRepository.save(product);
     }
-    private String extractPublicIdFromUrl(String url) {
-        String[] parts = url.split("/");
-        String filename = parts[parts.length - 1];
-        return "Discount Frame/" + filename.split("\\.")[0];
-    }
-
 }
 

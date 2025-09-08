@@ -211,48 +211,45 @@ public class ProductService implements IProductService {
 
     @Override
     public TypeResponse<Page<ProductDTO>> filterProduct(String categorySlug, String genderSlug, String colorCode,
-                                                        String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest) {
-        Specification<Product> spec = Specification.where(ProductSpecification.hasStatus(true));
+                                                        String sizeValue, Double minPrice, Double maxPrice, Boolean status, PageRequest pageRequest) {
+        try {
+            Specification<Product> spec = Specification.where(null);
 
-        if (categorySlug != null) {
-            log.info("Filtering by categorySlug: {}", categorySlug);
-            Category categoryOpt = categoryRepository.findBySlugWithParent(categorySlug);
-            if (categoryOpt == null) {
-                log.info("Category not found for slug: {}", categorySlug);
-                return ResponseHelper.notFound(String.format(ResponseMessage.CATEGORY_NOT_FOUND, categorySlug));
+            spec = Specification.where(ProductSpecification.hasStatus(status));
+            if (categorySlug != null) {
+                log.info("Filtering by categorySlug: {}", categorySlug);
+                Category categoryOpt = categoryRepository.findBySlug(categorySlug);
+                if (categoryOpt == null) {
+                    log.info("Category not found for slug: {}", categorySlug);
+                    return ResponseHelper.notFound(String.format(ResponseMessage.CATEGORY_NOT_FOUND, categorySlug));
+                }
+                log.info("Category found: slug = {}, parent = {}",
+                        categoryOpt.getSlug(),
+                        categoryOpt.getParent() != null ? categoryOpt.getParent().getSlug() : "null");
+
+                spec = spec.and((root, query, cb) -> cb.or (
+                    cb.equal(root.get("category").get("slug"), categorySlug),
+                    cb.equal(root.get("category").get("parent").get("slug"), categorySlug)
+                ));
             }
-            log.info("Category found: slug = {}, parent = {}",
-                    categoryOpt.getSlug(),
-                    categoryOpt.getParent() != null ? categoryOpt.getParent().getSlug() : "null");
 
-            spec = spec.and((root, query, cb) -> {
-                query.distinct(true);
-                Join<Product, Category> categoryJoin = root.join("category", JoinType.LEFT);
-                Join<Category, Category> parentJoin = categoryJoin.join("parent", JoinType.LEFT);
-
-                return cb.or(
-                        cb.equal(categoryJoin.get("slug"), categorySlug),
-                        cb.equal(parentJoin.get("slug"), categorySlug)
-                );
-            });
+            if (genderSlug != null) {
+                spec = spec.and(ProductSpecification.hasGenderSlug(genderSlug));
+            }
+            if (colorCode != null) {
+                spec = spec.and(ProductSpecification.hasColorCode(colorCode));
+            }
+            if (sizeValue != null) {
+                spec = spec.and(ProductSpecification.hasSizeValue(sizeValue));
+            }
+            if (minPrice != null && maxPrice != null) {
+                spec = spec.and(ProductSpecification.hasPriceBetween(minPrice, maxPrice));
+            }
+            Page<Product> productPage = productRepository.findAll(spec, pageRequest);
+            return ResponseHelper.ok(productPage.map(this::mapToProductDto), ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e){
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
-        if (genderSlug != null) {
-            spec = spec.and(ProductSpecification.hasGenderSlug(genderSlug));
-        }
-        if (colorCode != null) {
-            spec = spec.and(ProductSpecification.hasColorCode(colorCode));
-        }
-        if (sizeValue != null) {
-            spec = spec.and(ProductSpecification.hasSizeValue(sizeValue));
-        }
-        if (minPrice != null && maxPrice != null) {
-            spec = spec.and(ProductSpecification.hasPriceBetween(minPrice, maxPrice));
-        }
-        Page<Product> productPage = productRepository.findAll(spec, pageRequest);
-        if (productPage.isEmpty()) {
-            return ResponseHelper.notFound(ResponseMessage.PRODUCT_NOT_FOUND);
-        }
-        return ResponseHelper.ok(productPage.map(this::mapToProductDto), ResponseMessage.FETCH_SUCCESS);
     }
 
     @Override
