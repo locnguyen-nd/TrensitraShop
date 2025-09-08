@@ -119,13 +119,14 @@ public class ProductController {
             @RequestParam(required = false) String genderSlug,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false , defaultValue = "true") Boolean status,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "30") int size,
             @RequestParam(defaultValue = "price") String sortBy,
             @RequestParam(defaultValue = "false") boolean ascending
     ) {
         PageRequest pageRequest = createPageRequest(page, size, sortBy , ascending);
-        TypeResponse<Page<ProductDTO>> products =   productService.filterProduct(categorySlug, genderSlug, colorCode, sizeValue, minPrice, maxPrice, pageRequest);
+        TypeResponse<Page<ProductDTO>> products =   productService.filterProduct(categorySlug, genderSlug, colorCode, sizeValue, minPrice, maxPrice, status, pageRequest);
         return ResponseEntity.status(products.getStatusCode()).body(products);
     }
     private PageRequest createPageRequest (int page , int size, String sortBy , Boolean ascending) {

@@ -24,7 +24,7 @@ public interface IProductService {
     TypeResponse<ProductDTO> getProductBySlug(String slug);
 
     TypeResponse<Page<ProductDTO>> filterProduct(String categorySlug, String genderSlug, String colorCode,
-                                   String sizeValue, Double minPrice, Double maxPrice, PageRequest pageRequest);
+                                   String sizeValue, Double minPrice, Double maxPrice, Boolean status, PageRequest pageRequest);
 
     @Transactional
     public ProductDTO updateProduct(UUID productId, ProductRequestDTO productDto);

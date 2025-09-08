@@ -296,7 +296,7 @@ public class CategoryService implements ICategoryService {
                 .description(parent.getDescription())
                 .imageUrl(parent.getImageUrl())
                 .items(children)
-                .index(parent.getIndexNum())
+                .index(parent.getIndexNum() != null ? parent.getIndexNum() : Integer.MAX_VALUE)
                 .build();
     }
 }
