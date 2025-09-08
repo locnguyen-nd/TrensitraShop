@@ -4,9 +4,9 @@ services:
     container_name: mysql-container-dev
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${DB_NAME:-trendista}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-root}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3308:3306"
     volumes:
@@ -26,11 +26,11 @@ services:
     restart: unless-stopped
     ports:
       - "${SERVER_PORT:-8080}:8080"
-      - "35729:35729"
+      - "35729:35729"  # LiveReload port
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-dev:3306/${DB_NAME:-trendista}
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-root}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-root}
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-dev:3306/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_PROFILES_ACTIVE=dev
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-86400}
@@ -53,19 +53,28 @@ services:
       - PAYOS_CANCEL_URL=${PAYOS_CANCEL_URL:-http://localhost:8080/api/v1/payment/cancel}
       - VERIFICATION_MAX_ATTEMPTS=${VERIFICATION_MAX_ATTEMPTS:-5}
       - SEARCH_SUGGESTION_LIMIT=${SEARCH_SUGGESTION_LIMIT:-5}
+      # DevTools configuration
+      - SPRING_DEVTOOLS_RESTART_ENABLED=true
+      - SPRING_DEVTOOLS_LIVERELOAD_ENABLED=true
     depends_on:
       mysql-dev:
         condition: service_healthy
     volumes:
-      - ./src:/app/src:rw                    # Source code with read-write access
-      - ./pom.xml:/app/pom.xml:ro            # Maven config as read-only
-      - maven_cache:/root/.m2                # Maven cache for faster builds
+      - ./src:/app/src:rw                    # Source code với read-write access
+      - ./pom.xml:/app/pom.xml:ro            # Maven config read-only
+      - ./target:/app/target:rw              # Target directory cho compiled classes
+      - maven_cache:/root/.m2                # Maven cache
+      # Mount application-dev.properties nếu có
+      - ./src/main/resources/application.properties:/app/src/main/resources/application.properties:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+    # Thêm tty để có đầy đủ terminal output
+    tty: true
+    stdin_open: true
 
 volumes:
   mysql_data_dev:

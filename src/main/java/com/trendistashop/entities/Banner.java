@@ -1,0 +1,29 @@
+package com.trendistashop.entities;
+
+import com.trendistashop.enums.BannerTypeEnum;
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "banners")
+@NoArgsConstructor
+@AllArgsConstructor
+@Setter
+@Getter
+public class Banner extends BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String title;
+    @Column(nullable = false)
+    private String event;
+    @Column(nullable = false)
+    private String imageUrl;
+    private String linkUrl;
+    @Enumerated(EnumType.STRING)
+    private BannerTypeEnum type; // MAIN, PROMO, CATEGORY
+    @Column
+    private Integer displayOrder;
+    @Column
+    private Boolean isActive;
+}

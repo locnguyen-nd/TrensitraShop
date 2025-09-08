@@ -1,0 +1,25 @@
+package com.trendistashop.services;
+
+import com.trendistashop.dto.request.UserUpdateDTO;
+import com.trendistashop.dto.response.UserDetailDTO;
+import com.trendistashop.dto.response.TypeResponse;
+
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+public interface ICustomUserService {
+    TypeResponse<List<UserDetailDTO>> getAllUser();
+
+    TypeResponse<UserDetailDTO> getUserById(UUID id);
+
+    TypeResponse<UserDetailDTO> updateUser(UserUpdateDTO userUpdateDTO);
+
+    // TypeResponse<UserDetailDTO> updateAvatarUser( UUID userId, MultipartFile
+    // multipartFile) throws IOException;
+    TypeResponse<UserDetailDTO> assignRolesToUser(UUID id, Set<UUID> roleIds);
+
+    TypeResponse<Void> deleteUser(UUID id);
+
+    TypeResponse<Void> deleteOwnAccount();
+}
