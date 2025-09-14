@@ -49,6 +49,8 @@ public class ResponseMessage {
     public static final String EXPIRED_OTP_CODE = "expired_otp_code";
     public static final String PASSWORD_SAME_AS_OLD = "password_same_as_old";
     public static final String CART_EMPTY = "cart_empty";
+    public static final String DISCOUNT_EXIST = "discount_code_existed";
+
 
     public static final String USER_NOT_FOUND = "user_not_found";
     public static final String ROLE_NOT_FOUND = "role_not_found";

@@ -23,5 +23,6 @@ public class CategoryCreUpDTO {
     @URL(message = "Image URL must be a valid URL")
     private String imageUrl;
     private String description;
+    private Integer index;
 }
 

@@ -1,6 +1,7 @@
 package com.trendistashop.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.trendistashop.enums.DiscountApply;
 import com.trendistashop.enums.DiscountType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -23,6 +24,7 @@ public class DiscountDTO {
     private String description; // điều kiện áp dụng
     @NotBlank(message = "discount type not blank")
     private DiscountType discountType;
+    private DiscountApply discountApply;
     @NotBlank(message = "discount value not blank")
     @Min(value = 0)
     private BigDecimal discountValue;

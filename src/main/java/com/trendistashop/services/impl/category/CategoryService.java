@@ -117,6 +117,7 @@ public class CategoryService implements ICategoryService {
             category.setSlug(GenerateSlug.generateSlug(categoryDTO.getName()));
             category.setDescription(categoryDTO.getDescription());
             category.setImageUrl(categoryDTO.getImageUrl());
+            category.setIndexNum(categoryDTO.getIndex());
             category.setCreatedAt(new Date());
             Category savedCategory = categoryRepository.save(category);
             return ResponseHelper.created(convertToDTO(savedCategory), ResponseMessage.CREATE_SUCCESS);
@@ -159,6 +160,7 @@ public class CategoryService implements ICategoryService {
                 }
                 existingCategory.setGender(gender);
             }
+            existingCategory.setIndexNum(categoryDTO.getIndex());
             existingCategory.setUpdatedAt(new Date());
             Category updatedCategory = categoryRepository.save(existingCategory);
             return ResponseHelper.ok(convertToDTO(updatedCategory), ResponseMessage.UPDATE_SUCCESS);

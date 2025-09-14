@@ -38,7 +38,7 @@ public class Discount extends BaseEntity {
     private DiscountType discountType; // % or VNĐ
     @Enumerated(EnumType.STRING)
     @Column(name = "discount_apply", nullable = false)
-    private DiscountApply discountApply; // % or VNĐ
+    private DiscountApply discountApply;
 
     @Column(name = "discount_value", precision = 10, scale = 2, nullable = false)
     private BigDecimal discountValue; // 30% or VNĐ
