@@ -1,16 +1,13 @@
 package com.trendistashop.controllers.admin;
-import com.trendistashop.constants.ResponseMessage;
-import com.trendistashop.docs.example.DiscountRequestExamples;
 import com.trendistashop.docs.example.ProductRequestExamples;
-import com.trendistashop.docs.product.GetAllProductDocs;
 import com.trendistashop.docs.product.GetProductDocs;
-import com.trendistashop.dto.request.DiscountRequest;
 import com.trendistashop.dto.request.ProductRequestDTO;
+import com.trendistashop.dto.response.PageDTO;
 import com.trendistashop.dto.response.ProductDTO;
 import com.trendistashop.dto.response.SearchSuggestionDTO;
 import com.trendistashop.dto.response.TypeResponse;
+import com.trendistashop.helper.PageConverter;
 import com.trendistashop.services.IProductService;
-import com.trendistashop.utils.ResponseHelper;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -20,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,8 +28,10 @@ import java.util.*;
 @Tag(name = "Products")
 public class ProductController {
     private final IProductService productService;
-    public ProductController(IProductService iProductService) {
+    private final PageConverter pageConvert;
+    public ProductController(IProductService iProductService, PageConverter pageDTO) {
         this.productService = iProductService;
+        this.pageConvert = pageDTO;
     }
     
     @Operation(summary = "Tạo sản phẩm")
@@ -57,7 +55,7 @@ public class ProductController {
     }
     @Operation(summary = "Tìm kiếm sản phẩm theo tên")
     @GetMapping("/search")
-    public ResponseEntity<TypeResponse<Page<ProductDTO>>> getProductsByName(
+    public ResponseEntity<TypeResponse<PageDTO<ProductDTO>>> getProductsByName(
             @RequestParam() String name,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "30") int size
@@ -65,7 +63,14 @@ public class ProductController {
     ) {
         Pageable pageable = PageRequest.of(page, size);
         TypeResponse<Page<ProductDTO>> products = productService.searchWithName(name, pageable);
-        return ResponseEntity.status(products.getStatusCode()).body(products);
+        PageDTO<ProductDTO> pageDTO = pageConvert.toPageDTO(products.getData());
+        TypeResponse<PageDTO<ProductDTO>> response = new TypeResponse<>(
+                true,
+                products.getMessage(),
+                products.getErrors(),
+                pageDTO,
+                products.getStatusCode());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @Operation(summary = "Gợi ý tìm kiếm sản phẩm")
@@ -78,7 +83,7 @@ public class ProductController {
 
     @Operation(summary = "Lấy danh sách sản phẩm theo tag")
     @GetMapping("/tag")
-    public ResponseEntity<TypeResponse<Page<ProductDTO>>> getProductsByTag(
+    public ResponseEntity<TypeResponse<PageDTO<ProductDTO>>> getProductsByTag(
             @RequestParam String tag,
             @RequestParam String genderSlug,
             @RequestParam(defaultValue = "0") int page,
@@ -86,7 +91,14 @@ public class ProductController {
     ) {
         Pageable pageable = PageRequest.of(page, size);
         TypeResponse<Page<ProductDTO>> products = productService.getProductByTag(genderSlug, tag, pageable);
-        return ResponseEntity.status(products.getStatusCode()).body(products);
+        PageDTO<ProductDTO> pageDTO = pageConvert.toPageDTO(products.getData());
+        TypeResponse<PageDTO<ProductDTO>> response = new TypeResponse<>(
+                true,
+                products.getMessage(),
+                products.getErrors(),
+                pageDTO,
+                products.getStatusCode());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @Operation(summary = "Lấy sản phẩm theo slug")
@@ -101,14 +113,14 @@ public class ProductController {
 
     @Operation(summary = "Lọc sản phẩm")
     @GetMapping
-    public ResponseEntity<TypeResponse<Page<ProductDTO>>> getAllProductsWithFilter(
+    public ResponseEntity<TypeResponse<PageDTO<ProductDTO>>> getAllProductsWithFilter(
             @RequestParam(required = false) String categorySlug,
             @RequestParam(required = false) String colorCode,
             @RequestParam(required = false) String sizeValue,
             @RequestParam(required = false) String genderSlug,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
-            @RequestParam(required = false , defaultValue = "true") Boolean status,
+            @RequestParam(required = false) Boolean status,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "30") int size,
             @RequestParam(defaultValue = "price") String sortBy,
@@ -116,7 +128,14 @@ public class ProductController {
     ) {
         PageRequest pageRequest = createPageRequest(page, size, sortBy , ascending);
         TypeResponse<Page<ProductDTO>> products =   productService.filterProduct(categorySlug, genderSlug, colorCode, sizeValue, minPrice, maxPrice, status, pageRequest);
-        return ResponseEntity.status(products.getStatusCode()).body(products);
+        PageDTO<ProductDTO> pageDTO = pageConvert.toPageDTO(products.getData());
+        TypeResponse<PageDTO<ProductDTO>> response = new TypeResponse<>(
+                true,
+                products.getMessage(),
+                products.getErrors(),
+                pageDTO,
+                products.getStatusCode());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
     private PageRequest createPageRequest (int page , int size, String sortBy , Boolean ascending) {
         if(sortBy == null  && ascending.booleanValue() == true) {

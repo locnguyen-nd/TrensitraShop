@@ -227,7 +227,9 @@ public class ProductService implements IProductService {
                                                         String sizeValue, Double minPrice, Double maxPrice, Boolean status, PageRequest pageRequest) {
         try {
             Specification<Product> spec = Specification.where(null);
-            spec = Specification.where(ProductSpecification.hasStatus(status));
+            if (status != null) {
+                spec = Specification.where(ProductSpecification.hasStatus(status));
+            }
             if (categorySlug != null) {
                 log.info("Filtering by categorySlug: {}", categorySlug);
                 Category categoryOpt = categoryRepository.findBySlug(categorySlug);
