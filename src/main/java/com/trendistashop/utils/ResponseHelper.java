@@ -67,4 +67,7 @@ public class ResponseHelper {
         errors.put(key,message);
         return error(message, 422, errors);
     }
+    public static <T> TypeResponse<T> partialSuccess (T data, String message) {
+        return success(data, message, 207);
+    }
 }

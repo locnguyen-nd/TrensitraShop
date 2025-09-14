@@ -1,4 +1,5 @@
 package com.trendistashop.controllers.admin;
+import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.docs.example.DiscountRequestExamples;
 import com.trendistashop.docs.example.ProductRequestExamples;
 import com.trendistashop.docs.product.GetAllProductDocs;
@@ -9,6 +10,7 @@ import com.trendistashop.dto.response.ProductDTO;
 import com.trendistashop.dto.response.SearchSuggestionDTO;
 import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.services.IProductService;
+import com.trendistashop.utils.ResponseHelper;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,7 +38,7 @@ public class ProductController {
     
     @Operation(summary = "Tạo sản phẩm")
     @PostMapping
-    public ResponseEntity<ProductDTO> createProduct(
+    public ResponseEntity<TypeResponse<ProductDTO>> createProduct(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     content = @Content(schema = @Schema(implementation = ProductRequestDTO.class),
@@ -50,22 +52,9 @@ public class ProductController {
                     )
             )
             @RequestBody ProductRequestDTO productRequestDTO) {
-        ProductDTO createdProduct = productService.createProduct(productRequestDTO);
-        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+        TypeResponse<ProductDTO> createdProduct = productService.createProduct(productRequestDTO);
+        return ResponseEntity.status(createdProduct.getStatusCode()).body(createdProduct);
     }
-    
-    @Operation(summary = "Lấy danh sách sản phẩm")
-    @GetAllProductDocs
-    @GetMapping
-    public ResponseEntity<TypeResponse<Page<ProductDTO>>> getAllProducts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "30") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size);
-        TypeResponse<Page<ProductDTO>> products = productService.getAllProduct(pageable);
-        return ResponseEntity.status(products.getStatusCode()).body(products);
-    }
-
     @Operation(summary = "Tìm kiếm sản phẩm theo tên")
     @GetMapping("/search")
     public ResponseEntity<TypeResponse<Page<ProductDTO>>> getProductsByName(
@@ -111,7 +100,7 @@ public class ProductController {
     }
 
     @Operation(summary = "Lọc sản phẩm")
-    @GetMapping("/filter")
+    @GetMapping
     public ResponseEntity<TypeResponse<Page<ProductDTO>>> getAllProductsWithFilter(
             @RequestParam(required = false) String categorySlug,
             @RequestParam(required = false) String colorCode,
@@ -147,7 +136,7 @@ public class ProductController {
 
     @Operation(summary = "Cập nhật sản phẩm")
     @PutMapping("/{id}")
-    public ResponseEntity<ProductDTO> updateProduct(
+    public ResponseEntity<TypeResponse<ProductDTO>> updateProduct(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     content = @Content(schema = @Schema(implementation = ProductRequestDTO.class),
@@ -163,42 +152,14 @@ public class ProductController {
             @PathVariable UUID id,
             @RequestBody ProductRequestDTO productDto
     ) {
-        try {
-            ProductDTO updatedProduct = productService.updateProduct(id, productDto);
-            return ResponseEntity.ok(updatedProduct);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(null);
-        }
+        TypeResponse<ProductDTO> updatedProduct = productService.updateProduct(id, productDto);
+        return ResponseEntity.status(updatedProduct.getStatusCode()).body(updatedProduct);
     }
     
     @Operation(summary = "Xóa sản phẩm")
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteProduct(@PathVariable UUID id) {
-        productService.deleteProduct(id);
-        return ResponseEntity.ok().body(Map.of(
-                "message", "Delete successful",
-                "status", HttpStatus.OK
-        ));
-    }
-
-    @Operation(summary = "Cập nhật trạng thái sản phẩm")
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<Void> updateProductStatus(
-            @PathVariable UUID id,
-            @RequestParam boolean status
-    ) {
-        productService.updateProductStatus(id, status);
-        return ResponseEntity.ok().build();
-    }
-
-    @Operation(summary = "Cập nhật số lượng sản phẩm")
-    @PatchMapping("/{id}/quantities")
-    public ResponseEntity<Void> updateProductQuantities(
-            @PathVariable UUID id,
-            @RequestParam int availableQuantities
-    ) {
-        productService.updateProductQuantities(id, availableQuantities);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<TypeResponse<Void>> deleteProduct(@PathVariable UUID id) {
+        TypeResponse<Void> status = productService.deleteProduct(id);
+        return ResponseEntity.status(status.getStatusCode()).body(status);
     }
 }

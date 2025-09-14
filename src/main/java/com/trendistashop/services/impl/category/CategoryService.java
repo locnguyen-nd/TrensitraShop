@@ -15,6 +15,7 @@ import com.trendistashop.repositories.category.CategoryRepository;
 import com.trendistashop.repositories.category.GenderRepository;
 import com.trendistashop.services.ICategoryService;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class CategoryService implements ICategoryService {
     @Autowired
     private CategoryRepository categoryRepository;
@@ -41,8 +43,10 @@ public class CategoryService implements ICategoryService {
             if (categories.isEmpty()) {
                 return ResponseHelper.notFound(ResponseMessage.GENDER_NOT_FOUND);
             }
+            log.info("Get Gender successfully");
             return ResponseHelper.ok(categories, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
@@ -65,7 +69,28 @@ public class CategoryService implements ICategoryService {
             return ResponseHelper.created(modelMapper.map(genderRepository.save(gender), GenderDTO.class),
                     ResponseMessage.CREATE_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.CREATE_FAILED);
+        }
+    }
+
+    @Override
+    public TypeResponse<Void> deleteGender(UUID id) {
+        try {
+            Gender gender = genderRepository.findById(id).get();
+            if (gender == null) {
+                return ResponseHelper.notFound(ResponseMessage.GENDER_NOT_FOUND);
+            }
+            if (gender.getImageUrl() != null) {
+                cloudinaryService.deleteFile(gender.getImageUrl());
+            }
+            gender.preDestroy();
+            gender.setImageUrl(null);
+            genderRepository.save(gender);
+            return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
         }
     }
 
@@ -96,6 +121,7 @@ public class CategoryService implements ICategoryService {
             Category savedCategory = categoryRepository.save(category);
             return ResponseHelper.created(convertToDTO(savedCategory), ResponseMessage.CREATE_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.CREATE_FAILED);
         }
     }
@@ -137,6 +163,7 @@ public class CategoryService implements ICategoryService {
             Category updatedCategory = categoryRepository.save(existingCategory);
             return ResponseHelper.ok(convertToDTO(updatedCategory), ResponseMessage.UPDATE_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
         }
     }
@@ -158,6 +185,7 @@ public class CategoryService implements ICategoryService {
             categoryRepository.save(category);
             return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
         }
     }
@@ -172,6 +200,7 @@ public class CategoryService implements ICategoryService {
             }
             return ResponseHelper.ok(convertToDTO(category.get()), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
@@ -186,6 +215,7 @@ public class CategoryService implements ICategoryService {
             }
             return ResponseHelper.ok(convertToDTO(category), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
@@ -214,10 +244,42 @@ public class CategoryService implements ICategoryService {
             });
             return ResponseHelper.ok(result, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
-
+    @Override
+    public TypeResponse<List<CategoryDTO>> searchCategoryByName(String name) {
+        try {
+            List<Category> categories = categoryRepository.searchWithKeyword(name);
+            if (categories.isEmpty()) {
+                return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
+            }
+            List<CategoryDTO> categoryDTOS = categories.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseHelper.ok(categoryDTOS, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
+    }
+    @Override
+    public TypeResponse<List<GenderDTO>> searchGenderByName(String name) {
+        try {
+            List<Gender> genders = genderRepository.searchGenderWithKeyword(name);
+            if (genders.isEmpty()) {
+                return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
+            }
+            List<GenderDTO> genderDTOS = genders.stream()
+                    .map(this::convertGenderDTO)
+                    .collect(Collectors.toList());
+            return ResponseHelper.ok(genderDTOS, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
+    }
     // Lấy tất cả categories theo parentId
     @Override
     public TypeResponse<List<CategoryDTO>> getAllCategoriesByParentId(UUID parentId) {
@@ -230,6 +292,7 @@ public class CategoryService implements ICategoryService {
             }
             return ResponseHelper.ok(categories, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
@@ -243,6 +306,7 @@ public class CategoryService implements ICategoryService {
                     .collect(Collectors.toList());
             return ResponseHelper.ok(categories, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }

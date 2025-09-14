@@ -10,17 +10,13 @@ import com.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistashop.helper.GenerateCodeProduct;
 import com.trendistashop.helper.GenerateSlug;
 import com.trendistashop.repositories.category.CategoryRepository;
-import com.trendistashop.repositories.product.ColorRepository;
-import com.trendistashop.repositories.product.DiscountRepository;
-import com.trendistashop.repositories.product.ProductRepository;
+import com.trendistashop.repositories.product.*;
 import com.trendistashop.services.CloudinaryService;
 import com.trendistashop.services.IProductService;
 import com.trendistashop.specifications.ProductSpecification;
 import com.trendistashop.utils.ResponseHelper;
 import com.trendistashop.dto.response.*;
 import com.trendistashop.entities.product.*;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -44,25 +40,31 @@ public class ProductService implements IProductService {
     private final CategoryRepository categoryRepository;
     private final DiscountRepository discountRepository;
     private final ColorRepository colorRepository;
+    private final SizeRepository sizeRepository;
     private final DiscountService discountService;
     private final VariantService variantService;
     private final CloudinaryService cloudinaryService;
     private final ModelMapper modelMapper;
+    private final ImageRepository imageRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final int suggestionLimit;
 
     public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository,
                           DiscountRepository discountRepository, ColorRepository colorRepository,
-                          DiscountService discountService,
-                          VariantService variantService, CloudinaryService cloudinaryService, ModelMapper modelMapper,
-                          @Value("${search.suggestion.limit}") int suggestionLimit) {
+                          SizeRepository sizeRepository, DiscountService discountService,
+                          VariantService variantService, CloudinaryService cloudinaryService, ModelMapper modelMapper, ImageRepository imageRepository,
+                          ProductVariantRepository productVariantRepository, @Value("${search.suggestion.limit}") int suggestionLimit) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.discountRepository = discountRepository;
         this.colorRepository = colorRepository;
+        this.sizeRepository = sizeRepository;
         this.discountService = discountService;
         this.variantService = variantService;
         this.cloudinaryService = cloudinaryService;
         this.modelMapper = modelMapper;
+        this.imageRepository = imageRepository;
+        this.productVariantRepository = productVariantRepository;
         this.suggestionLimit = suggestionLimit;
     }
 
@@ -132,40 +134,51 @@ public class ProductService implements IProductService {
 
     @Override
     @Transactional
-    public ProductDTO createProduct(@Valid ProductRequestDTO productDto) {
-        if (productRepository.existsByName(productDto.getName())) {
-            throw new RuntimeException("Product with this name already exists");
+    public TypeResponse<ProductDTO> createProduct(@Valid ProductRequestDTO productDto) {
+        try {
+            if (productRepository.existsByName(productDto.getName())) {
+                throw new RuntimeException("Product with this name already exists");
+            }
+            // Tạo sản phẩm cơ bản
+            Product product = buildBasicProduct(productDto);
+
+            // Cập nhật các phần liên quan
+            updateCategory(product, productDto.getCategoryId());
+            updateDiscounts(product, productDto.getDiscountIds());
+            productRepository.save(product);
+            updateVariants(product, productDto.getVariants());
+            handleImages(product, productDto.getVariants());
+            productRepository.save(product);
+            return ResponseHelper.ok(mapToProductDto(product), ResponseMessage.CREATE_SUCCESS);
+        } catch (ResourceNotFoundEx e) {
+            return ResponseHelper.notFound(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseHelper.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error creating product", e);
+            throw e;
         }
-
-        // Tạo sản phẩm cơ bản
-        Product product = buildBasicProduct(productDto);
-        product = productRepository.save(product);
-
-        // Cập nhật các phần liên quan
-        updateCategory(product, productDto.getCategoryId());
-        updateDiscounts(product, productDto.getDiscountIds());
-        updateVariants(product, productDto.getVariants());
-        handleImages(product, productDto.getVariants());
-        productRepository.save(product);
-        return mapToProductDto(product);
     }
 
     @Override
     @Transactional
-    public ProductDTO updateProduct(UUID productId, @Valid ProductRequestDTO productDto) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
-
-        // Cập nhật fields cơ bản
-        updateBasicFields(product, productDto);
-
-        // Cập nhật các phần liên quan
-        updateCategory(product, productDto.getCategoryId());
-        updateDiscounts(product, productDto.getDiscountIds());
-        updateVariants(product, productDto.getVariants());
-        handleImages(product, productDto.getVariants());
-        productRepository.save(product);
-        return mapToProductDto(product);
+    public TypeResponse<ProductDTO> updateProduct(UUID productId, @Valid ProductRequestDTO productDto) {
+        try {
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
+            // Cập nhật fields cơ bản
+            updateBasicFields(product, productDto);
+            // Cập nhật các phần liên quan
+            updateCategory(product, productDto.getCategoryId());
+            updateDiscounts(product, productDto.getDiscountIds());
+            updateVariants(product, productDto.getVariants());
+            handleImages(product, productDto.getVariants());
+            productRepository.save(product);
+            return ResponseHelper.ok(mapToProductDto(product), ResponseMessage.UPDATE_SUCCESS);
+        } catch (Exception e) {
+            log.error("Error updating product", e);
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
+        }
     }
 
     @Override
@@ -214,7 +227,6 @@ public class ProductService implements IProductService {
                                                         String sizeValue, Double minPrice, Double maxPrice, Boolean status, PageRequest pageRequest) {
         try {
             Specification<Product> spec = Specification.where(null);
-
             spec = Specification.where(ProductSpecification.hasStatus(status));
             if (categorySlug != null) {
                 log.info("Filtering by categorySlug: {}", categorySlug);
@@ -227,9 +239,9 @@ public class ProductService implements IProductService {
                         categoryOpt.getSlug(),
                         categoryOpt.getParent() != null ? categoryOpt.getParent().getSlug() : "null");
 
-                spec = spec.and((root, query, cb) -> cb.or (
-                    cb.equal(root.get("category").get("slug"), categorySlug),
-                    cb.equal(root.get("category").get("parent").get("slug"), categorySlug)
+                spec = spec.and((root, query, cb) -> cb.or(
+                        cb.equal(root.get("category").get("slug"), categorySlug),
+                        cb.equal(root.get("category").get("parent").get("slug"), categorySlug)
                 ));
             }
 
@@ -246,32 +258,63 @@ public class ProductService implements IProductService {
                 spec = spec.and(ProductSpecification.hasPriceBetween(minPrice, maxPrice));
             }
             Page<Product> productPage = productRepository.findAll(spec, pageRequest);
+            log.info("Get product successfully: {} product", productPage.getTotalElements());
             return ResponseHelper.ok(productPage.map(this::mapToProductDto), ResponseMessage.FETCH_SUCCESS);
-        } catch (Exception e){
+        } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
 
     @Override
-    public void deleteProduct(UUID id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
-        productRepository.delete(product);
+    @Transactional
+    public TypeResponse<Void> deleteProduct(UUID id) {
+        try {
+            Product product = productRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
+            imageRepository.deleteAll(product.getImages());
+            productVariantRepository.deleteAll(product.getProductVariants());
+            productRepository.delete(product);
+            log.info("Delete product successfully");
+            return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
+        }
     }
 
     @Override
-    public void updateProductStatus(UUID id, boolean status) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
-        product.setStatus(status);
-        productRepository.save(product);
+    public TypeResponse<Void> updateProductStatus(UUID id, boolean status) {
+        try {
+            Product product = productRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
+            product.setStatus(status);
+            productRepository.save(product);
+            log.info("Update product successfully");
+            return ResponseHelper.ok(null, ResponseMessage.UPDATE_SUCCESS);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
+        }
     }
 
     @Override
-    public void updateProductQuantities(UUID id, int availableQuantities) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
-        productRepository.save(product);
+    public TypeResponse<Void> updateProductQuantities(UUID id, int availableQuantities) {
+        try {
+            Product product = productRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
+            int totalQuantity = product.getProductVariants()
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .mapToInt(ProductVariant::getStockQuantity)
+                    .sum();
+            if (availableQuantities < 0 || availableQuantities > totalQuantity) {
+                return ResponseHelper.badRequest("Available quantities must be between 0 and " + totalQuantity);
+            }
+            return ResponseHelper.ok(null, ResponseMessage.UPDATE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
+        }
     }
 
     private Product buildBasicProduct(ProductRequestDTO dto) {
@@ -295,6 +338,8 @@ public class ProductService implements IProductService {
 
     private void updateBasicFields(Product product, ProductRequestDTO dto) {
         product.setName(dto.getName());
+        product.setOriginPrice(dto.getOriginPrice());
+        product.setPrice(dto.getPrice());
         product.setSummary(dto.getSummary());
         product.setDescription(dto.getDescription());
         product.setStatus(dto.getStatus());
@@ -318,59 +363,80 @@ public class ProductService implements IProductService {
         product.setDiscounts(discounts);
     }
 
-    private void updateVariants(Product product, List<VariantRequestDTO> variants) {
-        if (variants != null && !variants.isEmpty()) {
-            List<ProductVariant> newVariants = variantService.createProductVariant(product, variants);
-            product.setProductVariants(newVariants);
+    private void updateVariants(Product managedProduct, List<VariantRequestDTO> variants) {
+        List<ProductVariant> existingVariants = managedProduct.getProductVariants() != null ? managedProduct.getProductVariants() : new ArrayList<>();
+        if (existingVariants.isEmpty()) {
+            // Trường hợp tạo mới
+            List<ProductVariant> newVariants = variantService.createProductVariant(managedProduct, variants);
+            managedProduct.setProductVariants(newVariants);
+            log.info("Tạo mới {} variants", newVariants.size());
+        }
+        else {
+            // Trường hợp cập nhật
+            List<ProductVariant> updatedVariants = variantService.updateVariant(managedProduct, variants);
+            managedProduct.getProductVariants().clear();
+            managedProduct.getProductVariants().addAll(updatedVariants);
+            log.info("Cập nhật {} variants (thêm/bớt/cập nhật)", updatedVariants.size());
         }
     }
 
     private void handleImages(Product product, List<VariantRequestDTO> variants) {
-        // Xóa hình ảnh cũ
-        deleteOldImages(product);
+        List<ProductImage> oldImages = product.getImages() != null ? product.getImages() : new ArrayList<>();
+        List<String> oldImageUrls = oldImages.stream()
+                .map(ProductImage::getUrl)
+                .collect(Collectors.toList());
 
-        // Thêm hình ảnh mới từ variants
+        // Chuẩn bị danh sách hình ảnh mới
+        List<ProductImage> newProductImages = new ArrayList<>();
         if (variants != null) {
-            List<ProductImage> productImages = new ArrayList<>();
             for (VariantRequestDTO variant : variants) {
                 if (variant.getImages() != null && !variant.getImages().isEmpty()) {
                     Color color = colorRepository.findById(variant.getColorId())
-                            .orElseThrow(() -> new ResourceNotFoundEx("Color not found"));
+                            .orElseThrow(() -> new ResourceNotFoundEx("Không tìm thấy màu sắc"));
+                    Size size = sizeRepository.findById(variant.getSizeId())
+                            .orElseThrow(() -> new ResourceNotFoundEx("Không tìm size"));
                     for (ImageRequestDTO imageDto : variant.getImages()) {
-                        if (imageDto.getUrl() != null) {
+                        if (imageDto.getUrl() != null && !imageDto.getUrl().isEmpty()) {
                             ProductImage image = ProductImage.builder()
                                     .url(imageDto.getUrl())
                                     .isThumbnail(imageDto.getIsThumbnail() != null ? imageDto.getIsThumbnail() : false)
                                     .product(product)
                                     .color(color)
+                                    .size(size)
+                                    .order(imageDto.getOrder())
                                     .build();
-                            productImages.add(image);
+                            newProductImages.add(image);
                         }
                     }
                 }
             }
-
-            // Set featured image
-            Optional<ProductImage> thumbnailImage = productImages.stream()
-                    .filter(ProductImage::getIsThumbnail)
-                    .findFirst();
-            thumbnailImage.ifPresent(image -> product.setFeaturedImage(image.getUrl()));
-
-            product.setImages(productImages);
         }
-    }
 
-    private void deleteOldImages(Product product) {
-        List<ProductImage> oldImages = product.getImages();
-        if (oldImages != null && !oldImages.isEmpty()) {
-            oldImages.stream()
-                    .forEach(image -> {
-                         cloudinaryService.deleteFile(image.getUrl());
-                    });
-            product.setImages(new ArrayList<>());
-        }
-    }
+        // Xóa hình ảnh từ Cloudinary nếu URL không còn trong danh sách mới
+        Set<String> newImageUrls = newProductImages.stream()
+                .map(ProductImage::getUrl)
+                .collect(Collectors.toSet());
 
+        oldImages.stream()
+                .filter(oldImage -> !newImageUrls.contains(oldImage.getUrl()))
+                .forEach(oldImage -> {
+                    try {
+                        cloudinaryService.deleteFile(oldImage.getUrl());
+                        imageRepository.delete(oldImage);
+                    } catch (Exception e) {
+                        log.error("Failed to delete image: " + oldImage.getUrl(), e);
+                    }
+                });
+
+        // Thiết lập hình ảnh nổi bật
+        Optional<ProductImage> thumbnailImage = newProductImages.stream()
+                .filter(ProductImage::getIsThumbnail)
+                .findFirst();
+        thumbnailImage.ifPresent(image -> product.setFeaturedImage(image.getUrl()));
+
+        // Cập nhật danh sách hình ảnh
+        product.setImages(newProductImages);
+    }
 
     private BigDecimal getFinalPriceAfterDiscount(UUID productId) {
         BigDecimal discountValue = discountService.calculateFinalPriceAndUpdateProduct(productId);
@@ -381,7 +447,7 @@ public class ProductService implements IProductService {
         return ProductDTO.builder()
                 .id(product.getId())
                 .name(product.getName())
-                .urlImage(product.getFeaturedImage())
+                .thumbnail(product.getFeaturedImage())
                 .code(product.getCode())
                 .slug(product.getSlug())
                 .summary(product.getSummary())
@@ -406,13 +472,12 @@ public class ProductService implements IProductService {
                 .genderId(product.getCategory().getGender().getId())
                 .genderName(product.getCategory().getGender().getName())
                 .genderSlug(product.getCategory().getGender().getSlug())
-                .productImages(product.getImages()
-                        .stream().filter(Objects::nonNull)
-                        .map(this::covertImageToDTO)
-                        .toList())
                 .productVariants(product.getProductVariants()
-                        .stream().filter(Objects::nonNull)
-                        .map(this::convertVariantDTO)
+                        .stream()
+                        .filter(Objects::nonNull)
+                        .filter(productVariant -> productVariant.getColor() != null)
+                        .filter(productVariant -> productVariant.getSize() != null)
+                        .map(variant -> convertVariantDTO(variant, product.getImages()))
                         .toList())
                 .discounts(product.getDiscounts()
                         .stream().filter(Objects::nonNull)
@@ -420,6 +485,7 @@ public class ProductService implements IProductService {
                         .toList())
                 .build();
     }
+
     private DiscountDTO convertDiscountToDTO(Discount discount) {
         return modelMapper.map(discount, DiscountDTO.class);
     }
@@ -428,16 +494,21 @@ public class ProductService implements IProductService {
         return ProductImageDTO.builder()
                 .id(productImage.getId())
                 .url(productImage.getUrl())
+                .order(productImage.getOrder())
                 .isThumbnail(productImage.getIsThumbnail())
-                .productId(productImage.getProduct().getId())
-                .variantId(productImage.getColor() != null ? productImage.getColor().getId() : null)
-                .colorId(productImage.getColor().getId())
                 .build();
     }
 
-    private VariantDTO convertVariantDTO(ProductVariant productVariant) {
+    private VariantDTO convertVariantDTO(ProductVariant productVariant, List<ProductImage> productImages) {
+        List<ProductImageDTO> imageDTOs = productImages.stream()
+                .filter(image -> image.getColor() != null && image.getColor().getId().equals(productVariant.getColor().getId()))
+                .filter(image -> image.getSize() != null && image.getSize().getId().equals(productVariant.getSize().getId()))
+                .sorted(Comparator.comparing(ProductImage::getOrder))
+                .map(this::covertImageToDTO)
+                .collect(Collectors.toList());
         return VariantDTO.builder()
                 .id(productVariant.getId())
+                .order(productVariant.getOrder())
                 .codeVariant(productVariant.getCodeVariant())
                 .colorCode(productVariant.getColor().getCode())
                 .colorValue(productVariant.getColor().getValue())
@@ -447,6 +518,7 @@ public class ProductService implements IProductService {
                 .sizeName(productVariant.getSize().getValue())
                 .stockQuantity(productVariant.getStockQuantity())
                 .price(productVariant.getPrice())
+                .productImages(imageDTOs)
                 .build();
     }
 }

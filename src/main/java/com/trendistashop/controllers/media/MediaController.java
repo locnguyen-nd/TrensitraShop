@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @RestController
@@ -79,44 +81,76 @@ public class MediaController {
     @PostMapping(value = "/upload-multiple", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @MediaDocs
     @Operation(summary = "Upload multiple media files (images or videos) to Cloudinary")
-    public ResponseEntity<TypeResponse<List<Map<String, String>>>> uploadMultipleMedia(
+    public CompletableFuture<ResponseEntity<TypeResponse<List<Map<String, Object>>>>> uploadMultipleMedia(
             @RequestParam("folder") CloudinaryEnum folder,
             @RequestParam(value = "subFolder", required = false) String subFolder,
             @RequestParam("files") List<MultipartFile> files) {
-
         // Validate folder
         if (folder == null) {
-            return ResponseEntity.badRequest()
-                    .body(ResponseHelper.badRequest("Folder parameter is required"));
+            return CompletableFuture.completedFuture(
+                    ResponseEntity.badRequest()
+                            .body(ResponseHelper.badRequest("Folder parameter is required")));
         }
 
         // Validate files
         if (files == null || files.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(ResponseHelper.badRequest("No files provided for upload."));
+            return CompletableFuture.completedFuture(
+                    ResponseEntity.badRequest()
+                            .body(ResponseHelper.badRequest("No files provided for upload.")));
         }
 
         // Validate each file
         for (MultipartFile file : files) {
             if (!FileValidationUtil.isValidMedia(file)) {
-                return ResponseEntity.status(422)
-                        .body(ResponseHelper.validationError(file.getOriginalFilename(),
-                                "Invalid file. Allowed types: images (jpeg, png, gif, webp up to 10MB) and videos (mp4, mpeg, quicktime, avi up to 50MB)."));
+                return CompletableFuture.completedFuture(
+                        ResponseEntity.status(422)
+                                .body(ResponseHelper.validationError(file.getOriginalFilename(),
+                                        "Invalid file. Allowed types: images (jpeg, png, gif, webp up to 10MB) and videos (mp4, mpeg, quicktime, avi up to 50MB).")));
             }
         }
 
-        try {
-            // Upload files
-            List<Map<String, String>> results = cloudinaryService.uploadFiles(files, folder, subFolder);
-            List<Map<String, String>> response = results.stream().map(result -> Map.of(
-                    "url", result.get("url")
-            )).collect(Collectors.toList());
-            return ResponseEntity.status(201)
-                    .body(ResponseHelper.created(response, "Files uploaded successfully."));
-        } catch (IOException e) {
-            return ResponseEntity.status(500)
-                    .body(ResponseHelper.serverError("Failed to upload files: " + e.getMessage()));
-        }
+        return cloudinaryService.uploadFilesAsync(files, folder, subFolder)
+                .thenApplyAsync(results -> {
+                    // Log results
+                    List<String> errors = results.stream()
+                            .filter(result -> result.containsKey("error"))
+                            .map(result -> result.get("error"))
+                            .collect(Collectors.toList());
+                    if (!errors.isEmpty()) {
+                        // Return partial success with HTTP 207 (Multi-Status)
+                        return ResponseEntity.status(207)
+                                .body(ResponseHelper.partialSuccess(
+                                        results.stream()
+                                                .filter(result -> !result.containsKey("error"))
+                                                .map(result -> {
+                                                    Map<String, Object> convertedMap = new HashMap<>();
+                                                    convertedMap.put("url", result.get("url"));
+                                                    convertedMap.put("public_id", result.get("public_id"));
+                                                    convertedMap.put("isThumbnail", false);
+                                                    return convertedMap;
+                                                })
+                                                .collect(Collectors.toList()),
+                                        "Some files uploaded successfully, but some failed: " + String.join(", ", errors)));
+                    }
+
+                    // Convert List<Map<String, String>> to List<Map<String, Object>>
+                    List<Map<String, Object>> response = results.stream()
+                            .map(result -> {
+                                Map<String, Object> convertedMap = new HashMap<>();
+                                convertedMap.put("url", result.get("url"));
+                                convertedMap.put("public_id", result.get("public_id"));
+                                convertedMap.put("isThumbnail", false);
+                                return convertedMap;
+                            })
+                            .collect(Collectors.toList());
+
+                    return ResponseEntity.status(201)
+                            .body(ResponseHelper.created(response, "Files uploaded successfully."));
+                }, cloudinaryService.getExecutor())
+                .exceptionally(throwable -> {
+                    return ResponseEntity.status(500)
+                            .body(ResponseHelper.serverError("Failed to upload files: " + throwable.getMessage()));
+                });
     }
 
     /**

@@ -37,7 +37,6 @@ public class AddressService implements IAddressService {
             Address address = Address.builder()
                     .name(addressRequest.getName())
                     .city(addressRequest.getCity())
-                    .district(addressRequest.getDistrict())
                     .ward(addressRequest.getWard())
                     .specAddress(addressRequest.getSpecAddress())
                     .phoneNumber(addressRequest.getPhoneNumber())
@@ -71,7 +70,6 @@ public class AddressService implements IAddressService {
 
             Address address = addressOpt.get();
             address.setCity(addressRequest.getCity());
-            address.setDistrict(addressRequest.getDistrict());
             address.setWard(addressRequest.getWard());
             address.setSpecAddress(addressRequest.getSpecAddress());
             address.setIsDefaultAddress(addressRequest.getIsDefaultAddress());

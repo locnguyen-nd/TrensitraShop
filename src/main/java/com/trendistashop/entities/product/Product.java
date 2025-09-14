@@ -55,7 +55,7 @@ public class Product extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
-    @OneToMany(fetch = FetchType.EAGER , orphanRemoval = true)
+    @OneToMany(fetch = FetchType.EAGER )
     private List<ProductVariant> productVariants;
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @JoinTable(
@@ -64,7 +64,7 @@ public class Product extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "discount_id")
     )
     private List<Discount> discounts = new ArrayList<>();
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<ProductImage> images = new ArrayList<>();
     public void incrementView() {
         this.views++;
