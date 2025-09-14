@@ -19,6 +19,7 @@ import com.trendistashop.repositories.product.ProductRepository;
 import com.trendistashop.services.CloudinaryService;
 import com.trendistashop.utils.ResponseHelper;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +29,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class DiscountService {
     @Autowired
     private DiscountRepository discountRepository;
@@ -46,45 +48,46 @@ public class DiscountService {
     public TypeResponse<DiscountDTO> createDiscount(DiscountRequest discountDto,
                                        List<UUID> categoryTds,
                                        List<UUID> productIds)  {
-        // Check if discount with same name already exists
-
         if (discountDto.getCode() == null || discountDto.getCode().isBlank()) {
             discountDto.setCode(generateCodeDiscount.generateUniqueDiscountCode());
         } else if (discountRepository.existsByCode(discountDto.getCode())) {
-            throw new ResourceNotFoundEx("Discount with this code already exists, you can blank code to system generate code");
+           return ResponseHelper.validationError(discountDto.getCode(),ResponseMessage.DISCOUNT_EXIST);
         }
 
-        // Validate dates
-        discountDto = validateDiscount(discountDto);
-
-        Discount discount = Discount.builder()
-                .code(discountDto.getCode())
-                .description(discountDto.getDescription())
-                .discountType(discountDto.getDiscountType())
-                .discountApply(discountDto.getDiscountApply())
-                .discountValue(discountDto.getDiscountValue())
-                .frame(discountDto.getFrame())
-                .maxDiscountValue(discountDto.getMaxDiscountValue())
-                .minOrderValue(discountDto.getMinOrderValue())
-                .startDate(discountDto.getStartDate())
-                .endDate(discountDto.getEndDate())
-                .isActive(discountDto.getIsActive() != null ? discountDto.getIsActive() : true)
-                .build();
-        Discount createDiscount = discountRepository.save(discount);
-//        System.out.println(categoryTds.size());
-        // For Categories
-        if (categoryTds != null && !categoryTds.isEmpty()) {
-            List<Category> categories = categoryRepository.findAllById(categoryTds);
-            categories.forEach(category -> category.getDiscounts().add(createDiscount));
-            categoryRepository.saveAll(categories);
+        try {
+            // Validate dates
+            discountDto = validateDiscount(discountDto);
+            Discount discount = Discount.builder()
+                    .code(discountDto.getCode())
+                    .description(discountDto.getDescription())
+                    .discountType(discountDto.getDiscountType())
+                    .discountApply(discountDto.getDiscountApply())
+                    .discountValue(discountDto.getDiscountValue())
+                    .frame(discountDto.getFrame())
+                    .maxDiscountValue(discountDto.getMaxDiscountValue())
+                    .minOrderValue(discountDto.getMinOrderValue())
+                    .startDate(discountDto.getStartDate())
+                    .endDate(discountDto.getEndDate())
+                    .isActive(discountDto.getIsActive() != null ? discountDto.getIsActive() : true)
+                    .build();
+            Discount createDiscount = discountRepository.save(discount);
+            // For Categories
+            if (categoryTds != null && !categoryTds.isEmpty()) {
+                List<Category> categories = categoryRepository.findAllById(categoryTds);
+                categories.forEach(category -> category.getDiscounts().add(createDiscount));
+                categoryRepository.saveAll(categories);
+            }
+            // For Products
+            if (productIds != null && !productIds.isEmpty()) {
+                List<Product> products = productRepository.findAllById(productIds);
+                products.forEach(product -> product.getDiscounts().add(createDiscount));
+                productRepository.saveAll(products);
+            }
+            return ResponseHelper.ok(mapToDiscountDto(createDiscount), ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            log.error("Error when create discount: {}", e.getMessage());
+            return ResponseHelper.badRequest(ResponseMessage.BAD_REQUEST);
         }
-        // For Products
-        if (productIds != null && !productIds.isEmpty()) {
-            List<Product> products = productRepository.findAllById(productIds);
-            products.forEach(product -> product.getDiscounts().add(createDiscount));
-            productRepository.saveAll(products);
-        }
-        return ResponseHelper.ok(mapToDiscountDto(createDiscount), ResponseMessage.FETCH_SUCCESS);
     }
 
     private DiscountRequest validateDiscount(DiscountRequest discountDTO) {
@@ -147,8 +150,11 @@ public class DiscountService {
             // Validate dates
             discountDto = validateDiscount(discountDto);
             // Find existing discount
-            Discount existingDiscount = discountRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundEx("Discount not found with id: " + id));
+            Discount existingDiscount = discountRepository.findById(id).get();
+            if (existingDiscount == null){
+                ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
+
+            }
             // Update discount
             existingDiscount.setCode(discountDto.getCode());
             existingDiscount.setDescription(discountDto.getDescription());
@@ -215,8 +221,10 @@ public class DiscountService {
     // Delete
     public TypeResponse<Void> deleteDiscount(UUID id) {
         try {
-            Discount discount = discountRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
+            Discount discount = discountRepository.findById(id).get();
+            if (discount == null){
+                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
+            }
             for (Product product : discount.getProducts()) {
                 product.getDiscounts().remove(discount);
             }
@@ -236,8 +244,10 @@ public class DiscountService {
     // Additional method to manage discount activation
     public TypeResponse<Void> setDiscountStatus(UUID id, boolean status) {
         try{
-            Discount discount = discountRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
+            Discount discount = discountRepository.findById(id).get();
+            if (discount == null){
+                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
+            }
             discount.setIsActive(status);
             discountRepository.save(discount);
             return ResponseHelper.ok(null, ResponseMessage.UPDATE_SUCCESS);
@@ -250,8 +260,8 @@ public class DiscountService {
         try {
             Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
             Order order = orderRepository.findById(orderId).get();
-            if (discountOptional == null || order == null) {
-                throw new ResourceNotFoundEx("Discount or Order not found with code and id: " + discountCode + orderId);
+            if (discountOptional  == null || order == null){
+                ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
             }
             if (order.getDiscount() != null && order.getDiscount().getCode().equals(discountCode)) {
                 return null;
@@ -289,8 +299,8 @@ public class DiscountService {
     public TypeResponse<BigDecimal> applyDiscountToNewProduct(String discountCode, BigDecimal price) {
         try {
             Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
-            if (discountOptional == null) {
-                throw new ResourceNotFoundEx("Discount not found with code: " + discountCode);
+            if (discountOptional == null){
+                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
             }
             if (!discountOptional.getIsActive()
                     || LocalDateTime.now().isBefore(discountOptional.getStartDate())
@@ -338,6 +348,7 @@ public class DiscountService {
                 .frame(discount.getFrame())
                 .description(discount.getDescription())
                 .discountType(discount.getDiscountType())
+                .discountApply(discount.getDiscountApply())
                 .discountValue(discount.getDiscountValue())
                 .maxDiscountValue(discount.getMaxDiscountValue())
                 .minOrderValue(discount.getMinOrderValue())
