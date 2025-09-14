@@ -21,10 +21,12 @@ public class ProductRequestExamples {
                       "sizeId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
                       "stockQuantity": 100,
                       "price": 20.99,
+                      "order": 1,
                       "images": [
                         {
                           "url": "https://example.com/images/tshirt-blue.jpg",
-                          "isThumbnail": true
+                          "isThumbnail": true,
+                          "order": 1
                         }
                       ]
                     }
@@ -51,10 +53,12 @@ public class ProductRequestExamples {
               "sizeId": "4fb96g75-6828-5673-c4fd-3d074g77bgb7",
               "stockQuantity": 40,
               "price": 99.99,
+              "order": 1,
               "images": [
                 {
                   "url": "https://example.com/images/jacket-black-updated.jpg",
-                  "isThumbnail": true
+                  "isThumbnail": true,
+                  "order": 1
                 }
               ]
             },
@@ -63,10 +67,12 @@ public class ProductRequestExamples {
               "sizeId": "5gc07h86-7939-6784-d5ge-4e185h88chc8",
               "stockQuantity": 20,
               "price": 99.99,
+              "order": 1
               "images": [
                 {
                   "url": "https://example.com/images/jacket-blue-updated.jpg",
-                  "isThumbnail": true
+                  "isThumbnail": true,
+                   "order": 1
                 }
               ]
             }

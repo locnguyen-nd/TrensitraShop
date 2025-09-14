@@ -71,7 +71,7 @@ public class ChatService {
                         message.setMessageType("PRODUCT_LINK");
                         message.setMessage("Shared a product: " + productInfo.getName());
                         message.setContentUrl("/product/" + slug);
-                        message.setThumbnailUrl(productInfo.getUrlImage());
+                        message.setThumbnailUrl(productInfo.getThumbnail());
                         message.setContentMetadata(String.format(
                                 "{\"productId\":\"%s\",\"productName\":\"%s\",\"productPrice\":\"%s\"}",
                                 slug, productInfo.getName(), productInfo.getPrice()

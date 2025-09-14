@@ -13,11 +13,14 @@ public interface ICategoryService {
     TypeResponse<CategoryDTO> createCategory(CategoryCreUpDTO categoryDTO);
     TypeResponse<CategoryDTO> updateCategory(UUID id, CategoryCreUpDTO categoryDTO);
     TypeResponse<Void> deleteCategory(UUID id);
-    TypeResponse<GenderDTO> createGender(GenderDTO genderDTO);
-    TypeResponse<List<GenderDTO>> getAllGender();
     TypeResponse<CategoryDTO> getCategoryById(UUID id);
     TypeResponse<CategoryDTO> getCategoryBySlug(String slug);
     TypeResponse<List<CategoryDTO>> getAllCategoriesByParentId(UUID parentId);
+    TypeResponse<List<CategoryDTO>> searchCategoryByName(String name);
     TypeResponse<List<CategoryDTO>> getAllCategoriesByGenderId(UUID genderId);
     TypeResponse<List<GenderCategoryGroup>> getAllCategoriesGroupByGender(String genderSlug);
+    TypeResponse<GenderDTO> createGender(GenderDTO genderDTO);
+    TypeResponse<Void> deleteGender(UUID id);
+    TypeResponse<List<GenderDTO>> getAllGender();
+    TypeResponse<List<GenderDTO>> searchGenderByName(String name);
 }

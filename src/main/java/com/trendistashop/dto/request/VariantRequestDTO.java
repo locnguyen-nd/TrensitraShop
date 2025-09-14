@@ -13,6 +13,7 @@ public class VariantRequestDTO {
     private UUID colorId;
     @NotNull(message = "Size ID không được để trống")
     private UUID sizeId;
+    private Integer order;
     @PositiveOrZero(message = "Số lượng tồn kho phải >= 0")
     private Integer stockQuantity;
     private BigDecimal price;

@@ -16,7 +16,7 @@ public interface IProductService {
     TypeResponse<Page<ProductDTO>> searchWithName(String name,Pageable pageable);
     TypeResponse<SearchSuggestionDTO> getSuggestion (String keyword);
     @Transactional
-    public ProductDTO createProduct(ProductRequestDTO productDto);
+    public TypeResponse<ProductDTO> createProduct(ProductRequestDTO productDto);
     public TypeResponse<ProductDTO> getProductById(UUID id);
 
     TypeResponse<Page<ProductDTO>> getProductByTag(String genderSlug , String tag, Pageable pageable);
@@ -27,8 +27,8 @@ public interface IProductService {
                                    String sizeValue, Double minPrice, Double maxPrice, Boolean status, PageRequest pageRequest);
 
     @Transactional
-    public ProductDTO updateProduct(UUID productId, ProductRequestDTO productDto);
-    public void deleteProduct(UUID id);
-    public void updateProductStatus(UUID id, boolean status);
-    public void updateProductQuantities(UUID id, int availableQuantities);
+    public TypeResponse<ProductDTO> updateProduct(UUID productId, ProductRequestDTO productDto);
+    public TypeResponse<Void> deleteProduct(UUID id);
+    public TypeResponse<Void>  updateProductStatus(UUID id, boolean status);
+    public TypeResponse<Void>  updateProductQuantities(UUID id, int availableQuantities);
 }

@@ -27,9 +27,11 @@ public class ProductVariant {
     @Column (nullable = false)
     private Integer stockQuantity;
     @Column(nullable = false)
-    private String codeVariant;
-    @Column(nullable = false)
     private BigDecimal price;
+    @Column(name = "variant_order" ,nullable = false)
+    private Integer order;
+    @Column(nullable = false)
+    private String codeVariant;
     @ManyToOne
     @JoinColumn(name = "product_id" , nullable = false)
     private Product product;

@@ -6,4 +6,5 @@ import lombok.Data;
 public class ImageRequestDTO {
     private String url;
     private Boolean isThumbnail;
+    private Integer order;
 }

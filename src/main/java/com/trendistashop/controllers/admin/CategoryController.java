@@ -25,14 +25,6 @@ public class CategoryController {
     @Autowired
     private ICategoryService iCategoryService;
 
-    @Operation(summary = "Tạo giới tính")
-    @PostMapping(value = "/create-gender")
-    public ResponseEntity<TypeResponse<GenderDTO>> createGender(
-            @RequestBody @Valid GenderDTO genderDTO) {
-        TypeResponse<GenderDTO> reponse = iCategoryService.createGender(genderDTO);
-        return ResponseEntity.status(reponse.getStatusCode()).body(reponse);
-    }
-
     @Operation(summary = "Tạo danh mục")
     @CreateCategoryDocs
     @PostMapping("/create")
@@ -99,7 +91,13 @@ public class CategoryController {
                 .getAllCategoriesGroupByGender(null);
         return ResponseEntity.status(groupedCategories.getStatusCode()).body(groupedCategories);
     }
-
+    @Operation(summary = "Goi ý tìm kiếm danh mục")
+    @GetMapping("/category/search")
+    public ResponseEntity<TypeResponse<List<CategoryDTO>>> searchCategoryByName(
+            @RequestParam String keyword ) {
+        TypeResponse<List<CategoryDTO>> categories = iCategoryService.searchCategoryByName(keyword);
+        return ResponseEntity.status(categories.getStatusCode()).body(categories);
+    }
     @Operation(summary = "Lấy danh sách giới tính")
     @GetGenderDocs
     @GetMapping("/genders")
@@ -107,12 +105,31 @@ public class CategoryController {
         TypeResponse<List<GenderDTO>> genders = iCategoryService.getAllGender();
         return ResponseEntity.status(genders.getStatusCode()).body(genders);
     }
-
+    @Operation(summary = "Tạo giới tính")
+    @PostMapping(value = "/create-gender")
+    public ResponseEntity<TypeResponse<GenderDTO>> createGender(
+            @RequestBody @Valid GenderDTO genderDTO) {
+        TypeResponse<GenderDTO> reponse = iCategoryService.createGender(genderDTO);
+        return ResponseEntity.status(reponse.getStatusCode()).body(reponse);
+    }
+    @Operation(summary = "Xóa danh mục")
+    @DeleteMapping("/gender/delete/{id}")
+    public ResponseEntity<TypeResponse<Void>> deleteGender(@PathVariable UUID id) {
+        TypeResponse<Void> response = iCategoryService.deleteGender(id);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
     @Operation(summary = "Lấy danh mục theo slug giới tính")
     @GetAllCategoryDocs
     @GetMapping("/gender/slug/{slug}")
     public ResponseEntity<TypeResponse<List<GenderCategoryGroup>>> getAllByGenderBySlug(@PathVariable String slug) {
         TypeResponse<List<GenderCategoryGroup>> groups = iCategoryService.getAllCategoriesGroupByGender(slug);
         return ResponseEntity.status(groups.getStatusCode()).body(groups);
+    }
+    @Operation(summary = "Goi ý tìm kiếm giới tính")
+    @GetMapping("/gender/search")
+    public ResponseEntity<TypeResponse<List<GenderDTO>>> searchGenderByName(
+            @RequestParam String keyword ) {
+        TypeResponse<List<GenderDTO>> genders = iCategoryService.searchGenderByName(keyword);
+        return ResponseEntity.status(genders.getStatusCode()).body(genders);
     }
 }

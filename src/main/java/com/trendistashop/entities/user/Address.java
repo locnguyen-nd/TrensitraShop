@@ -22,14 +22,12 @@ public class Address extends BaseEntity {
     @Column(nullable = false)
     private String city;//TP
     @Column(nullable = false)
-    private String district;//Quận
-    @Column(nullable = false)
     private String ward;//Phường
     @Column(nullable = false)
-    private String specAddress;//Chi tiết
+    private String specAddress;
     @Column(nullable = false)
-    private String phoneNumber;//Chi tiết
-    private Boolean isDefaultAddress;//Chi tiết
+    private String phoneNumber;
+    private Boolean isDefaultAddress;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore
