@@ -383,52 +383,97 @@ public class ProductService implements IProductService {
     }
 
     private void handleImages(Product product, List<VariantRequestDTO> variants) {
-        List<ProductImage> oldImages = product.getImages() != null ? product.getImages() : new ArrayList<>();
-        List<String> oldImageUrls = oldImages.stream()
-                .map(ProductImage::getUrl)
-                .collect(Collectors.toList());
-
-        // Chuẩn bị danh sách hình ảnh mới
+        // Lấy danh sách hình ảnh cũ
+        List<ProductImage> oldImages = product.getImages() != null ? new ArrayList<>(product.getImages()) : new ArrayList<>();
         List<ProductImage> newProductImages = new ArrayList<>();
+        Set<String> newImageUrls = new HashSet<>();
+        // Lấy danh sách variant hiện tại của sản phẩm sau khi cập nhật
+        List<ProductVariant> currentVariants = product.getProductVariants() != null ? product.getProductVariants() : new ArrayList<>();
+        Set<String> validVariantKeys = currentVariants.stream()
+                .map(v -> v.getColor().getId() + "_" + v.getSize().getId())
+                .collect(Collectors.toSet());
+        // Lưu trữ danh sách ảnh theo variant
+        Map<String, Set<String>> variantImageUrls = new HashMap<>();
+
+        // Tạo danh sách hình ảnh mới từ variants
         if (variants != null) {
             for (VariantRequestDTO variant : variants) {
                 if (variant.getImages() != null && !variant.getImages().isEmpty()) {
                     Color color = colorRepository.findById(variant.getColorId())
                             .orElseThrow(() -> new ResourceNotFoundEx("Không tìm thấy màu sắc"));
                     Size size = sizeRepository.findById(variant.getSizeId())
-                            .orElseThrow(() -> new ResourceNotFoundEx("Không tìm size"));
+                            .orElseThrow(() -> new ResourceNotFoundEx("Không tìm thấy size"));
+
+                    // Kiểm tra variant có tồn tại trong danh sách variant hiện tại không
+                    String variantKey = color.getId() + "_" + size.getId();
+                    if (!validVariantKeys.contains(variantKey)) {
+                        log.warn("Variant với colorId {} và sizeId {} không tồn tại trong sản phẩm",
+                                variant.getColorId(), variant.getSizeId());
+                        continue;
+                    }
+
+                    // Lưu trữ URL ảnh theo variant
+                    Set<String> imageUrlsForVariant = new HashSet<>();
                     for (ImageRequestDTO imageDto : variant.getImages()) {
                         if (imageDto.getUrl() != null && !imageDto.getUrl().isEmpty()) {
-                            ProductImage image = ProductImage.builder()
-                                    .url(imageDto.getUrl())
-                                    .isThumbnail(imageDto.getIsThumbnail() != null ? imageDto.getIsThumbnail() : false)
-                                    .product(product)
-                                    .color(color)
-                                    .size(size)
-                                    .order(imageDto.getOrder())
-                                    .build();
-                            newProductImages.add(image);
+                            // Kiểm tra xem URL đã tồn tại trong oldImages chưa
+                            Optional<ProductImage> existingImage = oldImages.stream()
+                                    .filter(img -> img.getUrl().equals(imageDto.getUrl())
+                                            && img.getColor().getId().equals(color.getId())
+                                            && img.getSize().getId().equals(size.getId()))
+                                    .findFirst();
+
+                            if (existingImage.isPresent()) {
+                                // Cập nhật thông tin cho hình ảnh cũ
+                                ProductImage image = existingImage.get();
+                                image.setIsThumbnail(imageDto.getIsThumbnail() != null ? imageDto.getIsThumbnail() : false);
+                                image.setOrder(imageDto.getOrder());
+                                newProductImages.add(image);
+                            } else {
+                                // Tạo mới hình ảnh
+                                ProductImage image = ProductImage.builder()
+                                        .url(imageDto.getUrl())
+                                        .isThumbnail(imageDto.getIsThumbnail() != null ? imageDto.getIsThumbnail() : false)
+                                        .product(product)
+                                        .color(color)
+                                        .size(size)
+                                        .order(imageDto.getOrder())
+                                        .build();
+                                newProductImages.add(image);
+                            }
+                            imageUrlsForVariant.add(imageDto.getUrl());
+                            newImageUrls.add(imageDto.getUrl());
                         }
                     }
+                    variantImageUrls.put(variantKey, imageUrlsForVariant);
                 }
             }
         }
 
-        // Xóa hình ảnh từ Cloudinary nếu URL không còn trong danh sách mới
-        Set<String> newImageUrls = newProductImages.stream()
-                .map(ProductImage::getUrl)
-                .collect(Collectors.toSet());
+        // Xóa hình ảnh cũ không còn trong danh sách mới hoặc thuộc variant không hợp lệ
+        oldImages.forEach(oldImage -> {
+            String variantKey = oldImage.getColor().getId() + "_" + oldImage.getSize().getId();
+            Set<String> imageUrlsForVariant = variantImageUrls.getOrDefault(variantKey, Collections.emptySet());
 
-        oldImages.stream()
-                .filter(oldImage -> !newImageUrls.contains(oldImage.getUrl()))
-                .forEach(oldImage -> {
-                    try {
+            // Xóa bản ghi trong DB nếu ảnh không còn trong danh sách của variant hoặc variant không hợp lệ
+            if (!imageUrlsForVariant.contains(oldImage.getUrl()) || !validVariantKeys.contains(variantKey)) {
+                try {
+                    // Chỉ xóa trên Cloudinary nếu URL không còn được sử dụng bởi bất kỳ variant nào
+                    boolean isImageUsedElsewhere = newProductImages.stream()
+                            .anyMatch(img -> img.getUrl().equals(oldImage.getUrl()));
+                    if (!isImageUsedElsewhere) {
                         cloudinaryService.deleteFile(oldImage.getUrl());
-                        imageRepository.delete(oldImage);
-                    } catch (Exception e) {
-                        log.error("Failed to delete image: " + oldImage.getUrl(), e);
+                        log.info("Deleted image {} from Cloudinary as it is not used by any variant", oldImage.getUrl());
+                    } else {
+                        log.info("Kept image {} on Cloudinary as it is used by another variant", oldImage.getUrl());
                     }
-                });
+                    imageRepository.delete(oldImage);
+                    log.info("Deleted image record {} for variant {} from database", oldImage.getUrl(), variantKey);
+                } catch (Exception e) {
+                    log.error("Failed to delete image: " + oldImage.getUrl(), e);
+                }
+            }
+        });
 
         // Thiết lập hình ảnh nổi bật
         Optional<ProductImage> thumbnailImage = newProductImages.stream()

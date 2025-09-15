@@ -166,9 +166,10 @@ public class DiscountService {
             existingDiscount.setStartDate(discountDto.getStartDate());
             existingDiscount.setEndDate(discountDto.getEndDate());
             existingDiscount.setIsActive(discountDto.getIsActive() != null ? discountDto.getIsActive() : true);
-            // Upload ảnh
+            // Delete ảnh
             if (existingDiscount.getFrame() != null && !existingDiscount.getFrame().equals(discountDto.getFrame())) {
                 cloudinaryService.deleteFile(existingDiscount.getFrame());
+                existingDiscount.setFrame(discountDto.getFrame());
             } else {
                 existingDiscount.setFrame(discountDto.getFrame());
             }
