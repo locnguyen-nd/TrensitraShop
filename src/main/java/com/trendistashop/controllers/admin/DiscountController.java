@@ -1,9 +1,10 @@
 package com.trendistashop.controllers.admin;
+import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.docs.example.DiscountRequestExamples;
 import com.trendistashop.dto.request.DiscountRequest;
-import com.trendistashop.dto.response.DiscountApply;
-import com.trendistashop.dto.response.DiscountDTO;
-import com.trendistashop.dto.response.TypeResponse;
+import com.trendistashop.dto.response.*;
+import com.trendistashop.enums.DiscountType;
+import com.trendistashop.helper.PageConverter;
 import com.trendistashop.services.impl.product.DiscountService;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -11,10 +12,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,6 +32,8 @@ import java.util.UUID;
 public class DiscountController {
     @Autowired
     private DiscountService discountService;
+    @Autowired
+    private PageConverter pageConverter;
     // Create
     @PostMapping
     public ResponseEntity<TypeResponse<DiscountDTO>> createDiscount(
@@ -63,9 +71,53 @@ public class DiscountController {
         return ResponseEntity.status(discountDTO.getStatusCode()).body(discountDTO);
     }
     @GetMapping
-    public ResponseEntity<TypeResponse<List<DiscountDTO>>> getAllDiscount(){
-        TypeResponse<List<DiscountDTO>> discountDTOS = discountService.getAllDiscount();
-        return ResponseEntity.status(discountDTOS.getStatusCode()).body(discountDTOS);
+    public ResponseEntity<TypeResponse<PageDTO<DiscountDTO>>> getAllDiscount(
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) DiscountType discountType,
+            @RequestParam(required = false) com.trendistashop.enums.DiscountApply discountApply,
+            @RequestParam(required = false) BigDecimal discountValue,
+            @RequestParam(required = false) BigDecimal maxDiscountValue,
+            @RequestParam(required = false) BigDecimal minOrderValue,
+            @RequestParam(required = false) LocalDateTime startDate,
+            @RequestParam(required = false) LocalDateTime endDate,
+            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "30") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "false") boolean ascending
+    ){
+        String validSortBy = validateSortBy(sortBy);
+
+        DiscountRequest discountRequest = new DiscountRequest();
+        discountRequest.setCode(code);
+        discountRequest.setDiscountType(discountType);
+        discountRequest.setDiscountApply(discountApply);
+        discountRequest.setDiscountValue(discountValue);
+        discountRequest.setMaxDiscountValue(maxDiscountValue);
+        discountRequest.setMinOrderValue(minOrderValue);
+        discountRequest.setStartDate(startDate);
+        discountRequest.setEndDate(endDate);
+        discountRequest.setIsActive(isActive);
+        PageRequest pageRequest = PageRequest.of(page, size, ascending ? Sort.by(validSortBy).ascending() : Sort.by(validSortBy).descending());
+
+        TypeResponse<Page<DiscountDTO>> discounts = discountService.getAllDiscount(discountRequest, pageRequest);
+        PageDTO<DiscountDTO> pageDTO = pageConverter.toPageDTO(discounts.getData());
+        TypeResponse<PageDTO<DiscountDTO>> response = new TypeResponse<>(
+                true,
+                discounts.getMessage(),
+                discounts.getErrors(),
+                pageDTO,
+                discounts.getStatusCode());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+    private String validateSortBy(String sortBy) {
+        String[] validFields = {"id", "code", "discountType", "discountApply", "discountValue", "maxDiscountValue", "minOrderValue", "startDate", "endDate", "isActive", "createdAt", "updatedAt"};
+        for (String field : validFields) {
+            if (field.equalsIgnoreCase(sortBy)) {
+                return field;
+            }
+        }
+        return "createdAt";
     }
     // Read One
     @GetMapping("/{id}")

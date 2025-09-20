@@ -123,7 +123,7 @@ public class ProductController {
             @RequestParam(required = false) Boolean status,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "30") int size,
-            @RequestParam(defaultValue = "price") String sortBy,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "false") boolean ascending
     ) {
         PageRequest pageRequest = createPageRequest(page, size, sortBy , ascending);

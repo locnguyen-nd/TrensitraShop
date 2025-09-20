@@ -1,14 +1,15 @@
+name: trendista-dev
 services:
-  mysql-dev:
+  mysql:
     image: mysql:8.0
     container_name: mysql-container-dev
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: trendista
+      MYSQL_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
     ports:
-      - "3308:3306"
+      - "3309:3306"
     volumes:
       - mysql_data_dev:/var/lib/mysql
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -18,61 +19,28 @@ services:
       retries: 5
       interval: 15s
 
-  backend-dev:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile.dev
     container_name: trendista-backend-dev
     restart: unless-stopped
     ports:
-      - "${SERVER_PORT:-8080}:8080"
-      - "35729:35729"  # LiveReload port
+      - "8080:8080"
+      - "35729:35729"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-dev:3306/${DB_NAME}
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
-      - SPRING_PROFILES_ACTIVE=dev
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-86400}
-      - JWT_REFRESH_TOKEN_EXPIRES_IN=${JWT_REFRESH_TOKEN_EXPIRES_IN:-604800}
-      - JWT_VERIFICATION_EXPIRES_IN=${JWT_VERIFICATION_EXPIRES_IN:-86400}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - BACKUP_EMAIL=${BACKUP_EMAIL}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - VIETQR_CLIENT_ID=${VIETQR_CLIENT_ID}
-      - VIETQR_API_KEY=${VIETQR_API_KEY}
-      - VIETQR_ACCOUNT_NO=${VIETQR_ACCOUNT_NO}
-      - VIETQR_ACCOUNT_NAME=${VIETQR_ACCOUNT_NAME}
-      - VIETQR_BANK_ID=${VIETQR_BANK_ID}
-      - PAYOS_CLIENT_ID=${PAYOS_CLIENT_ID}
-      - PAYOS_API_KEY=${PAYOS_API_KEY}
-      - PAYOS_CHECKSUM_KEY=${PAYOS_CHECKSUM_KEY}
-      - PAYOS_RETURN_URL=${PAYOS_RETURN_URL:-http://localhost:8080/api/v1/order/payment/success}
-      - PAYOS_CANCEL_URL=${PAYOS_CANCEL_URL:-http://localhost:8080/api/v1/payment/cancel}
-      - VERIFICATION_MAX_ATTEMPTS=${VERIFICATION_MAX_ATTEMPTS:-5}
-      - SEARCH_SUGGESTION_LIMIT=${SEARCH_SUGGESTION_LIMIT:-5}
-      # DevTools configuration
-      - SPRING_DEVTOOLS_RESTART_ENABLED=true
-      - SPRING_DEVTOOLS_LIVERELOAD_ENABLED=true
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+      SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
     depends_on:
-      mysql-dev:
+      mysql:
         condition: service_healthy
     volumes:
-      - ./src:/app/src:rw                    # Source code với read-write access
-      - ./pom.xml:/app/pom.xml:ro            # Maven config read-only
-      - ./target:/app/target:rw              # Target directory cho compiled classes
-      - maven_cache:/root/.m2                # Maven cache
-      # Mount application-dev.properties nếu có
+      - ./src:/app/src:rw
+      - ./pom.xml:/app/pom.xml:ro
+      - ./target:/app/target:rw
+      - maven_cache:/root/.m2
       - ./src/main/resources/application.properties:/app/src/main/resources/application.properties:ro
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    # Thêm tty để có đầy đủ terminal output
     tty: true
     stdin_open: true
 

@@ -17,10 +17,13 @@ import com.trendistashop.repositories.order.OrderRepository;
 import com.trendistashop.repositories.product.DiscountRepository;
 import com.trendistashop.repositories.product.ProductRepository;
 import com.trendistashop.services.CloudinaryService;
+import com.trendistashop.specifications.DiscountSpec;
 import com.trendistashop.utils.ResponseHelper;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -129,17 +132,16 @@ public class DiscountService {
         }
     }
 
-    public TypeResponse<List<DiscountDTO>> getAllDiscount() {
+    public TypeResponse<Page<DiscountDTO>> getAllDiscount(DiscountRequest discountRequest, Pageable pageable) {
         try {
-            List<Discount> discounts = discountRepository.findAll();
-            List result =  discounts.stream().map(this::mapToDiscountDto).collect(Collectors.toList());
-            return ResponseHelper.ok(result, ResponseMessage.FETCH_SUCCESS);
+            Page<Discount> discounts = discountRepository.findAll(DiscountSpec.filter(discountRequest), pageable);
+            Page<DiscountDTO> discountDTOPage = discounts.map(this::mapToDiscountDto);
+            return ResponseHelper.ok(discountDTOPage, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error("Failed to fetch discounts: {}", e.getMessage(), e);
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
-
     }
-
     // Update
     @Transactional
     public TypeResponse<DiscountDTO> updateDiscount(UUID id,
@@ -166,9 +168,10 @@ public class DiscountService {
             existingDiscount.setStartDate(discountDto.getStartDate());
             existingDiscount.setEndDate(discountDto.getEndDate());
             existingDiscount.setIsActive(discountDto.getIsActive() != null ? discountDto.getIsActive() : true);
-            // Upload ảnh
+            // Delete ảnh
             if (existingDiscount.getFrame() != null && !existingDiscount.getFrame().equals(discountDto.getFrame())) {
                 cloudinaryService.deleteFile(existingDiscount.getFrame());
+                existingDiscount.setFrame(discountDto.getFrame());
             } else {
                 existingDiscount.setFrame(discountDto.getFrame());
             }

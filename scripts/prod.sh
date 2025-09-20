@@ -1,37 +1,27 @@
-#!/bin/bash
-# Script to run Docker for Trendista Backend
-echo "Start Trendista Backend with Docker..."
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-# Check if Docker is running
-if ! docker info > /dev/null 2>&1; then
-    echo "Docker is not running. Please start Docker first."
-    exit 1
+# Detect docker compose command
+if docker compose version >/dev/null 2>&1; then
+  DC="docker compose"
+elif docker-compose version >/dev/null 2>&1; then
+  DC="docker-compose"
+else
+  echo "docker compose not found. Please install Docker Desktop / Compose v2."
+  exit 1
 fi
 
-# Stop and delete old containers if any
-echo "Stopping existing containers..."
-docker-compose down -v
+echo "▶ Stopping and removing old DEV stack…"
+$DC down -v
 
-# Cleaning old images if any
-echo "Cleaning old images..."
-docker-compose down --rmi all
+echo "▶ Building and starting PROD stack…"
+$DC up --build -d
 
-# Build and run
-echo "Building and starting services..."
-docker-compose -p trendista up --build -d
+echo "⏳ Waiting for services to be healthy…"
+$DC ps
 
-# Wait for services to start
-echo "Waiting for services to start..."
-sleep 20
-
-# Check status
-echo "Services status:"
-docker-compose ps
-
-echo "Done! Backend is running at http://localhost:8080"
-echo "Swagger UI: http://localhost:8080/swagger-ui.html"
-echo "Health check: http://localhost:8080/actuator/health"
-echo "MySQL: localhost:3308"
-echo ""
-echo "To view logs: docker-compose logs -f"
-echo "To stop: docker-compose down"
+echo
+echo "PROD is up! Endpoints:"
+echo "  • Backend       : http://localhost:8080 (profile=production)"
+echo "  • MySQL         : localhost:3309"
+echo "  • Actuator      : http://localhost:8080/actuator/health"

@@ -1,14 +1,15 @@
+name: trendista
 services:
   mysql:
     image: mysql:8.0
     container_name: mysql-container
-    restart: always
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
-      MYSQL_DATABASE: ${DB_NAME:-trendista}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: trendista
+      MYSQL_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
     ports:
-      - "3308:3306"
+      - "3309:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -22,54 +23,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: trendista-backend:latest
     container_name: trendista-backend
     restart: unless-stopped
     ports:
-      - "${SERVER_PORT:-8080}:8080"
+      - "8080:8080"
       - "9093:9093"
     environment:
-      # Database
-      SPRING_DATASOURCE_URL: jdbc:mysql://${DB_HOST:-mysql}:${DB_PORT:-3306}/${DB_NAME:-trendista}
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-root}
-      SPRING_PROFILES_ACTIVE: docker
-      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC -Djava.security.egd=file:/dev/./urandom"
-      # JWT
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-86400}
-      JWT_REFRESH_TOKEN_EXPIRES_IN: ${JWT_REFRESH_TOKEN_EXPIRES_IN:-604800}
-      JWT_VERIFICATION_EXPIRES_IN: ${JWT_VERIFICATION_EXPIRES_IN:-86400}
-      # Mail
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      BACKUP_EMAIL: ${BACKUP_EMAIL}
-      # Google OAuth2
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      # VietQR
-      VIETQR_CLIENT_ID: ${VIETQR_CLIENT_ID}
-      VIETQR_API_KEY: ${VIETQR_API_KEY}
-      VIETQR_ACCOUNT_NO: ${VIETQR_ACCOUNT_NO}
-      VIETQR_ACCOUNT_NAME: ${VIETQR_ACCOUNT_NAME}
-      VIETQR_BANK_ID: ${VIETQR_BANK_ID}
-      # PayOS
-      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID}
-      PAYOS_API_KEY: ${PAYOS_API_KEY}
-      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY}
-      PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-http://localhost:8080/api/v1/order/payment/success}
-      PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-http://localhost:8080/api/v1/payment/cancel}
-      # Other configs
-      VERIFICATION_MAX_ATTEMPTS: ${VERIFICATION_MAX_ATTEMPTS:-5}
-      SEARCH_SUGGESTION_LIMIT: ${SEARCH_SUGGESTION_LIMIT:-5}
+      SPRING_PROFILES_ACTIVE: production
     depends_on:
       mysql:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
 
 volumes:
   mysql_data:

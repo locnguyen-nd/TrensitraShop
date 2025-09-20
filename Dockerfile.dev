@@ -1,101 +1,23 @@
-FROM openjdk:17-jdk-slim
-
-# Cài đặt inotify-tools để monitor file changes và curl cho health check
-RUN apt-get update && apt-get install -y curl inotify-tools && rm -rf /var/lib/apt/lists/*
-
+# Dev image runs mvn spring-boot:run with DevTools
+FROM maven:3.9-eclipse-temurin-21
 WORKDIR /app
 
-# Copy Maven wrapper và pom.xml trước để cache tốt hơn
-COPY mvnw pom.xml ./
-COPY .mvn .mvn
+# Pre-warm maven cache with pom only
+COPY pom.xml ./
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -q -DskipTests dependency:go-offline
 
-# Làm cho maven wrapper có thể thực thi
-RUN chmod +x ./mvnw
-
-# Tải dependencies
-RUN ./mvnw dependency:go-offline -B
-
-# Copy source code
+# Copy source last (we’ll still bind-mount in compose)
 COPY src ./src
 
-# Compile ban đầu
-RUN ./mvnw compile -B
+ENV SPRING_PROFILES_ACTIVE=dev \
+    SPRING_DEVTOOLS_RESTART_ENABLED=true \
+    SPRING_DEVTOOLS_LIVERELOAD_ENABLED=true
 
-# Tạo script hot reload được cải thiện
-RUN echo '#!/bin/bash\n\
-echo "🚀 Starting Spring Boot with DevTools Hot Reload..."\n\
-echo "📁 Monitoring: src/main/java and src/main/resources"\n\
-echo "🔄 Auto-compile: Enabled"\n\
-echo "🌐 LiveReload: http://localhost:35729"\n\
-\n\
-# Cleanup function\n\
-cleanup() {\n\
-    echo "🛑 Stopping Spring Boot..."\n\
-    kill $SPRING_PID 2>/dev/null\n\
-    kill $WATCH_PID 2>/dev/null\n\
-    exit 0\n\
-}\n\
-trap cleanup SIGTERM SIGINT\n\
-\n\
-# Function to compile changes (không restart process, để DevTools tự restart)\n\
-compile_changes() {\n\
-    echo "⚡ Compiling changes..."\n\
-    ./mvnw compile -q\n\
-    if [ $? -eq 0 ]; then\n\
-        echo "✅ Compilation successful - DevTools will restart automatically"\n\
-        # Trigger DevTools restart bằng cách touch trigger file\n\
-        touch target/classes/restart.txt\n\
-    else\n\
-        echo "❌ Compilation failed"\n\
-    fi\n\
-}\n\
-\n\
-# Start Spring Boot với DevTools\n\
-echo "▶️ Starting Spring Boot with DevTools..."\n\
-./mvnw spring-boot:run &\n\
-SPRING_PID=$!\n\
-echo "🟢 Spring Boot started with PID: $SPRING_PID"\n\
-\n\
-# Wait for initial startup\n\
-echo "⏳ Waiting for Spring Boot to fully start..."\n\
-sleep 10\n\
-\n\
-# Monitor file changes\n\
-echo "👀 Watching for file changes in src/main/..."\n\
-while inotifywait -r -e modify,create,delete,move src/main/ 2>/dev/null; do\n\
-    echo "📝 File change detected..."\n\
-    # Debounce multiple rapid changes\n\
-    sleep 2\n\
-    if ! timeout 1 inotifywait -r -e modify,create,delete,move src/main/ 2>/dev/null; then\n\
-        compile_changes\n\
-    else\n\
-        echo "⏸️ More changes coming, waiting..."\n\
-    fi\n\
-done &\n\
-WATCH_PID=$!\n\
-\n\
-echo "🎯 Hot reload system ready!"\n\
-echo "📖 Edit any Java file to see automatic restart"\n\
-echo "🌐 Access your app at: http://localhost:8080"\n\
-echo "📊 Swagger UI: http://localhost:8080/swagger-ui.html"\n\
-\n\
-# Wait for Spring Boot process\n\
-wait $SPRING_PID' > /app/hotreload.sh && chmod +x /app/hotreload.sh
-
-# Expose ports
 EXPOSE 8080 35729
+# Healthcheck via actuator
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -fsS http://localhost:8080/actuator/health >/dev/null || exit 1
 
-# Thiết lập environment variables cho development
-ENV SPRING_PROFILES_ACTIVE=dev
-ENV MAVEN_OPTS="-Dmaven.repo.local=/root/.m2/repository"
-
-# Cấu hình JVM arguments tối ưu cho development và DevTools
-ENV JAVA_OPTS="-Xms512m -Xmx1024m \
-    -XX:TieredStopAtLevel=1 \
-    -XX:+UseParallelGC \
-    -Djava.security.egd=file:/dev/./urandom \
-    -Dspring.devtools.restart.enabled=true \
-    -Dspring.devtools.livereload.enabled=true"
-
-# Chạy hot reload script
-CMD ["/app/hotreload.sh"]
+# Default command for dev
+CMD ["sh","-c","mvn -q -Dspring-boot.run.jvmArguments='-XX:MaxRAMPercentage=75' spring-boot:run"]
