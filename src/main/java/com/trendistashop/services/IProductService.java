@@ -23,7 +23,7 @@ public interface IProductService {
 
     TypeResponse<ProductDTO> getProductBySlug(String slug);
 
-    TypeResponse<Page<ProductDTO>> filterProduct(String categorySlug, String genderSlug, String colorCode,
+    TypeResponse<Page<ProductDTO>> filterProduct(String keyword, String tag, String categorySlug, String genderSlug, String colorCode,
                                    String sizeValue, Double minPrice, Double maxPrice, Boolean status, PageRequest pageRequest);
 
     @Transactional

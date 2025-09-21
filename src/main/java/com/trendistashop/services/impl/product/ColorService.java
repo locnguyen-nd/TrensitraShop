@@ -8,14 +8,19 @@ import com.trendistashop.repositories.product.ColorRepository;
 import com.trendistashop.utils.ResponseHelper;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Service
+@Slf4j
 public class ColorService {
     @Autowired
     private ColorRepository colorRepository;
@@ -39,11 +44,24 @@ public class ColorService {
     }
 
     // Read All
-    public TypeResponse<List<ColorDTO>> getAllColors() {
-        List<ColorDTO> colors = colorRepository.findAll().stream()
-                .map(color -> modelMapper.map(color, ColorDTO.class))
-                .collect(Collectors.toList());
-        return ResponseHelper.ok(colors, ResponseMessage.FETCH_SUCCESS);
+    public TypeResponse<Page<ColorDTO>> getAllColors(String keyword, int page, int size) {
+        try {
+            Sort sort = Sort.by("createdAt").descending();
+            PageRequest pageRequest = PageRequest.of(page, size , sort);
+            Specification<Color> spec = Specification.where(null);
+            if(keyword!=null && !keyword.isEmpty()) {
+                spec = spec.and((root, query, cb) -> cb.or(
+                        cb.like(cb.lower(root.get("name")), "%"+keyword.trim().toLowerCase()+"%", '\\'),
+                        cb.like(cb.lower(root.get("code")), "%"+keyword.trim().toLowerCase()+"%", '\\')
+                ));
+            }
+            Page<ColorDTO> colorPage = colorRepository.findAll(spec, pageRequest).map(color -> modelMapper.map(color, ColorDTO.class));
+            log.info("Get color successfully: {} color", colorPage.getTotalElements());
+            return ResponseHelper.ok(colorPage, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
     }
 
     // Read One

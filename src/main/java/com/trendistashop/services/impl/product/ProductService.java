@@ -223,7 +223,7 @@ public class ProductService implements IProductService {
     }
 
     @Override
-    public TypeResponse<Page<ProductDTO>> filterProduct(String categorySlug, String genderSlug, String colorCode,
+    public TypeResponse<Page<ProductDTO>> filterProduct(String keyword, String tag, String categorySlug, String genderSlug, String colorCode,
                                                         String sizeValue, Double minPrice, Double maxPrice, Boolean status, PageRequest pageRequest) {
         try {
             Specification<Product> spec = Specification.where(null);
@@ -246,7 +246,12 @@ public class ProductService implements IProductService {
                         cb.equal(root.get("category").get("parent").get("slug"), categorySlug)
                 ));
             }
-
+            if (tag != null) {
+                spec = spec.and(ProductSpecification.hasTag(ProductTagEnum.valueOf(tag.toUpperCase())));
+            }
+            if (keyword != null) {
+                spec = spec.and(ProductSpecification.hasNameOrSlug(keyword));
+            }
             if (genderSlug != null) {
                 spec = spec.and(ProductSpecification.hasGenderSlug(genderSlug));
             }

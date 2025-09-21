@@ -25,4 +25,10 @@ public class DiscountRequest {
         private LocalDateTime startDate;
         private LocalDateTime endDate;
         private Boolean isActive;
+        
+        // Fields for range filtering
+        private BigDecimal maxDiscountValueFrom;
+        private BigDecimal maxDiscountValueTo;
+        private BigDecimal minOrderValueFrom;
+        private BigDecimal minOrderValueTo;
 }

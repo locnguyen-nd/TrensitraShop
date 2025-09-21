@@ -106,4 +106,25 @@ public class ProductSpecification {
             return criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice);
         };
     }
+    public static Specification<Product> hasNameOrSlug(String keyword) {
+        return (root, query, criteriaBuilder) -> {
+            if(keyword == null || keyword.trim().isEmpty()) {
+                return criteriaBuilder.conjunction();
+            }
+            String like = "%" + keyword.trim().toLowerCase()
+                    .replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_") + "%";
+
+            Predicate productNamePredicate = criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("name")),
+                    like
+            );
+            Predicate ProductSlugPredicate = criteriaBuilder.like(
+                    criteriaBuilder.lower(root.get("slug")),
+                    like
+            );
+            return criteriaBuilder.or(productNamePredicate, ProductSlugPredicate);
+        };
+    }
 }

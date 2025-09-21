@@ -114,6 +114,8 @@ public class ProductController {
     @Operation(summary = "Lọc sản phẩm")
     @GetMapping
     public ResponseEntity<TypeResponse<PageDTO<ProductDTO>>> getAllProductsWithFilter(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String tag,
             @RequestParam(required = false) String categorySlug,
             @RequestParam(required = false) String colorCode,
             @RequestParam(required = false) String sizeValue,
@@ -127,7 +129,7 @@ public class ProductController {
             @RequestParam(defaultValue = "false") boolean ascending
     ) {
         PageRequest pageRequest = createPageRequest(page, size, sortBy , ascending);
-        TypeResponse<Page<ProductDTO>> products =   productService.filterProduct(categorySlug, genderSlug, colorCode, sizeValue, minPrice, maxPrice, status, pageRequest);
+        TypeResponse<Page<ProductDTO>> products =   productService.filterProduct(keyword, tag, categorySlug, genderSlug, colorCode, sizeValue, minPrice, maxPrice, status, pageRequest);
         PageDTO<ProductDTO> pageDTO = pageConvert.toPageDTO(products.getData());
         TypeResponse<PageDTO<ProductDTO>> response = new TypeResponse<>(
                 true,
@@ -138,7 +140,7 @@ public class ProductController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
     private PageRequest createPageRequest (int page , int size, String sortBy , Boolean ascending) {
-        if(sortBy == null  && ascending.booleanValue() == true) {
+        if(sortBy == null  && ascending) {
             return PageRequest.of(page,size);
         } else {
             Sort sort = ascending ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending() ;
