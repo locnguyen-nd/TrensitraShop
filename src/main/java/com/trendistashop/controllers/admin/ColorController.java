@@ -6,16 +6,18 @@ import com.trendistashop.docs.color.GetAllColorDocs;
 import com.trendistashop.docs.color.GetColorDocs;
 import com.trendistashop.docs.color.UpdateColorDocs;
 import com.trendistashop.dto.response.ColorDTO;
+import com.trendistashop.dto.response.PageDTO;
 import com.trendistashop.dto.response.TypeResponse;
+import com.trendistashop.helper.PageConverter;
 import com.trendistashop.services.impl.product.ColorService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -25,6 +27,8 @@ import java.util.UUID;
 public class ColorController {
     @Autowired
     private ColorService colorService;
+    @Autowired
+    private PageConverter pageConvert;
 
     @Operation(summary = "Tạo mới màu")
     @CreateColorDocs
@@ -37,9 +41,20 @@ public class ColorController {
     @Operation(summary = "Lấy tất cả màu")
     @GetAllColorDocs
     @GetMapping
-    public ResponseEntity<TypeResponse<List<ColorDTO>>> getAllColors() {
-        TypeResponse<List<ColorDTO>> colors = colorService.getAllColors();
-        return ResponseEntity.status(colors.getStatusCode()).body(colors);
+    public ResponseEntity<TypeResponse<PageDTO<ColorDTO>>> getAllColors(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "30") int size
+    ) {
+        TypeResponse<Page<ColorDTO>> colors = colorService.getAllColors(keyword, page, size);
+        PageDTO<ColorDTO> pageDTO = pageConvert.toPageDTO(colors.getData());
+        return ResponseEntity.status(colors.getStatusCode()).body(new TypeResponse<>(
+                true,
+                colors.getMessage(),
+                colors.getErrors(),
+                pageDTO,
+                colors.getStatusCode())
+        );
     }
 
     @Operation(summary = "Lấy màu theo id")

@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -77,9 +78,13 @@ public class DiscountController {
             @RequestParam(required = false) com.trendistashop.enums.DiscountApply discountApply,
             @RequestParam(required = false) BigDecimal discountValue,
             @RequestParam(required = false) BigDecimal maxDiscountValue,
+            @RequestParam(required = false) BigDecimal maxDiscountValueFrom,
+            @RequestParam(required = false) BigDecimal maxDiscountValueTo,
             @RequestParam(required = false) BigDecimal minOrderValue,
-            @RequestParam(required = false) LocalDateTime startDate,
-            @RequestParam(required = false) LocalDateTime endDate,
+            @RequestParam(required = false) BigDecimal minOrderValueFrom,
+            @RequestParam(required = false) BigDecimal minOrderValueTo,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'") LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'") LocalDateTime endDate,
             @RequestParam(required = false) Boolean isActive,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "30") int size,
@@ -94,7 +99,11 @@ public class DiscountController {
         discountRequest.setDiscountApply(discountApply);
         discountRequest.setDiscountValue(discountValue);
         discountRequest.setMaxDiscountValue(maxDiscountValue);
+        discountRequest.setMaxDiscountValueFrom(maxDiscountValueFrom);
+        discountRequest.setMaxDiscountValueTo(maxDiscountValueTo);
         discountRequest.setMinOrderValue(minOrderValue);
+        discountRequest.setMinOrderValueFrom(minOrderValueFrom);
+        discountRequest.setMinOrderValueTo(minOrderValueTo);
         discountRequest.setStartDate(startDate);
         discountRequest.setEndDate(endDate);
         discountRequest.setIsActive(isActive);

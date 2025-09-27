@@ -358,6 +358,20 @@ public class DiscountService {
                 .startDate(discount.getStartDate())
                 .endDate(discount.getEndDate())
                 .isActive(discount.getIsActive())
+                .categoryApplies(
+                        Optional.ofNullable(discount.getCategories())
+                                .orElse(Collections.emptyList())
+                                .stream()
+                                .map(Category::getId)
+                                .toList()
+                )
+                .productApplies(
+                        Optional.ofNullable(discount.getProducts())
+                                .orElse(Collections.emptyList())
+                                .stream()
+                                .map(p -> new DiscountDTO.ProductApplyDTO(p.getId(), p.getName()))
+                                .toList()
+                )
                 .build();
     }
 

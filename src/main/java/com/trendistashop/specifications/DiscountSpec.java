@@ -53,12 +53,44 @@ public class DiscountSpec {
                         discountRequest.getMaxDiscountValue()
                 ));
             }
+            
+            // Lọc theo maxDiscountValue range (from)
+            if (discountRequest.getMaxDiscountValueFrom() != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(
+                        root.get("maxDiscountValue"),
+                        discountRequest.getMaxDiscountValueFrom()
+                ));
+            }
+            
+            // Lọc theo maxDiscountValue range (to)
+            if (discountRequest.getMaxDiscountValueTo() != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(
+                        root.get("maxDiscountValue"),
+                        discountRequest.getMaxDiscountValueTo()
+                ));
+            }
 
             // Lọc theo minOrderValue
             if (discountRequest.getMinOrderValue() != null) {
                 predicates.add(criteriaBuilder.equal(
                         root.get("minOrderValue"),
                         discountRequest.getMinOrderValue()
+                ));
+            }
+            
+            // Lọc theo minOrderValue range (from)
+            if (discountRequest.getMinOrderValueFrom() != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(
+                        root.get("minOrderValue"),
+                        discountRequest.getMinOrderValueFrom()
+                ));
+            }
+            
+            // Lọc theo minOrderValue range (to)
+            if (discountRequest.getMinOrderValueTo() != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(
+                        root.get("minOrderValue"),
+                        discountRequest.getMinOrderValueTo()
                 ));
             }
 

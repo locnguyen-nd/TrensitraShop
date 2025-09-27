@@ -5,7 +5,12 @@ import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.entities.product.Size;
 import com.trendistashop.repositories.product.SizeRepository;
 import com.trendistashop.utils.ResponseHelper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class SizeService {
     @Autowired
     private SizeRepository sizeRepository;
@@ -28,11 +34,21 @@ public class SizeService {
     }
 
     // Get all Sizes
-    public TypeResponse<List<Size>> getAllSizes() {
+    public TypeResponse<Page<Size>> getAllSizes(String keyword, int page, int size) {
         try {
-            List<Size> sizes = sizeRepository.findAll();
-            return ResponseHelper.ok(sizes, ResponseMessage.FETCH_SUCCESS);
+            Sort sort = Sort.by("createdAt").descending();
+            PageRequest pageRequest = PageRequest.of(page, size , sort);
+            Specification<Size> spec = Specification.where(null);
+            if(keyword!=null && !keyword.isEmpty()) {
+                spec = spec.and((root, query, cb) -> cb.or(
+                        cb.like(cb.lower(root.get("value")), "%"+keyword.trim().toLowerCase()+"%", '\\')
+                ));
+            }
+            Page<Size> sizePage = sizeRepository.findAll(spec, pageRequest);
+            log.info("Get size successfully: {} size", sizePage.getTotalElements());
+            return ResponseHelper.ok(sizePage, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }

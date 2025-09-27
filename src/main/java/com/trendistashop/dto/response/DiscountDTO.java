@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -41,4 +42,15 @@ public class DiscountDTO {
     private LocalDateTime endDate;
     private BigDecimal valueApply;
     private Boolean isActive;
+    private List<UUID> categoryApplies;
+    private List<ProductApplyDTO> productApplies;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ProductApplyDTO {
+        private UUID id;
+        private String name;
+    }
 }

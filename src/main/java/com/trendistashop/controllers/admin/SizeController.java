@@ -1,5 +1,7 @@
 package com.trendistashop.controllers.admin;
 
+import com.trendistashop.dto.response.ColorDTO;
+import com.trendistashop.dto.response.PageDTO;
 import com.trendistashop.entities.product.Size;
 import com.trendistashop.docs.size.CreateSizeDocs;
 import com.trendistashop.docs.size.DeleteSizeDocs;
@@ -8,6 +10,7 @@ import com.trendistashop.docs.size.GetSizeDocs;
 import com.trendistashop.docs.size.UpdateSizeDocs;
 import com.trendistashop.docs.size.examples.SizeRequestExamples;
 import com.trendistashop.dto.response.TypeResponse;
+import com.trendistashop.helper.PageConverter;
 import com.trendistashop.services.impl.product.SizeService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +19,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +33,8 @@ import java.util.UUID;
 public class SizeController {
     @Autowired
     private SizeService sizeService;
+    @Autowired
+    private PageConverter pageConvert;
 
     @Operation(summary = "Tạo size")
     @CreateSizeDocs
@@ -50,9 +56,20 @@ public class SizeController {
     @Operation(summary = "Lấy tất cả size")
     @GetAllSizeDocs
     @GetMapping
-    public ResponseEntity<TypeResponse<List<Size>>> getAllSizes() {
-        TypeResponse<List<Size>> response = sizeService.getAllSizes();
-        return ResponseEntity.status(response.getStatusCode()).body(response);
+    public ResponseEntity<TypeResponse<PageDTO<Size>>> getAllSizes(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "30") int size
+    ) {
+        TypeResponse<Page<Size>> sizes = sizeService.getAllSizes(keyword, page, size);
+        PageDTO<Size> pageDTO = pageConvert.toPageDTO(sizes.getData());
+        return ResponseEntity.status(sizes.getStatusCode()).body(new TypeResponse<>(
+                true,
+                sizes.getMessage(),
+                sizes.getErrors(),
+                pageDTO,
+                sizes.getStatusCode())
+        );
     }
 
     @Operation(summary = "Lấy size theo id")
