@@ -38,7 +38,7 @@ public class SocketIOService implements MessageBroadcaster {
         this.chatMessageRepository = chatMessageRepository;
     }
 
-    @PostConstruct
+//    @PostConstruct
     public void init() {
         try {
             // Configure event listeners for connection and disconnection

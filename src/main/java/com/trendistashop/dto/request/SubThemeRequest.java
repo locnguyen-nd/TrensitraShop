@@ -1,7 +1,6 @@
-package com.trendistashop.dto.response;
+package com.trendistashop.dto.request;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,11 +10,10 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class SubCollectionResponseDTO {
-    private UUID id;
+public class SubThemeRequest {
     private String name;
     private String description;
-    private List<MediaDTO> media;
-    private List<ProductDTO> products;
+    private String imageUrl;
+    private Integer priority;
+    private List<UUID> productIds;
 }

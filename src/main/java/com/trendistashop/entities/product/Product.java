@@ -2,6 +2,8 @@ package com.trendistashop.entities.product;
 
 import com.trendistashop.entities.category.Category;
 import com.trendistashop.entities.BaseEntity;
+import com.trendistashop.entities.collection.Collection;
+import com.trendistashop.entities.collection.SubTheme;
 import com.trendistashop.enums.ProductTagEnum;
 import com.trendistashop.enums.SizeEnum;
 import jakarta.persistence.*;
@@ -66,8 +68,38 @@ public class Product extends BaseEntity {
     private List<Discount> discounts = new ArrayList<>();
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<ProductImage> images = new ArrayList<>();
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "collection_id")
+    private Collection collection;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "product_sub_themes",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "sub_theme_id")
+    )
+    private List<SubTheme> subThemes = new ArrayList<>();
     public void incrementView() {
         this.views++;
+    }
+    public void addSubTheme(SubTheme subTheme) {
+        if (!subThemes.contains(subTheme)) {
+            subThemes.add(subTheme);
+            if (subTheme.getProducts() == null) {
+                subTheme.setProducts(new ArrayList<>());
+            }
+            if (!subTheme.getProducts().contains(this)) {
+                subTheme.getProducts().add(this);
+            }
+        }
+    }
+
+    public void removeSubTheme(SubTheme subTheme) {
+        if (subThemes.contains(subTheme)) {
+            subThemes.remove(subTheme);
+            if (subTheme.getProducts() != null && subTheme.getProducts().contains(this)) {
+                subTheme.getProducts().remove(this);
+            }
+        }
     }
 
 }
