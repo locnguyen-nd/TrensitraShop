@@ -62,6 +62,9 @@ public class ResponseMessage {
     public static final String ORDER_NOT_FOUND = "order_not_found";
     public static final String SIZE_NOT_FOUND = "size_not_found";
     public static final String COLOR_NOT_FOUND = "color_not_found";
+    public static final String COLLECTION_NOT_FOUND = "collection_not_found";
+    public static final String COLLECTION_NAME_EXIST = "collection_name_exist";
+    public static final String BANNER_EVENT_EXISTS = "banner_event_exists";
     public static final String REQUIRED = "required";
 
     private ResponseMessage() {

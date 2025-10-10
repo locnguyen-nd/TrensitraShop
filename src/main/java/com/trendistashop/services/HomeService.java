@@ -1,21 +1,33 @@
 package com.trendistashop.services;
 
+import com.trendistashop.constants.ResponseMessage;
+import com.trendistashop.dto.request.BannerImageRequest;
+import com.trendistashop.dto.request.BannerRequestDTO;
+import com.trendistashop.dto.response.BannerImageResponse;
+import com.trendistashop.dto.response.BannerResponseDTO;
 import com.trendistashop.entities.Banner;
+import com.trendistashop.entities.BannerImage;
+import com.trendistashop.specifications.BannerSpecification;
 import com.trendistashop.utils.ResponseHelper;
-import com.trendistashop.dto.response.BannerDTO;
 import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.enums.BannerTypeEnum;
 import com.trendistashop.repositories.BannerRepository;
 import jakarta.transaction.Transactional;
+import lombok.extern.log4j.Log4j;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class HomeService implements IHomeService {
     @Autowired
     private ModelMapper mapper;
@@ -26,90 +38,162 @@ public class HomeService implements IHomeService {
 
     @Override
     @Transactional
-    public TypeResponse<BannerDTO> createBanner(BannerDTO bannerDTO) {
+    public TypeResponse<BannerResponseDTO> createBanner(BannerRequestDTO bannerDTO) {
         try {
-            Banner banner = new Banner();
-            banner.setImageUrl(bannerDTO.getImageUrl());
-            banner.setTitle(bannerDTO.getTitle());
-            banner.setType(bannerDTO.getType());
+            Banner banner = mapper.map(bannerDTO, Banner.class);
+            if (bannerRepository.existsByEvent(banner.getEvent())) {
+                log.warn("Banner with event '{}' already exists.", bannerDTO.getEvent());
+                return ResponseHelper.badRequest(ResponseMessage.BANNER_EVENT_EXISTS);
+            }
             banner.setEvent(bannerDTO.getEvent());
-            banner.setDisplayOrder(banner.getDisplayOrder());
-            banner.setLinkUrl(bannerDTO.getLinkUrl());
+            banner.setType(bannerDTO.getType());
             banner.setIsActive(bannerDTO.getIsActive() != null ? bannerDTO.getIsActive() : true);
-            banner.setDisplayOrder(bannerDTO.getDisplayOrder());
+            if (bannerDTO.getBannerImages() != null && !bannerDTO.getBannerImages().isEmpty()) {
+                List<BannerImage> bannerImages = bannerDTO.getBannerImages().stream()
+                        .map(imageReq -> {
+                            BannerImage image = new BannerImage();
+                            image.setImageUrl(imageReq.getImageUrl());
+                            image.setLinkUrl(imageReq.getLinkUrl());
+                            image.setContent(imageReq.getContent());
+                            image.setDisplayOrder(imageReq.getDisplayOrder());
+                            image.setBanner(banner);
+                            return image;
+                        })
+                        .collect(Collectors.toList());
+                banner.setBannerImages(bannerImages);
+            }
             Banner bannerSave = bannerRepository.save(banner);
-            BannerDTO bannerResponse = mapper.map(bannerSave, BannerDTO.class);
-            return ResponseHelper.created(bannerResponse, "Tạo banner thành công !");
+            BannerResponseDTO bannerResponse = mapToBannerResponse(bannerSave);
+            log.info("Created new banner with ID: {}", bannerResponse.getId());
+            return ResponseHelper.created(bannerResponse, ResponseMessage.CREATE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            log.error("Error creating banner: {}", e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.CREATE_FAILED);
         }
-
     }
 
     @Override
-    public TypeResponse<Map<String, List<BannerDTO>>> getBannerWithType(String type) {
+    public TypeResponse<List<BannerResponseDTO>> getBannerWithTypeAndFilter(String type, String event, Boolean isActive) {
         try {
-            List<Banner> banners = bannerRepository.findBannerByTypeAndIsActiveTrue(BannerTypeEnum.valueOf(type));
-            List<BannerDTO> bannerDTOS = banners.stream().map(
-                    banner -> mapper.map(banner, BannerDTO.class)).collect(Collectors.toList());
-            Map<String, List<BannerDTO>> groupedByEvent = bannerDTOS.stream()
-                    .collect(Collectors.groupingBy(BannerDTO::getEvent));
-            return ResponseHelper.ok(groupedByEvent, "Lấy danh sách banner thành công !");
+            BannerTypeEnum bannerType = null;
+            if(type != null && !type.isEmpty()) {
+                bannerType = BannerTypeEnum.valueOf(type.toUpperCase());
+            }
+            Specification<Banner> spec = BannerSpecification.withFilters(bannerType, event, isActive);
+            List<Banner> banners = bannerRepository.findAll(spec);
+            List<BannerResponseDTO> bannerResponses = banners.stream()
+                    .map(this::mapToBannerResponse)
+                    .collect(Collectors.toList());
+
+            log.info("Found {} banners: {}", banners.size(), bannerResponses);
+            return ResponseHelper.ok(bannerResponses, ResponseMessage.FETCH_SUCCESS);
         } catch (IllegalArgumentException e) {
-            return ResponseHelper.badRequest("Loại banner không hợp lệ");
+            log.error("Err: {}", e.getMessage());
+            return ResponseHelper.badRequest(ResponseMessage.VALIDATION_ERROR);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            log.error("Error fetching banners: {}", e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
-
     }
 
-    @Transactional
     @Override
-    public TypeResponse<BannerDTO> updateBanner(Long id, BannerDTO bannerDTO) {
+    @Transactional
+    public TypeResponse<BannerResponseDTO> updateBanner(Long id, BannerRequestDTO bannerDTO) {
         try {
-            Banner existingBanner = bannerRepository.findById(id).get();
-            if (existingBanner == null) {
-                return ResponseHelper.notFound("Không tìm thấy banner");
+            Optional<Banner> existingBanner = bannerRepository.findById(id);
+            if (existingBanner.isEmpty()) {
+                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
             }
-            if(existingBanner.getImageUrl() != null && !existingBanner.getImageUrl().equals(bannerDTO.getImageUrl())) {
-                cloudinaryService.deleteFile(existingBanner.getImageUrl());
-            }
-            existingBanner.setImageUrl(bannerDTO.getImageUrl());
-            existingBanner.setTitle(bannerDTO.getTitle());
-            existingBanner.setType(bannerDTO.getType());
-            existingBanner.setEvent(bannerDTO.getEvent());
-            existingBanner.setLinkUrl(bannerDTO.getLinkUrl());
-            existingBanner.setIsActive(bannerDTO.getIsActive() != null ? bannerDTO.getIsActive() : true);
-            existingBanner.setDisplayOrder(bannerDTO.getDisplayOrder());
-            BannerDTO bannerResponse = mapper.map(existingBanner, BannerDTO.class);
-            return ResponseHelper.ok(bannerResponse, "Update banner thành công !");
-        } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
-        }
+            Banner banner = existingBanner.get();
+            banner.setEvent(bannerDTO.getEvent());
+            banner.setType(bannerDTO.getType());
+            banner.setIsActive(bannerDTO.getIsActive() != null ? bannerDTO.getIsActive() : true);
+            if (bannerDTO.getBannerImages() != null) {
+                List<BannerImage> oldImages = banner.getBannerImages();
+                List<String> newImageUrls = bannerDTO.getBannerImages()
+                        .stream()
+                        .map(BannerImageRequest::getImageUrl)
+                        .filter(Objects::nonNull)
+                        .toList();
 
+                List<BannerImage> imagesToRemove = oldImages.stream()
+                        .filter(img -> img.getImageUrl() != null && !newImageUrls.contains(img.getImageUrl()))
+                        .toList();
+
+                imagesToRemove.forEach(img -> {
+                    cloudinaryService.deleteFile(img.getImageUrl());
+                    oldImages.remove(img);
+                });
+
+                for (BannerImageRequest imageReq : bannerDTO.getBannerImages()) {
+                    boolean exists = oldImages.stream()
+                            .anyMatch(img -> Objects.equals(img.getImageUrl(), imageReq.getImageUrl()));
+                    if (!exists) {
+                        BannerImage newImg = new BannerImage();
+                        newImg.setImageUrl(imageReq.getImageUrl());
+                        newImg.setLinkUrl(imageReq.getLinkUrl());
+                        newImg.setContent(imageReq.getContent());
+                        newImg.setDisplayOrder(imageReq.getDisplayOrder());
+                        newImg.setBanner(banner);
+                        oldImages.add(newImg);
+                    }
+                }
+            }
+
+            Banner updatedBanner = bannerRepository.save(banner);
+            BannerResponseDTO bannerResponse = mapToBannerResponse(updatedBanner);
+            log.info("Updated banner with ID: {}", bannerResponse.getId());
+            return ResponseHelper.ok(bannerResponse, ResponseMessage.UPDATE_SUCCESS);
+        } catch (Exception e) {
+            log.error("Error fetching banner: {}", e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
+        }
     }
 
-    @Transactional
     @Override
+    @Transactional
     public TypeResponse<Void> deleteBanner(Long id) {
         try {
-            Banner existingBanner = bannerRepository.findById(id).get();
-            if (existingBanner == null) {
-                return ResponseHelper.notFound("Không tìm thấy banner");
+            Optional<Banner> existingBanner = bannerRepository.findById(id);
+            if (existingBanner.isEmpty()) {
+                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
             }
-            // Xóa ảnh trên Cloudinary nếu có
-            if (existingBanner.getImageUrl() != null) {
-                cloudinaryService.deleteFile(existingBanner.getImageUrl());
-                existingBanner.setImageUrl(null);
-            }
-            existingBanner.preDestroy();
-            // Xóa Banner khỏi database
-            bannerRepository.save(existingBanner);
-            return ResponseHelper.ok(null, "Xóa banner thành công !");
+            Banner banner = existingBanner.get();
+            banner.getBannerImages().forEach(image -> {
+                if (image.getImageUrl() != null) {
+                    cloudinaryService.deleteFile(image.getImageUrl());
+                }
+            });
+            bannerRepository.delete(banner);
+            log.info("Deleted banner with ID: {}", id);
+            return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
         } catch (Exception e) {
-            return ResponseHelper.serverError("Lỗi server");
+            log.error("Error deleting banner: {}", e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
         }
+    }
 
+    private BannerResponseDTO mapToBannerResponse(Banner banner) {
+        BannerResponseDTO response = new BannerResponseDTO();
+        response.setId(banner.getId());
+        response.setEvent(banner.getEvent());
+        response.setType(banner.getType());
+        response.setIsActive(banner.getIsActive());
+
+        if (banner.getBannerImages() != null) {
+            List<BannerImageResponse> imageResponses = banner.getBannerImages().stream()
+                    .map(image -> {
+                        BannerImageResponse imgResp = new BannerImageResponse();
+                        imgResp.setImageUrl(image.getImageUrl());
+                        imgResp.setLinkUrl(image.getLinkUrl());
+                        imgResp.setContent(image.getContent() != null ? image.getContent() : "");
+                        imgResp.setOrder(image.getDisplayOrder());
+                        return imgResp;
+                    })
+                    .collect(Collectors.toList());
+            response.setBannerImages(imageResponses);
+        }
+        return response;
     }
 
 }
