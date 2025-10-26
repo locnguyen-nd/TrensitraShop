@@ -27,7 +27,6 @@ import java.io.IOException;
  * Bộ lọc xác thực JWT, kiểm tra tính hợp lệ của JWT trong yêu cầu và thiết lập thông tin xác thực cho người dùng.
  */
 @Slf4j
-
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
     private final JWTTokenHelper jwtTokenHelper;
@@ -53,6 +52,18 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
      */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        String requestURI = request.getRequestURI();
+        log.info("Processing request: {}", requestURI);
+        // Bỏ qua các endpoint OAuth2 và login
+        if (requestURI.startsWith("/oauth2/")
+                || requestURI.equals("/error")
+                || requestURI.startsWith("/login/")
+                || requestURI.startsWith("/login/oauth2/")
+                || requestURI.equals("/api/v1/oauth2/")
+                || requestURI.startsWith("/.well-known/")){
+            filterChain.doFilter(request, response);
+            return;
+        }
         String authHeader = request.getHeader("Authorization");
         if (null == authHeader || !authHeader.startsWith("Bearer")) {
             filterChain.doFilter(request, response);

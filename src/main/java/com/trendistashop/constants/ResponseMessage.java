@@ -66,6 +66,7 @@ public class ResponseMessage {
     public static final String COLLECTION_NAME_EXIST = "collection_name_exist";
     public static final String BANNER_EVENT_EXISTS = "banner_event_exists";
     public static final String REQUIRED = "required";
+    public static final String PAYMENT_CALLBACK_ERROR = "payment_callback_error";
 
     private ResponseMessage() {
     }

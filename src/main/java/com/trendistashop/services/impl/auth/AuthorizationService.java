@@ -26,11 +26,15 @@ public class AuthorizationService implements IAuthorizationService {
         @Autowired
         private ModelMapper modelMapper;
 
+        @Transactional
         public List<RoleEntity> getUserRole() {
-                List<RoleEntity> roles = new ArrayList<>();
-                RoleEntity role = roleRepository.findByName("USER");
-                roles.add(role);
-                return roles;
+            List<RoleEntity> roles = new ArrayList<>();
+            RoleEntity role = roleRepository.findByName("USER");
+            if (role == null) {
+                throw new ResourceNotFoundEx("Role USER not found");
+            }
+            roles.add(role);
+            return roles;
         }
 
         @Transactional

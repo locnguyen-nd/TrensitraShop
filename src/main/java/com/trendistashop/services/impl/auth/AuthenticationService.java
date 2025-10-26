@@ -220,8 +220,8 @@ public class AuthenticationService implements IAuthenticationService {
             if (user.getUserCart() == null) {
                 Cart newCart = new Cart();
                 newCart.setUser(user);
-                newCart.setCartItems(new ArrayList<>());
-                newCart.setCartTotal(BigDecimal.ZERO);
+                newCart.setItems(new ArrayList<>());
+                newCart.setTotalPrice(BigDecimal.ZERO);
                 user.setUserCart(newCart);
             }
 
@@ -401,7 +401,7 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     @Override
-    public UserEntity createUserWithGoogle(OAuth2User oAuth2User) {
+    public UserEntity createUserWithGoogle(OAuth2User oAuth2User) { // UPDATED
         try {
             String firstName = oAuth2User.getAttribute("given_name");
             String lastName = oAuth2User.getAttribute("family_name");
@@ -418,8 +418,8 @@ public class AuthenticationService implements IAuthenticationService {
             if (user.getUserCart() == null) {
                 Cart newCart = new Cart();
                 newCart.setUser(user);
-                newCart.setCartItems(new ArrayList<>());
-                newCart.setCartTotal(BigDecimal.ZERO);
+                newCart.setItems(new ArrayList<>());
+                newCart.setTotalPrice(BigDecimal.ZERO);
                 user.setUserCart(newCart);
             }
             return userDetailRepository.save(user);

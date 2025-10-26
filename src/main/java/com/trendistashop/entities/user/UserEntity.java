@@ -74,7 +74,7 @@ public class UserEntity extends BaseEntity implements UserDetails {
     @JoinTable(
             name = "auth_user_authority",
             joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "roles_id")
+            inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private List<RoleEntity> roles ;
 

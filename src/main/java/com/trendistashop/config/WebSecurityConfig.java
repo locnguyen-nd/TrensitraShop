@@ -1,19 +1,22 @@
 package com.trendistashop.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trendistashop.entities.user.UserEntity;
+import com.trendistashop.services.impl.auth.AuthenticationService;
 import com.trendistashop.services.impl.auth.PermissionService;
 import com.trendistashop.utils.ResponseHelper;
 import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.dto.response.TypeResponse;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
@@ -31,10 +34,13 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig {
@@ -44,6 +50,9 @@ public class WebSecurityConfig {
     private PermissionService permissionService;
     @Autowired
     private JWTTokenHelper jwtTokenHelper;
+    @Autowired
+    @Lazy
+    private AuthenticationService authenticationService;
     @Value("${api.prefix}")
     private String prefix;
     @Value("${frontend.dev.url}")
@@ -55,9 +64,9 @@ public class WebSecurityConfig {
     @Value("${admin.prod.url}")
     private String adminProdUrl;
 
-    /**
-     * Danh sach các URL không cần phân quyền
-     */
+    @Value("${frontend.prod.url:http://localhost:4000}")
+    private String oauth2RedirectUrl;
+
     private final String[] publicApis = {
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -74,46 +83,44 @@ public class WebSecurityConfig {
             "/api/v1/collections/**",
             "/api/v1/notifications/**",
             "/api/v1/test/**",
-            "/oauth2/**",
+            "/api/v1/oauth2/**",
             "/api/v1/media/**",
-            "/actuator/health/**"
+            "/actuator/health/**",
+            "/favicon.ico",
+            "/*.html",
+            "/error",
+            "/.well-known/**"
     };
 
-    /**
-     * Cấu hình bảo mật cho ứng dụng, xác định cách thức xử lý các yêu cầu HTTP.
-     * - Tắt CSRF.
-     * - Cấu hình quyền truy cập cho từng URL.
-     * - Cấu hình chính sách session.
-     * - Thêm bộ lọc JWT để xác thực người dùng.
-     *
-     * @param http Đối tượng HttpSecurity để cấu hình bảo mật.
-     * @return SecurityFilterChain đối tượng cấu hình bảo mật hoàn chỉnh.
-     * @throws Exception nếu có lỗi khi cấu hình bảo mật.
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         Map<String, Map<String, List<String>>> permissionMappings = permissionService.loadPermissions();
+
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(
-                        corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, authException) -> {
+                            log.error("Authentication error for request {}: {}", request.getRequestURI(), authException.getMessage());
                             response.setStatus(401);
                             response.setContentType("application/json;charset=UTF-8");
                             TypeResponse<?> errorResponse = ResponseHelper.unauthorized(ResponseMessage.UNAUTHORIZED);
                             response.getWriter().write(new ObjectMapper().writeValueAsString(errorResponse));
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            log.error("Access denied for request {}: {}", request.getRequestURI(), accessDeniedException.getMessage());
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");
                             TypeResponse<?> errorResponse = ResponseHelper.forbidden(ResponseMessage.FORBIDDEN);
                             response.getWriter().write(new ObjectMapper().writeValueAsString(errorResponse));
-                        }))
-                .authenticationManager(authenticationManager())
-                // Ánh xạ quyền dựa trên permissions từ cơ sở dữ liệu
+                        })
+                )
+
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers(publicApis);
+                    auth.requestMatchers(publicApis).permitAll();
+                    auth.requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll();
+
                     permissionMappings.forEach((endPoint, methodMap) -> {
                         methodMap.forEach((httpMethod, permissions) -> {
                             String fullUrl = prefix + endPoint;
@@ -121,84 +128,150 @@ public class WebSecurityConfig {
                                     .hasAnyAuthority(permissions.toArray(new String[0]));
                         });
                     });
-                    auth.requestMatchers(
-                            "/",
-                            "/login/**",
-                            "/oauth2/**",
-                            "/api/v1/chat/**",
-                            "/oauth2/callback**",
-                            "/error").permitAll();
+
                     auth.anyRequest().authenticated();
                 })
-                .logout(logout -> {
-                    logout
-                            .logoutUrl("/api/v1/auth/logout")
-                            .addLogoutHandler((request, response, authentication) -> {
-                                // Lấy token từ request và thêm vào blacklist
-                                String token = jwtTokenHelper.getToken(request);
-                                jwtTokenHelper.logout(token);
-                            })
-                            .clearAuthentication(true)
-                            .invalidateHttpSession(true)
-                            .deleteCookies("JSESSIONID")
-                            .logoutSuccessHandler((request, response, authentication) -> {
-                                response.setStatus(HttpServletResponse.SC_OK);
-                                response.getWriter().write("Logged out successfully");
-                            });
-                })
-                // .oauth2Login(oauth2 -> oauth2
-                // .defaultSuccessUrl("/oauth2/success", true)
-                // .userInfoEndpoint(userInfo -> userInfo
-                // .userService(oAuth2UserService())
-                // )
-                // )
-                .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .addFilterBefore(new JWTAuthenticationFilter(jwtTokenHelper, userDetailsService),
-                        UsernamePasswordAuthenticationFilter.class);
+
+                .logout(logout -> logout
+                        .logoutUrl("/api/v1/auth/logout")
+                        .addLogoutHandler((request, response, authentication) -> {
+                            String token = jwtTokenHelper.getToken(request);
+                            jwtTokenHelper.logout(token);
+                        })
+                        .clearAuthentication(true)
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(HttpServletResponse.SC_OK);
+                            response.getWriter().write("Logged out successfully");
+                        })
+                )
+
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authorization ->
+                                authorization.baseUri("/oauth2/authorization")
+                        )
+                        .redirectionEndpoint(redirection ->
+                                redirection.baseUri("/login/oauth2/code/*")
+                        )
+                        .userInfoEndpoint(userInfo ->
+                                userInfo.userService(oAuth2UserService())
+                        )
+                        .successHandler((request, response, authentication) -> {
+                            log.info(" OAuth2 login successful");
+
+                            try {
+                                OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+                                String email = oauth2User.getAttribute("email");
+
+                                if (email == null) {
+                                    log.error("Email is null in OAuth2User");
+                                    redirectToFrontendWithError(response, "Email not found");
+                                    return;
+                                }
+
+                                log.info("Processing OAuth2 user: {}", email);
+
+                                // Get or create user
+                                UserEntity user = authenticationService.getUser(email)
+                                        .orElseGet(() -> {
+                                            log.info("Creating new Google user: {}", email);
+                                            return authenticationService.createUserWithGoogle(oauth2User);
+                                        });
+
+                                // Generate JWT token
+                                String token = jwtTokenHelper.generateToken(user.getUsername());
+                                log.info("JWT token generated for user: {}", email);
+
+                                // Redirect to frontend with token
+                                String redirectUrl = String.format("%s?token=%s&email=%s",
+                                        oauth2RedirectUrl,
+                                        URLEncoder.encode(token, StandardCharsets.UTF_8),
+                                        URLEncoder.encode(email, StandardCharsets.UTF_8)
+                                );
+
+                                log.info("Redirecting to: {}", redirectUrl);
+                                response.sendRedirect(redirectUrl);
+
+                            } catch (Exception e) {
+                                log.error("Error in OAuth2 success handler", e);
+                                redirectToFrontendWithError(response, "Authentication failed");
+                            }
+                        })
+                        .failureHandler((request, response, exception) -> {
+                            log.error(" OAuth2 login failed: {}", exception.getMessage(), exception);
+                            redirectToFrontendWithError(response, exception.getMessage());
+                        })
+                )
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                .addFilterBefore(
+                        new JWTAuthenticationFilter(jwtTokenHelper, userDetailsService),
+                        UsernamePasswordAuthenticationFilter.class
+                );
+
         return http.build();
+    }
+
+    /**
+     * Helper method to redirect to frontend with error
+     */
+    private void redirectToFrontendWithError(HttpServletResponse response, String errorMessage) {
+        try {
+            String errorUrl = String.format("%s?error=true&message=%s",
+                    oauth2RedirectUrl,
+                    URLEncoder.encode(errorMessage, StandardCharsets.UTF_8)
+            );
+            response.sendRedirect(errorUrl);
+        } catch (Exception e) {
+            log.error("Failed to redirect to error page", e);
+        }
     }
 
     @Bean
     public OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService() {
         DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
-
         return request -> {
-            OAuth2User user = delegate.loadUser(request);
-            // Có thể thêm xử lý custom cho user ở đây
-            return user;
+            log.info("Processing OAuth2 request for client: {}", request.getClientRegistration().getRegistrationId());
+            try {
+                OAuth2User oauth2User = delegate.loadUser(request);
+                if (oauth2User == null) {
+                    log.error("OAuth2User is null after loadUser");
+                    throw new IllegalStateException("OAuth2User is null");
+                }
+
+                log.info("Loaded OAuth2User attributes: {}", oauth2User.getAttributes());
+                String email = oauth2User.getAttribute("email");
+
+                if (email == null) {
+                    log.error("Email attribute is null in OAuth2User");
+                    throw new IllegalArgumentException("Email not found in OAuth2User");
+                }
+
+                log.info("OAuth2 user loaded successfully: {}", email);
+                return oauth2User;
+
+            } catch (Exception e) {
+                log.error("Error in oAuth2UserService: {}", e.getMessage(), e);
+                throw e;
+            }
         };
     }
 
-    /**
-     * Cấu hình WebSecurity để bỏ qua bảo mật cho các API công khai.
-     *
-     * @return WebSecurityCustomizer cho phép bỏ qua bảo mật cho các API công khai.
-     */
     @Bean
     public WebSecurityCustomizer webSecurityConfigurer() {
         return (web) -> web.ignoring().requestMatchers(publicApis);
     }
 
-    /**
-     * Cấu hình AuthenticationManager, sử dụng DaoAuthenticationProvider để xác thực
-     * người dùng.
-     *
-     * @return AuthenticationManager để xác thực người dùng.
-     */
     @Bean
-    public AuthenticationManager authenticationManager() {
-        DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
-        daoAuthenticationProvider.setUserDetailsService(userDetailsService);
-        daoAuthenticationProvider.setPasswordEncoder(passwordEncoder());
-
-        return new ProviderManager(daoAuthenticationProvider);
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
     }
 
-    /**
-     * Tạo một PasswordEncoder để mã hóa mật khẩu người dùng.
-     *
-     * @return PasswordEncoder sử dụng mã hóa mật khẩu.
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
@@ -207,11 +280,15 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(frontendDevUrl, frontendProdUrl, adminDevUrl, adminProdUrl));
+        configuration.setAllowedOrigins(Arrays.asList(
+                frontendDevUrl,
+                frontendProdUrl,
+                adminDevUrl,
+                adminProdUrl
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
