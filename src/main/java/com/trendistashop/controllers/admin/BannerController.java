@@ -57,7 +57,12 @@ public class BannerController {
         TypeResponse<BannerResponseDTO> response = homeService.createBanner(bannerDTO);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-
+    @GetMapping("/{id}")
+    @Operation(summary = "Lấy banner theo ID", description = "Lấy chi tiết banner theo ID.")
+    public ResponseEntity<TypeResponse<BannerResponseDTO>> getBannerById(@PathVariable Long id) {
+        TypeResponse<BannerResponseDTO> response = homeService.getBannerById(id);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
     @PutMapping(value = "/update/{id}")
     @UpdateCategoryDocs
     @Operation(summary = "Cập nhật banner", description = "Cập nhật banner bao gồm ảnh và thông tin khác.")

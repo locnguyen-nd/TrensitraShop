@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface IHomeService {
+    TypeResponse<BannerResponseDTO> getBannerById(Long id);
     TypeResponse<BannerResponseDTO> createBanner(BannerRequestDTO bannerDTO);
     TypeResponse<BannerResponseDTO> updateBanner(Long id, BannerRequestDTO bannerDTO) ;
     TypeResponse<List<BannerResponseDTO>> getBannerWithTypeAndFilter(String type, String event, Boolean isActive);

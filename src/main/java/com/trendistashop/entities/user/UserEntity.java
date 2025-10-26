@@ -70,13 +70,13 @@ public class UserEntity extends BaseEntity implements UserDetails {
     @Builder.Default
     @EqualsAndHashCode.Exclude
     private Cart userCart = new Cart() ;
-    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "auth_user_authority",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    private List<RoleEntity> roles ;
+    private List<RoleEntity> roles = new ArrayList<>();
 
     @OneToMany(mappedBy = "user")
     private List<Notification> notifications;

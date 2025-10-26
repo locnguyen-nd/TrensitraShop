@@ -25,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -125,14 +127,12 @@ public class CollectionServiceImpl implements ICollectionService {
     }
 
     @Override
-    public TypeResponse<List<CollectionResponseDTO>> getCollectionsWithFilter(Boolean status, String keyword) {
+    public TypeResponse<Page<CollectionResponseDTO>> getCollectionsWithFilter(Boolean status, String keyword, PageRequest pageRequest) {
         try{
             Specification <Collection> spec = CollectionSpecification.withFilters(status, keyword);
-            List<Collection> collections = collectionRepository.findAll(spec);
-            List<CollectionResponseDTO> responses = collections.stream()
-                    .map(this::mapToCollectionResponse)
-                    .collect(Collectors.toList());
-            log.info("Found {} collections", responses.size());
+            Page<Collection> collections = collectionRepository.findAll(spec, pageRequest);
+            Page<CollectionResponseDTO> responses = collections.map(this::mapToCollectionResponse);
+            log.info("Collections found successfully");
             return ResponseHelper.ok(responses, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
             log.error("Error getting collections with filter: {}", e.getMessage(), e);

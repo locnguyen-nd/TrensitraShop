@@ -38,6 +38,22 @@ public class HomeService implements IHomeService {
 
     @Override
     @Transactional
+    public TypeResponse<BannerResponseDTO> getBannerById(Long id) {
+        try {
+            Optional<Banner> bannerOpt = bannerRepository.findById(id);
+            if (bannerOpt.isEmpty()) {
+                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
+            }
+            BannerResponseDTO bannerResponse = mapToBannerResponse(bannerOpt.get());
+            log.info("Fetched banner with ID: {}", id);
+            return ResponseHelper.ok(bannerResponse, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            log.error("Error fetching banner: {}", e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
+    }
+    @Override
+    @Transactional
     public TypeResponse<BannerResponseDTO> createBanner(BannerRequestDTO bannerDTO) {
         try {
             Banner banner = mapper.map(bannerDTO, Banner.class);

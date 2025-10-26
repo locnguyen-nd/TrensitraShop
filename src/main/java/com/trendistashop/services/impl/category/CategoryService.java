@@ -179,11 +179,11 @@ public class CategoryService implements ICategoryService {
             if (category == null) {
                 return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
             }
-            if (category.getImageUrl() != null) {
-                cloudinaryService.deleteFile(category.getImageUrl());
-            }
+//            if (category.getImageUrl() != null) {
+//                cloudinaryService.deleteFile(category.getImageUrl());
+//            }
             category.preDestroy();
-            category.setImageUrl(null);
+//            category.setImageUrl(null);
             categoryRepository.save(category);
             return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
         } catch (Exception e) {
