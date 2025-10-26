@@ -85,7 +85,7 @@ public class HomeService implements IHomeService {
                     .map(this::mapToBannerResponse)
                     .collect(Collectors.toList());
 
-            log.info("Found {} banners: {}", banners.size(), bannerResponses);
+            log.info("Found {} banners", banners.size());
             return ResponseHelper.ok(bannerResponses, ResponseMessage.FETCH_SUCCESS);
         } catch (IllegalArgumentException e) {
             log.error("Err: {}", e.getMessage());

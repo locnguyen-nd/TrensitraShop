@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- ====================================== -->
+    <!-- PROPERTIES -->
+    <!-- ====================================== -->
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="TrendistaShop"/>
+    <property name="LOG_PATH" value="logs"/>
+    <property name="LOG_FILE" value="${LOG_PATH}/${APP_NAME}"/>
+    <property name="ARCHIVE_PATH" value="${LOG_PATH}/archive"/>
+
+    <!-- ====================================== -->
+    <!-- LOG PATTERN -->
+    <!-- ====================================== -->
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n%ex"/>
+    <property name="FILE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%t] %-40.40logger{39} : %m%n%ex"/>
+
+    <!-- ====================================== -->
+    <!-- CONSOLE APPENDER -->
+    <!-- ====================================== -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ====================================== -->
+    <!-- FILE APPENDER - ALL LOGS -->
+    <!-- ====================================== -->
+    <appender name="FILE_ALL" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Daily rollover -->
+            <fileNamePattern>${ARCHIVE_PATH}/${APP_NAME}-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!-- Each file should be at most 10MB -->
+            <maxFileSize>10MB</maxFileSize>
+            <!-- Keep 30 days' worth of history -->
+            <maxHistory>30</maxHistory>
+            <!-- Total size of all archive files -->
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- ====================================== -->
+    <!-- ASYNC FILE APPENDER -->
+    <!-- ====================================== -->
+    <appender name="ASYNC_FILE_ALL" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="FILE_ALL"/>
+    </appender>
+
+    <!-- ====================================== -->
+    <!-- LOGGERS -->
+    <!-- ====================================== -->
+    <!-- Your Application Logger -->
+    <logger name="com.trendistashop" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE_ALL"/>
+    </logger>
+
+    <!-- Spring Framework Logger -->
+    <logger name="org.springframework" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE_ALL"/>
+    </logger>
+
+    <!-- Root Logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE_ALL"/>
+    </root>
+</configuration>

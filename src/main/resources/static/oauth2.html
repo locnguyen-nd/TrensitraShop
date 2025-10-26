@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OAuth2 Login Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        button {
+            padding: 10px 20px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background-color: #3367d6; }
+    </style>
+</head>
+<body>
+<h2>🔐 Test Google OAuth2 Login</h2>
+<button onclick="loginWithGoogle()">Login with Google</button>
+
+<h3>Response:</h3>
+<pre id="response"></pre>
+
+<script>
+    function loginWithGoogle() {
+        // Gọi endpoint OAuth2 authorization
+        window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+    }
+
+    // Nếu có token trong URL sau redirect, hiển thị ra
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const email = params.get("email");
+    if (token) {
+        document.getElementById("response").textContent =
+            "✅ Logged in successfully!\nEmail: " + email + "\nToken: " + token;
+    }
+</script>
+</body>
+</html>

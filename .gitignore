@@ -15,6 +15,7 @@ target/
 
 ### IntelliJ IDEA ###
 .idea
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -44,3 +45,17 @@ build/
 *.pem
 *.p12
 *.jks
+# Log directory
+logs/
+*.log
+*.log.*
+# Log archives
+*.gz
+*.zip
+
+# Specific log files
+TrendistaShop.log
+TrendistaShop-*.log
+# Spring Boot logs
+spring.log
+application.log

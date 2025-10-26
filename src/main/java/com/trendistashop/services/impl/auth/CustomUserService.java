@@ -44,6 +44,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
      * @return Đối tượng UserToken chứa JWT token.
      * @throws UsernameNotFoundException Nếu tài khoản không tồn tại.
      */
+    @Transactional
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Optional<UserEntity> user = userDetailRepository.findByEmail(username);
@@ -53,6 +54,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         return user.get();
     }
 
+    @Transactional
     @Override
     public TypeResponse<List<UserDetailDTO>> getAllUser() {
         try {
@@ -67,6 +69,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         }
     }
 
+    @Transactional
     @Override
     public TypeResponse<UserDetailDTO> getUserById(UUID id) {
         Optional<UserEntity> userOpt = userDetailRepository.findById(id);
@@ -132,6 +135,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), ResponseMessage.UPDATE_SUCCESS);
     }
 
+    @Transactional
     @Override
     public TypeResponse<Void> deleteUser(UUID id) {
         Optional<UserEntity> userExisting = userDetailRepository.findById(id);
@@ -151,6 +155,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         }
     }
 
+    @Transactional
     @Override
     public TypeResponse<Void> deleteOwnAccount() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
