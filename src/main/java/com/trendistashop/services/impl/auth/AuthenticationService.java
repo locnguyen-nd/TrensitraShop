@@ -220,8 +220,8 @@ public class AuthenticationService implements IAuthenticationService {
             if (user.getUserCart() == null) {
                 Cart newCart = new Cart();
                 newCart.setUser(user);
-                newCart.setItems(new ArrayList<>());
-                newCart.setTotalPrice(BigDecimal.ZERO);
+                newCart.setCartItems(new ArrayList<>());
+                newCart.setCartTotal(BigDecimal.ZERO);
                 user.setUserCart(newCart);
             }
 
@@ -418,8 +418,8 @@ public class AuthenticationService implements IAuthenticationService {
             if (user.getUserCart() == null) {
                 Cart newCart = new Cart();
                 newCart.setUser(user);
-                newCart.setItems(new ArrayList<>());
-                newCart.setTotalPrice(BigDecimal.ZERO);
+                newCart.setCartItems(new ArrayList<>());
+                newCart.setCartTotal(BigDecimal.ZERO);
                 user.setUserCart(newCart);
             }
             return userDetailRepository.save(user);
