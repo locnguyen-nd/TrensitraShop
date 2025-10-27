@@ -66,6 +66,8 @@ public class WebSecurityConfig {
 
     @Value("${frontend.prod.url:http://localhost:4000}")
     private String oauth2RedirectUrl;
+    @Value("${jwt.auth.expires_in}")
+    private int expiresIn;
 
     private final String[] publicApis = {
             "/v3/api-docs/**",
@@ -184,10 +186,11 @@ public class WebSecurityConfig {
                                 log.info("JWT token generated for user: {}", email);
 
                                 // Redirect to frontend with token
-                                String redirectUrl = String.format("%s?token=%s&email=%s",
+                                String redirectUrl = String.format("%s/oauth2?token=%s&email=%s&expiresIn=%s",
                                         oauth2RedirectUrl,
                                         URLEncoder.encode(token, StandardCharsets.UTF_8),
-                                        URLEncoder.encode(email, StandardCharsets.UTF_8)
+                                        URLEncoder.encode(email, StandardCharsets.UTF_8),
+                                        URLEncoder.encode(String.valueOf(expiresIn), StandardCharsets.UTF_8)
                                 );
 
                                 log.info("Redirecting to: {}", redirectUrl);
