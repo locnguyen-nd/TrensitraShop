@@ -5,9 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Data
 @NoArgsConstructor
@@ -21,6 +19,6 @@ public class CollectionResponseDTO {
     private String bannerUrl;
     private Boolean status;
     private Integer orderIndex;
-    private List<SubThemeResponse> subThemes;
-    private List<ProductDTO> products;
+    private List<SubThemeResponse> subThemes = new ArrayList<>();
+    private List<ProductDTO> products = new ArrayList<>();
 }

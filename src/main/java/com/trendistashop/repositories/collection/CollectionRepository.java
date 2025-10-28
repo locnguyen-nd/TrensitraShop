@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface CollectionRepository extends JpaRepository<Collection, UUID>, JpaSpecificationExecutor<Collection> {
-    Collection findBySlugAndStatusTrue(String slug);
+    Collection findBySlug(String slug);
     Collection findByName(String name);
 }

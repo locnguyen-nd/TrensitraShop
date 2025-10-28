@@ -19,9 +19,19 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
         List<Category> findByParentId(UUID parent);
 
         List<Category> findByGenderId(UUID gender);
-
-        List<Category> findByGenderSlug(String slug);
-
+        @Query("""
+        SELECT c FROM Category c
+        WHERE (:slug IS NULL OR c.gender.slug = :slug)
+          AND (
+               :isActive IS NULL
+            OR (:isActive = TRUE AND c.deletedAt IS NULL)
+            OR (:isActive = FALSE AND c.deletedAt IS NOT NULL)
+          )
+    """)
+        List<Category> findByGenderSlug(
+                @Param("slug") String slug,
+                @Param("isActive") Boolean isActive
+        );
         @Query("SELECT DISTINCT c.name,c.slug FROM Category c " +
                         "WHERE LOWER(c.slug) LIKE %:keyword% " +
                         "ORDER BY CASE " +
