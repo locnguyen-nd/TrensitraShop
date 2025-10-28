@@ -13,5 +13,5 @@ public class BannerImageResponse {
     private String imageUrl;
     private String linkUrl;
     private String content;
-    private Integer order;
+    private Integer displayOrder;
 }
