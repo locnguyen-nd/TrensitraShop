@@ -203,7 +203,7 @@ public class HomeService implements IHomeService {
                         imgResp.setImageUrl(image.getImageUrl());
                         imgResp.setLinkUrl(image.getLinkUrl());
                         imgResp.setContent(image.getContent() != null ? image.getContent() : "");
-                        imgResp.setOrder(image.getDisplayOrder());
+                        imgResp.setDisplayOrder(image.getDisplayOrder());
                         return imgResp;
                     })
                     .collect(Collectors.toList());
