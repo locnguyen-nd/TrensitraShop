@@ -406,11 +406,13 @@ public class AuthenticationService implements IAuthenticationService {
             String firstName = oAuth2User.getAttribute("given_name");
             String lastName = oAuth2User.getAttribute("family_name");
             String email = oAuth2User.getAttribute("email");
+            String avatar = oAuth2User.getAttribute("picture");
             System.out.println(email);
             UserEntity user = UserEntity.builder()
                     .firstName(firstName)
                     .lastName(lastName)
                     .email(email)
+                    .avatar(avatar)
                     .provider(ProviderEnum.GOOGLE)
                     .enabled(true)
                     .roles(authorizationService.getUserRole())
