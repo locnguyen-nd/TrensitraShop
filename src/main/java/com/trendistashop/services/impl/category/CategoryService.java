@@ -81,11 +81,7 @@ public class CategoryService implements ICategoryService {
             if (gender == null) {
                 return ResponseHelper.notFound(ResponseMessage.GENDER_NOT_FOUND);
             }
-            if (gender.getImageUrl() != null) {
-                cloudinaryService.deleteFile(gender.getImageUrl());
-            }
             gender.preDestroy();
-            gender.setImageUrl(null);
             genderRepository.save(gender);
             return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
         } catch (Exception e) {
@@ -179,11 +175,7 @@ public class CategoryService implements ICategoryService {
             if (category == null) {
                 return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
             }
-//            if (category.getImageUrl() != null) {
-//                cloudinaryService.deleteFile(category.getImageUrl());
-//            }
             category.preDestroy();
-//            category.setImageUrl(null);
             categoryRepository.save(category);
             return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
         } catch (Exception e) {
@@ -224,32 +216,44 @@ public class CategoryService implements ICategoryService {
 
     // Lấy tất cả categories
     @Override
-    public TypeResponse<List<GenderCategoryGroup>> getAllCategoriesGroupByGender(String genderSlug) {
+    public TypeResponse<List<GenderCategoryGroup>> getAllCategoriesGroupByGender(String genderSlug, Boolean isActive) {
         try {
-            List<Category> categories;
-            if (genderSlug != null && !genderSlug.isEmpty()) {
-                categories = categoryRepository.findByGenderSlug(genderSlug);
-            } else {
-                categories = categoryRepository.findAll(); // Nếu không có genderSlug, lấy tất cả danh mục
-            }
-            Map<Gender, List<Category>> groupedByGender = categories.stream()
-                    .collect(Collectors.groupingBy(category -> category.getGender()));
-            List<GenderCategoryGroup> result = new ArrayList<>();
-            groupedByGender.forEach((gender, genderCategories) -> {
-                GenderDTO genderDTO = convertGenderDTO(gender);
-                List<CategoryDTO> parentCategories = genderCategories.stream()
-                        .filter(category -> category.getParent() == null) // Lọc danh mục cha
-                        .map(parent -> mapToCategoryDTO(parent, genderCategories)) // Ánh xạ sang DTO
+            List<Category> categories = categoryRepository.findByGenderSlug(genderSlug, null); // lấy tất cả trước
+            List<Category> parentCategories = categories.stream()
+                    .filter(c -> c.getParent() == null)
+                    .collect(Collectors.toList());
+
+            Map<Gender, List<Category>> groupedByGender = new HashMap<>();
+            for (Category parent : parentCategories) {
+                List<Category> childCategories = categories.stream()
+                        .filter(c -> parent.equals(c.getParent()) &&
+                                (isActive == null || (isActive ? c.getDeletedAt() == null : c.getDeletedAt() != null)))
                         .collect(Collectors.toList());
-                // Đưa vào Map
-                result.add(new GenderCategoryGroup(genderDTO, parentCategories));
+                boolean parentMatches = isActive == null || (isActive ? parent.getDeletedAt() == null : parent.getDeletedAt() != null);
+                if (parentMatches || !childCategories.isEmpty()) {
+                    groupedByGender.computeIfAbsent(parent.getGender(), k -> new ArrayList<>()).add(parent);
+                }
+            }
+
+            List<GenderCategoryGroup> result = new ArrayList<>();
+            groupedByGender.forEach((gender, parents) -> {
+                GenderDTO genderDTO = convertGenderDTO(gender);
+
+                List<CategoryDTO> parentDTOs = parents.stream()
+                        .map(parent -> mapToCategoryDTO(parent, categories, isActive))
+                        .collect(Collectors.toList());
+
+                result.add(new GenderCategoryGroup(genderDTO, parentDTOs));
             });
+
             return ResponseHelper.ok(result, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
             log.error(e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
+
+
     @Override
     public TypeResponse<List<CategoryDTO>> searchCategoryByName(String name) {
         try {
@@ -282,6 +286,25 @@ public class CategoryService implements ICategoryService {
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
+
+    @Override
+    public TypeResponse<CategoryDTO> restoreCategory(UUID id) {
+        try  {
+            Optional<Category> optionalCategory = categoryRepository.findById(id);
+            if (optionalCategory.isEmpty()) {
+                return ResponseHelper.notFound(ResponseMessage.CATEGORY_NOT_FOUND);
+            }
+            Category category = optionalCategory.get();
+            category.setDeletedAt(null);
+            categoryRepository.save(category);
+            log.info("Restore category successfully");
+            return ResponseHelper.ok(convertToDTO(category), ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            log.error("Restore category error {}", e.getMessage());
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
+    }
+
     // Lấy tất cả categories theo parentId
     @Override
     public TypeResponse<List<CategoryDTO>> getAllCategoriesByParentId(UUID parentId) {
@@ -328,6 +351,7 @@ public class CategoryService implements ICategoryService {
         if (category.getParent() != null) {
             dto.setParentId(category.getParent().getId());
         }
+        dto.setActive(category.getDeletedAt() == null);
         return dto;
     }
 
@@ -341,20 +365,22 @@ public class CategoryService implements ICategoryService {
         return genderDTO;
     }
 
-    private CategoryDTO mapToCategoryDTO(Category parent, List<Category> allCategories) {
+    private CategoryDTO mapToCategoryDTO(Category parent, List<Category> allCategories, Boolean isActive) {
+        // Lọc danh mục con theo parent và isActive
         List<Category> childCategories = allCategories.stream()
-                .filter(category -> parent.equals(category.getParent())) // Lọc danh mục con
+                .filter(category -> parent.equals(category.getParent()) &&
+                        (isActive == null ||
+                                (isActive ? category.getDeletedAt() == null : category.getDeletedAt() != null)))
                 .collect(Collectors.toList());
 
-        // Chuyển đổi danh mục con sang DTO
         List<CategoryDTO> children = new ArrayList<>();
         childCategories.sort(Comparator
                 .comparingInt(category -> category.getIndexNum() != null ? category.getIndexNum() : Integer.MAX_VALUE));
-        for (int i = 0; i < childCategories.size(); i++) {
-            Category child = childCategories.get(i);
-            CategoryDTO childDTO = mapToCategoryDTO(child, allCategories);
-            children.add(childDTO);
+
+        for (Category child : childCategories) {
+            children.add(mapToCategoryDTO(child, allCategories, isActive));
         }
+
         return new CategoryDTO().builder()
                 .id(parent.getId())
                 .slug(parent.getSlug())
@@ -363,6 +389,7 @@ public class CategoryService implements ICategoryService {
                 .imageUrl(parent.getImageUrl())
                 .items(children)
                 .index(parent.getIndexNum() != null ? parent.getIndexNum() : Integer.MAX_VALUE)
+                .active(parent.getDeletedAt() == null)
                 .build();
     }
 }

@@ -113,7 +113,7 @@ public class CollectionServiceImpl implements ICollectionService {
     @Override
     public TypeResponse<CollectionResponseDTO> getCollectionBySlug(String slug) {
         try {
-            Collection collection = collectionRepository.findBySlugAndStatusTrue(slug);
+            Collection collection = collectionRepository.findBySlug(slug);
             if (collection == null) {
                 ResponseHelper.notFound(ResponseMessage.COLLECTION_NOT_FOUND);
             }

@@ -86,9 +86,9 @@ public class CategoryController {
     @Operation(summary = "Lấy danh sách tất cả danh mục")
     @GetAllCategoryDocs
     @GetMapping
-    public ResponseEntity<TypeResponse<List<GenderCategoryGroup>>> getAllCategories() {
+    public ResponseEntity<TypeResponse<List<GenderCategoryGroup>>> getAllCategories(@RequestParam(required = false) Boolean isActive) {
         TypeResponse<List<GenderCategoryGroup>> groupedCategories = iCategoryService
-                .getAllCategoriesGroupByGender(null);
+                .getAllCategoriesGroupByGender(null, isActive);
         return ResponseEntity.status(groupedCategories.getStatusCode()).body(groupedCategories);
     }
     @Operation(summary = "Goi ý tìm kiếm danh mục")
@@ -121,8 +121,8 @@ public class CategoryController {
     @Operation(summary = "Lấy danh mục theo slug giới tính")
     @GetAllCategoryDocs
     @GetMapping("/gender/slug/{slug}")
-    public ResponseEntity<TypeResponse<List<GenderCategoryGroup>>> getAllByGenderBySlug(@PathVariable String slug) {
-        TypeResponse<List<GenderCategoryGroup>> groups = iCategoryService.getAllCategoriesGroupByGender(slug);
+    public ResponseEntity<TypeResponse<List<GenderCategoryGroup>>> getAllByGenderBySlug(@PathVariable String slug, @RequestParam Boolean isActive) {
+        TypeResponse<List<GenderCategoryGroup>> groups = iCategoryService.getAllCategoriesGroupByGender(slug,isActive);
         return ResponseEntity.status(groups.getStatusCode()).body(groups);
     }
     @Operation(summary = "Goi ý tìm kiếm giới tính")
@@ -131,5 +131,11 @@ public class CategoryController {
             @RequestParam String keyword ) {
         TypeResponse<List<GenderDTO>> genders = iCategoryService.searchGenderByName(keyword);
         return ResponseEntity.status(genders.getStatusCode()).body(genders);
+    }
+    @Operation(summary = "Restore category")
+    @PutMapping("/restore/{id}")
+    public ResponseEntity<TypeResponse<CategoryDTO>> restore(@PathVariable UUID id) {
+        TypeResponse<CategoryDTO> response = iCategoryService.restoreCategory(id);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 }

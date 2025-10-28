@@ -21,5 +21,6 @@ public class CategoryDTO {
     private UUID parentId;
     private GenderDTO gender;
     private List<CategoryDTO> items;
-    private int index;
+    private Integer index;
+    private Boolean active;
 }
