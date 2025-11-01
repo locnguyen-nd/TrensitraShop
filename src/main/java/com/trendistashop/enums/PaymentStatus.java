@@ -2,8 +2,11 @@ package com.trendistashop.enums;
 
 public enum PaymentStatus {
     CREATED,
+    PENDING,
     PAID,
     EXPIRED,
-    FAILED
-    // khởi tạo ,hoàn thành, hết hạn, hủy
+    FAILED,
+    REFUNDED,
+    CANCELLED
+    // khởi tạo ,hoàn thành, hết hạn, hủy, hoàn tiền
 }

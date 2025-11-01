@@ -16,8 +16,4 @@ public class ProductImageDTO {
     private String url;
     private Boolean isThumbnail;
     private Integer order;
-//    private UUID productId;
-//    private UUID variantId;
-//    private UUID colorId;
-
 }

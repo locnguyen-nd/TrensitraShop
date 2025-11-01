@@ -34,7 +34,7 @@ public class VietQRService {
         payload.put("accountName", vietQRConfig.getAccountName());
         payload.put("acqId", vietQRConfig.getBankId());
         payload.put("amount", amount);
-        payload.put("addInfo", "Order-" + order.getOrderCoder());
+        payload.put("addInfo", "Order-" + order.getOrderCode());
         payload.put("format", "text");
         payload.put("template", "compact2");
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
@@ -53,14 +53,14 @@ public class VietQRService {
                 return response.getData().getQrDataURL();
             } else {
                 String errorMessage = response != null ? response.getDesc() : "Unknown error";
-                log.error("Error generating QR code for order {}: {}", order.getOrderCoder(), errorMessage);
+                log.error("Error generating QR code for order {}: {}", order.getOrderCode(), errorMessage);
                 //throw new PaymentException("Failed to generate QR code: " + errorMessage);
             }
         }  catch (RestClientException e) {
-            log.error("Error calling VietQR API for order {}: {}", order.getOrderCoder(), e.getMessage());
+            log.error("Error calling VietQR API for order {}: {}", order.getOrderCode(), e.getMessage());
             //throw new PaymentException("Failed to call VietQR API", e);
         } catch (Exception e) {
-            log.error("Unexpected error generating QR code for order {}: {}", order.getOrderCoder(), e.getMessage());
+            log.error("Unexpected error generating QR code for order {}: {}", order.getOrderCode(), e.getMessage());
            // throw new PaymentException("Unexpected error generating QR code", e);
         }
         return null;

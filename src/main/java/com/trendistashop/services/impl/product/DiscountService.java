@@ -8,7 +8,8 @@ import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.entities.category.Category;
 import com.trendistashop.entities.product.Discount;
 import com.trendistashop.entities.product.Product;
-import com.trendistashop.entities.user.Order;
+import com.trendistashop.entities.user.CartItem;
+import com.trendistashop.enums.DiscountApplyFor;
 import com.trendistashop.enums.DiscountType;
 import com.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistashop.helper.GenerateCodeDiscount;
@@ -64,7 +65,7 @@ public class DiscountService {
                     .code(discountDto.getCode())
                     .description(discountDto.getDescription())
                     .discountType(discountDto.getDiscountType())
-                    .discountApply(discountDto.getDiscountApply())
+                    .discountApplyFor(discountDto.getDiscountApplyFor())
                     .discountValue(discountDto.getDiscountValue())
                     .frame(discountDto.getFrame())
                     .maxDiscountValue(discountDto.getMaxDiscountValue())
@@ -161,7 +162,7 @@ public class DiscountService {
             existingDiscount.setCode(discountDto.getCode());
             existingDiscount.setDescription(discountDto.getDescription());
             existingDiscount.setDiscountType(discountDto.getDiscountType());
-            existingDiscount.setDiscountApply(discountDto.getDiscountApply());
+            existingDiscount.setDiscountApplyFor(discountDto.getDiscountApplyFor());
             existingDiscount.setDiscountValue(discountDto.getDiscountValue());
             existingDiscount.setMaxDiscountValue(discountDto.getMaxDiscountValue());
             existingDiscount.setMinOrderValue(discountDto.getMinOrderValue());
@@ -259,46 +260,6 @@ public class DiscountService {
         }
     }
 
-    public TypeResponse<DiscountApply> applyDiscountToOrder(String discountCode, UUID orderId) {
-        try {
-            Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
-            Order order = orderRepository.findById(orderId).get();
-            if (discountOptional  == null || order == null){
-                ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
-            }
-            if (order.getDiscount() != null && order.getDiscount().getCode().equals(discountCode)) {
-                return null;
-            }
-            if (!discountOptional.getIsActive()
-                    || LocalDateTime.now().isBefore(discountOptional.getStartDate())
-                    || LocalDateTime.now().isAfter(discountOptional.getEndDate())) {
-                return null;
-            }
-            if (discountOptional.getDiscountApply() == com.trendistashop.enums.DiscountApply.ORDER
-                    && order.getTotalAmount().compareTo(discountOptional.getMinOrderValue()) < 0) {
-                return null;
-            }
-            // Calculate discount amount
-            BigDecimal discountAmount = calculateDiscountAmount(discountOptional, order.getTotalAmount());
-            BigDecimal originPrice = order.getOrderItems().stream()
-                    .findFirst()
-                    .map(orderItem -> orderItem.getProduct().getOriginPrice())
-                    .orElse(BigDecimal.ZERO);
-
-            BigDecimal saved = originPrice.subtract(discountAmount);
-            DiscountApply discountApply = DiscountApply.builder()
-                    .code(discountOptional.getCode())
-                    .valueApply(discountAmount)
-                    .saved(saved)
-                    .build();
-            order.setDiscount(discountOptional);
-            orderRepository.save(order);
-            return ResponseHelper.ok(discountApply, ResponseMessage.FETCH_SUCCESS);
-        } catch (Exception e) {
-            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
-        }
-    }
-
     public TypeResponse<BigDecimal> applyDiscountToNewProduct(String discountCode, BigDecimal price) {
         try {
             Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
@@ -321,7 +282,7 @@ public class DiscountService {
 
     private BigDecimal calculateDiscountAmount(Discount discount, BigDecimal price) {
         BigDecimal discountAmount;
-        if (discount.getDiscountApply() == com.trendistashop.enums.DiscountApply.PRODUCT) {
+        if (discount.getDiscountApplyFor() == DiscountApplyFor.PRODUCT) {
             if (discount.getDiscountType() == DiscountType.PERCENT) {
                 discountAmount = price.multiply(discount.getDiscountValue().divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP));
             } else {
@@ -351,7 +312,7 @@ public class DiscountService {
                 .frame(discount.getFrame())
                 .description(discount.getDescription())
                 .discountType(discount.getDiscountType())
-                .discountApply(discount.getDiscountApply())
+                .discountApplyFor(discount.getDiscountApplyFor())
                 .discountValue(discount.getDiscountValue())
                 .maxDiscountValue(discount.getMaxDiscountValue())
                 .minOrderValue(discount.getMinOrderValue())
@@ -449,7 +410,7 @@ public class DiscountService {
             finalPrice = calculateFixedDiscount(basePrice, discount.getDiscountValue());
             discountValue = calculateEffectiveDiscountPercentage(basePrice, discount.getDiscountValue());
         }
-        if(com.trendistashop.enums.DiscountApply.PRODUCT.equals(discount.getDiscountApply()))
+        if(DiscountApplyFor.PRODUCT.equals(discount.getDiscountApplyFor()))
         {
             product.setPrice(finalPrice.max(BigDecimal.ZERO));
         }
@@ -486,6 +447,66 @@ public class DiscountService {
 
     private void updateProductPrice(Product product) {
         productRepository.save(product);
+    }
+
+
+    public DiscountApply previewDiscountForOrder(UUID id, BigDecimal subtotal, List<CartItem> items) {
+        Discount discount = discountRepository.findById(id).orElse(null);
+        if (discount == null || !discount.getIsActive()) return null;
+
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(discount.getStartDate()) || now.isAfter(discount.getEndDate())) return null;
+        if (discount.getMinOrderValue() != null && subtotal.compareTo(discount.getMinOrderValue()) < 0) return null;
+
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (discount.getDiscountApplyFor() == DiscountApplyFor.ORDER) {
+            if (discount.getDiscountType() == DiscountType.PERCENT) {
+                discountAmount = subtotal.multiply(discount.getDiscountValue())
+                        .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
+                if (discount.getMaxDiscountValue() != null) {
+                    discountAmount = discountAmount.min(discount.getMaxDiscountValue());
+                }
+            } else {
+                discountAmount = discount.getDiscountValue();
+                if (discount.getMaxDiscountValue() != null) {
+                    discountAmount = discountAmount.min(discount.getMaxDiscountValue());
+                }
+            }
+        }
+
+        // === GIẢM PHÍ SHIP (SHIPPING) ===
+        else if (discount.getDiscountApplyFor() == DiscountApplyFor.SHIPPING) {
+            BigDecimal defaultShippingFee = BigDecimal.valueOf(30000);
+
+            if (discount.getDiscountType() == DiscountType.AMOUNT) {
+                discountAmount = discount.getDiscountValue();
+                if (discountAmount.compareTo(defaultShippingFee) >= 0) {
+                    discountAmount = defaultShippingFee; // free ship
+                }
+            } else if (discount.getDiscountType() == DiscountType.PERCENT) {
+                if (discount.getDiscountValue().compareTo(BigDecimal.valueOf(100)) >= 0) {
+                    discountAmount = defaultShippingFee; // 100% → free ship
+                } else {
+                    discountAmount = defaultShippingFee.multiply(discount.getDiscountValue())
+                            .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
+                }
+            }
+        }
+
+        // Nếu không phải ORDER hoặc SHIPPING → không áp dụng
+        else {
+            return null;
+        }
+
+        return DiscountApply.builder()
+                .id(id)
+                .code(discount.getCode())
+                .valueApply(discountAmount)
+                .saved(discountAmount)
+                .applyType(discount.getDiscountApplyFor() == DiscountApplyFor.ORDER
+                        ? DiscountApplyFor.ORDER
+                        : DiscountApplyFor.SHIPPING)
+                .build();
     }
 }
 

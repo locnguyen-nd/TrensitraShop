@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -114,5 +115,14 @@ public class VariantService {
         // Lưu các ProductVariant (mới và cập nhật)
         List<ProductVariant> savedVariants = productVariantRepository.saveAll(variantsToSave);
         return savedVariants;
+    }
+    public int getStockForVariant(UUID variantId) {
+        Integer stock = productVariantRepository.findStockById(variantId);
+        return stock != null ? stock : 0;
+    }
+    public ProductVariant getVariantById(UUID variantId) {
+        log.info("Get variant by id {}", variantId);
+        return productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundEx("Product variant not found"));
     }
 }

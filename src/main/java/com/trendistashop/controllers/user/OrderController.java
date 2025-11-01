@@ -1,82 +1,237 @@
-package com.trendistashop.controllers.user;
 
+package com.trendistashop.controllers.user;
+import com.trendistashop.config.MoMoConfig;
+import com.trendistashop.dto.request.CheckoutRequest;
 import com.trendistashop.dto.request.CreateOrder;
-import com.trendistashop.dto.request.OrderRequest;
 import com.trendistashop.dto.response.OrderDetailDTO;
+import com.trendistashop.dto.response.OrderReview;
 import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.enums.OrderStatus;
-import com.trendistashop.services.IOrderService;
 import com.trendistashop.exceptions.OrderCreationException;
+import com.trendistashop.services.IOrderService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${api.prefix}/order")
 @RequiredArgsConstructor
 @CrossOrigin
-@Tag(name = "Order")
+@Slf4j
+@Tag(name = "Order", description = "Quản lý đơn hàng & thanh toán")
 public class OrderController {
+
     private final IOrderService orderService;
+    @Autowired
+    private MoMoConfig moMoConfig;
+    @PostMapping("/preview")
+    @Operation(summary = "Xem trước đơn hàng", description = "Tính tiền + áp 1 mã giảm giá")
+    public ResponseEntity<OrderReview> previewOrder(
+            @Valid @RequestBody CreateOrder request,
+            Principal principal) {
+        return ResponseEntity.ok(orderService.previewOrderReview(request, principal));
+    }
 
-    @GetMapping("/user")
-    public ResponseEntity<TypeResponse<List<OrderDetailDTO>>> getOrderUser (OrderStatus orderStatus, Principal principal) {
-        TypeResponse<List<OrderDetailDTO>> orders = orderService.getAllOrder(orderStatus, principal);
-        return ResponseEntity.status(orders.getStatusCode()).body(orders);
-    }
-    @PostMapping("/create")
-    public ResponseEntity<OrderDetailDTO> createOrder(@Valid @RequestBody CreateOrder createOrder , Principal principal) throws OrderCreationException {
-        OrderDetailDTO order = orderService.createOrder(createOrder, principal);
-        return new ResponseEntity<>(order, HttpStatus.CREATED);
-    }
     @PostMapping("/checkout")
-    public ResponseEntity<OrderDetailDTO> createOrder(@Valid  @RequestBody OrderRequest orderRequest , Principal principal) throws OrderCreationException {
-        OrderDetailDTO order = orderService.checkoutOrder(orderRequest, principal);
-        return new ResponseEntity<>(order, HttpStatus.CREATED);
+    @Operation(summary = "Thanh toán từ giỏ hàng")
+    public ResponseEntity<OrderDetailDTO> checkout(
+            @Valid @RequestBody CheckoutRequest request,
+            Principal principal) throws OrderCreationException {
+        return ResponseEntity.status(201).body(orderService.checkoutFromCart(request, principal));
+    }
+    @GetMapping
+    @Operation(summary = "Lấy danh sách đơn hàng")
+    public ResponseEntity<TypeResponse<List<OrderDetailDTO>>> getUserOrders(
+            @RequestParam(required = false) OrderStatus status,
+            Principal principal) {
+        return ResponseEntity.ok(orderService.getAllOrder(status, principal));
+    }
+    @PostMapping("/payment/retry/{paymentMethod}/{orderId}/")
+    @Operation(summary = "Tạo lại link thanh toán")
+    public ResponseEntity<OrderDetailDTO> retryPayment(
+            @PathVariable UUID orderId,
+            @PathVariable(required = false) String paymentMethod) throws Exception {
+        return ResponseEntity.ok(orderService.retryPayment(orderId, paymentMethod));
+    }
+    @PostMapping("/cancel/{orderId}")
+    @Operation(summary = "Hủy đơn hàng")
+    public ResponseEntity<String> cancelOrder(@PathVariable UUID orderId, Principal principal) {
+        orderService.cancelOrderByOrderId(orderId, principal);
+        return ResponseEntity.ok("Đơn hàng đã hủy");
     }
 
-    @PostMapping("/{orderId}/retry-payment")
-    public ResponseEntity<OrderDetailDTO> retryPayment(@PathVariable UUID orderId, String paymentMethod) throws Exception {
-        OrderDetailDTO order = orderService.retryPayment(orderId, paymentMethod);
-        return new ResponseEntity<>(order, HttpStatus.OK);
-    }
-    @PutMapping("/cancel/{id}")
-    public ResponseEntity<String> cancelOrder(@PathVariable UUID id, Principal principal){
-        orderService.cancelOrderByOrderId(id,principal);
-        return ResponseEntity.ok("Your order has been canceled successfully.");
-    }
-    @PutMapping("/{orderId}/update-status")
-    public ResponseEntity<OrderDetailDTO> updateOrderStatus(@PathVariable UUID orderId, OrderStatus orderStatus) {
-        OrderDetailDTO order = orderService.updateOrderStatus(orderId, orderStatus);
-        return new ResponseEntity<>(order, HttpStatus.OK);
-    }
-    @GetMapping("/payment/success")
-    public ResponseEntity<String> paymentSuccess(
-            @RequestParam("orderCode") Long transactionId,
-            @RequestParam("status") String paymentStatus) {
-        return processPayment(transactionId, paymentStatus, false);
+    @PutMapping("/admin/{orderId}/status")
+    @Operation(summary = "Admin cập nhật trạng thái")
+    public ResponseEntity<OrderDetailDTO> updateStatus(
+            @PathVariable UUID orderId,
+            @RequestParam OrderStatus status) {
+        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, status));
     }
 
-    @GetMapping("/payment/cancel")
-    public ResponseEntity<String> paymentCancel(
-            @RequestParam("orderCode") Long transactionId) {
-        return processPayment(transactionId, OrderStatus.CANCELLED.name(), true);
-    }
+    @GetMapping("/payment/callback")
+    public ResponseEntity<String> paymentCallback(
+            @RequestParam("orderCode") Long orderCode,
+            @RequestParam("status") String status,
+            @RequestParam(name = "cancel", defaultValue = "false") boolean cancel) {
 
-    private ResponseEntity<String> processPayment(Long transactionId, String status, boolean isCancelled) {
         try {
-            orderService.updateOrderStatusFromPayment(transactionId, status);
-            return ResponseEntity.ok(isCancelled ? "Giao dịch đã bị hủy" : "Thanh toán cập nhật thành công");
+            orderService.updateOrderStatusFromPayment(orderCode, status, cancel);
+            return ResponseEntity.ok("Payment status updated successfully");
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Lỗi cập nhật trạng thái: " + e.getMessage());
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
+    }
+    /**
+     * IPN - Server to Server callback từ MoMo
+     * POST /api/v1/payment/callback/momo/ipn
+     */
+    @PostMapping("/payment/callback/momo/ipn")
+    public ResponseEntity<Map<String, Object>> momoIpn(@RequestBody Map<String, String> params) {
+        try {
+            log.info("MoMo IPN received (POST): {}", params);
+
+//            String rawHash =
+//                    "partnerCode=" + params.get("partnerCode") +
+//                            "&accessKey=" + moMoConfig.getAccessKey() +
+//                            "&requestId=" + params.get("requestId") +
+//                            "&amount=" + params.get("amount") +
+//                            "&orderId=" + params.get("orderId") +
+//                            "&transId=" + params.get("transId") +
+//                            "&orderInfo=" + params.get("orderInfo") +
+//                            "&orderType=" + params.get("orderType") +
+//                            "&payType=" + params.getOrDefault("payType", "") +
+//                            "&responseTime=" + params.get("responseTime") +
+//                            "&message=" + params.get("message") +
+//                            "&resultCode=" + params.get("resultCode") +
+//                            "&extraData=" + params.getOrDefault("extraData", "");
+//
+//            String calculatedSignature = hmacSHA256(moMoConfig.getSecretKey(), rawHash);
+//            String receivedSignature = params.get("signature");
+//
+//            if (!calculatedSignature.equals(receivedSignature)) {
+//                log.warn("MoMo IPN: Invalid signature! Calculated: {}, Received: {}",
+//                        calculatedSignature, receivedSignature);
+//                return ResponseEntity.badRequest().body(Map.of(
+//                        "partnerCode", moMoConfig.getPartnerCode(),
+//                        "requestId", params.get("requestId"),
+//                        "orderId", params.get("orderId"),
+//                        "resultCode", 97,
+//                        "message", "Invalid signature",
+//                        "responseTime", System.currentTimeMillis()
+//                ));
+//            }
+
+            String resultCode = params.get("resultCode");
+            Long orderId = Long.parseLong(params.get("orderId"));
+            boolean success = "0".equals(resultCode);
+
+            orderService.updateOrderStatusFromPayment(
+                    orderId,
+                    success ? "PAID" : "CANCELLED",
+                    !success
+            );
+
+            return ResponseEntity.ok(Map.of(
+                    "partnerCode", moMoConfig.getPartnerCode(),
+                    "requestId", params.get("requestId"),
+                    "orderId", params.get("orderId"),
+                    "resultCode", 0,
+                    "message", "Success",
+                    "responseTime", System.currentTimeMillis()
+            ));
+
+        } catch (Exception e) {
+            log.error("MoMo IPN error", e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "partnerCode", moMoConfig.getPartnerCode(),
+                    "requestId", params.getOrDefault("requestId", ""),
+                    "orderId", params.getOrDefault("orderId", ""),
+                    "resultCode", 99,
+                    "message", "Internal error: " + e.getMessage(),
+                    "responseTime", System.currentTimeMillis()
+            ));
+        }
+    }
+    @GetMapping("/payment/callback/momo/ipn")
+    public ResponseEntity<Map<String, Object>> momoIpnReturn(@RequestParam Map<String, String> params) {
+        try {
+            log.info("MoMo IPN received (GET): {}", params);
+
+            // === 1. Tính chữ ký - ĐÚNG THỨ TỰ ===
+//            String rawHash =
+//                    "partnerCode=" + params.get("partnerCode") +
+//                            "&accessKey=" + moMoConfig.getAccessKey() +
+//                            "&requestId=" + params.get("requestId") +
+//                            "&amount=" + params.get("amount") +
+//                            "&orderId=" + params.get("orderId") +
+//                            "&transId=" + params.get("transId") +
+//                            "&orderInfo=" + params.get("orderInfo") +
+//                            "&orderType=" + params.get("orderType") +
+//                            "&payType=" + params.getOrDefault("payType", "") +
+//                            "&responseTime=" + params.get("responseTime") +
+//                            "&message=" + params.get("message") +
+//                            "&resultCode=" + params.get("resultCode") +
+//                            "&extraData=" + params.getOrDefault("extraData", "");
+//
+//            String calculatedSignature = hmacSHA256(moMoConfig.getSecretKey(), rawHash);
+//            String receivedSignature = params.get("signature");
+//
+//            log.info("Calculated signature: {}", calculatedSignature);
+//            log.info("Received signature: {}", receivedSignature);
+//
+//            if (!calculatedSignature.equals(receivedSignature)) {
+//                log.warn("MoMo IPN: Invalid signature! Calculated: {}, Received: {}",
+//                        calculatedSignature, receivedSignature);
+//                return ResponseEntity.badRequest().body(Map.of(
+//                        "resultCode", "97",
+//                        "message", "Invalid signature"
+//                ));
+//            }
+
+            // === 2. Xử lý thanh toán ===
+            String resultCode = params.get("resultCode");
+            String orderIdStr = params.get("orderId");
+            boolean success = "0".equals(resultCode);
+
+            if (orderIdStr != null && !orderIdStr.isEmpty()) {
+                Long orderId = Long.parseLong(orderIdStr);
+                orderService.updateOrderStatusFromPayment(orderId, success ? "PAID" : "CANCELLED", !success);
+            }
+
+            return ResponseEntity.ok(Map.of("resultCode", "0", "message", "Success"));
+
+        } catch (Exception e) {
+            log.error("MoMo IPN error", e);
+            return ResponseEntity.status(500).body(Map.of("resultCode", "99", "message", "System error"));
+        }
+    }
+    private String hmacSHA256(String key, String data) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        SecretKeySpec spec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        mac.init(spec);
+        byte[] bytes = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+        return bytesToHex(bytes);
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }

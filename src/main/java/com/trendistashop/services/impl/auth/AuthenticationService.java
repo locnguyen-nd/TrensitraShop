@@ -407,24 +407,27 @@ public class AuthenticationService implements IAuthenticationService {
             String lastName = oAuth2User.getAttribute("family_name");
             String email = oAuth2User.getAttribute("email");
             String avatar = oAuth2User.getAttribute("picture");
-            System.out.println(email);
+            String phone = oAuth2User.getAttribute("phone_number");
+//            System.out.println(email);
             UserEntity user = UserEntity.builder()
                     .firstName(firstName)
                     .lastName(lastName)
                     .email(email)
+                    .phoneNumber(phone)
                     .avatar(avatar)
                     .provider(ProviderEnum.GOOGLE)
                     .enabled(true)
                     .roles(authorizationService.getUserRole())
                     .build();
-            if (user.getUserCart() == null) {
-                Cart newCart = new Cart();
-                newCart.setUser(user);
-                newCart.setCartItems(new ArrayList<>());
-                newCart.setCartTotal(BigDecimal.ZERO);
-                user.setUserCart(newCart);
-            }
-            return userDetailRepository.save(user);
+
+            Cart newCart = new Cart();
+            newCart.setUser(user);
+            newCart.setCartItems(new ArrayList<>());
+            newCart.setCartTotal(BigDecimal.ZERO);
+            user.setUserCart(newCart);
+            UserEntity savedUser = userDetailRepository.save(user);
+            log.info("Google user created successfully: {}", email);
+            return savedUser;
         } catch (Exception e) {
             log.error("Error creating account");
             throw new ServerErrorException(e.getMessage(), e.getCause());

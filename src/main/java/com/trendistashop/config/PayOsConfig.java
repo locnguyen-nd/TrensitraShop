@@ -9,10 +9,8 @@ import org.springframework.context.annotation.Configuration;
 public class PayOsConfig {
     @Value("${PAYOS_CLIENT_ID}")
     private String clientId;
-
     @Value("${PAYOS_API_KEY}")
     private String apiKey;
-
     @Value("${PAYOS_CHECKSUM_KEY}")
     private String checksumKey;
     public static final int ORDER_TIMEOUT_MINUTES = 10;
@@ -20,4 +18,6 @@ public class PayOsConfig {
     private String returnUrl;
     @Value("${PAYOS_CANCEL_URL}")
     private String cancelUrl;
+    @Value("${PAYOS_PAY_RETRY}")
+    private String paymentRetry;
 }

@@ -40,7 +40,7 @@ services:
       - ./pom.xml:/app/pom.xml:ro
       - ./target:/app/target:rw
       - maven_cache:/root/.m2
-      - ./src/main/resources/application.properties:/app/src/main/resources/application.properties:ro
+      - ./src/main/resources/application.yml:/app/src/main/resources/application.yml:ro
     tty: true
     stdin_open: true
 

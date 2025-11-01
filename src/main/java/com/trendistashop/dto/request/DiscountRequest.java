@@ -1,10 +1,8 @@
 package com.trendistashop.dto.request;
 
-import com.trendistashop.enums.DiscountApply;
+import com.trendistashop.enums.DiscountApplyFor;
 import com.trendistashop.enums.DiscountType;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 import org.hibernate.validator.constraints.URL;
 
@@ -15,7 +13,7 @@ public class DiscountRequest {
         private String code;
         private String description;
         private DiscountType discountType;
-        private DiscountApply discountApply;
+        private DiscountApplyFor discountApplyFor;
         @Min(value = 0)
         private BigDecimal discountValue;
         private BigDecimal maxDiscountValue;

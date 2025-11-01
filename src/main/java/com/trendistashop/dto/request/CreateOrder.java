@@ -1,7 +1,10 @@
 package com.trendistashop.dto.request;
 
+import com.trendistashop.enums.PaymentMethod;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,7 +17,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class CreateOrder {
-    @NotNull(message = "Order items cannot be null")
     @NotEmpty(message = "Order must have at least one item")
     private List<UUID> orderItems;
+    @Size(max = 2, message = "Chỉ được áp dụng tối đa 2 mã giảm giá")
+    private List<UUID> discountId;
 }
