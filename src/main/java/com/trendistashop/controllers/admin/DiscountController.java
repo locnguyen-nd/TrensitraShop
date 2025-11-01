@@ -1,8 +1,8 @@
 package com.trendistashop.controllers.admin;
-import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.docs.example.DiscountRequestExamples;
 import com.trendistashop.dto.request.DiscountRequest;
 import com.trendistashop.dto.response.*;
+import com.trendistashop.enums.DiscountApplyFor;
 import com.trendistashop.enums.DiscountType;
 import com.trendistashop.helper.PageConverter;
 import com.trendistashop.services.impl.product.DiscountService;
@@ -21,7 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -64,18 +63,11 @@ public class DiscountController {
         return ResponseEntity.status(createdDiscount.getStatusCode()).body(createdDiscount);
     }
 
-    @PutMapping(value = "/apply")
-    public ResponseEntity<TypeResponse<DiscountApply>> applyDiscount(
-            @RequestParam String discountCode,
-            @RequestParam UUID orderId) {
-        TypeResponse<DiscountApply> discountDTO = discountService.applyDiscountToOrder(discountCode, orderId);
-        return ResponseEntity.status(discountDTO.getStatusCode()).body(discountDTO);
-    }
     @GetMapping
     public ResponseEntity<TypeResponse<PageDTO<DiscountDTO>>> getAllDiscount(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) DiscountType discountType,
-            @RequestParam(required = false) com.trendistashop.enums.DiscountApply discountApply,
+            @RequestParam(required = false) DiscountApplyFor discountApplyFor,
             @RequestParam(required = false) BigDecimal discountValue,
             @RequestParam(required = false) BigDecimal maxDiscountValue,
             @RequestParam(required = false) BigDecimal maxDiscountValueFrom,
@@ -96,7 +88,7 @@ public class DiscountController {
         DiscountRequest discountRequest = new DiscountRequest();
         discountRequest.setCode(code);
         discountRequest.setDiscountType(discountType);
-        discountRequest.setDiscountApply(discountApply);
+        discountRequest.setDiscountApplyFor(discountApplyFor);
         discountRequest.setDiscountValue(discountValue);
         discountRequest.setMaxDiscountValue(maxDiscountValue);
         discountRequest.setMaxDiscountValueFrom(maxDiscountValueFrom);

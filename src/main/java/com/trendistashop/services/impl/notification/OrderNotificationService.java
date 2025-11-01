@@ -24,7 +24,7 @@ public class OrderNotificationService {
         notificationEventHandler.notifyOrderPlaced(
                 order.getUser().getId(),
                 order.getId(),
-                order.getOrderCoder().toString()
+                order.getOrderCode().toString()
         );
     }
     /**

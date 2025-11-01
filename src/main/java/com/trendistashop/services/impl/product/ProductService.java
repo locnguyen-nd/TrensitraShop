@@ -324,6 +324,11 @@ public class ProductService implements IProductService {
         }
     }
 
+    @Override
+    public ProductVariant productVariantById(UUID id) {
+        return variantService.getVariantById(id);
+    }
+
     private Product buildBasicProduct(ProductRequestDTO dto) {
         return Product.builder()
                 .name(dto.getName())

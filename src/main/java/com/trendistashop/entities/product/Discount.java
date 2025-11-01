@@ -2,7 +2,7 @@ package com.trendistashop.entities.product;
 
 import com.trendistashop.entities.category.Category;
 import com.trendistashop.entities.BaseEntity;
-import com.trendistashop.enums.DiscountApply;
+import com.trendistashop.enums.DiscountApplyFor;
 import com.trendistashop.enums.DiscountType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -38,7 +38,7 @@ public class Discount extends BaseEntity {
     private DiscountType discountType; // % or VNĐ
     @Enumerated(EnumType.STRING)
     @Column(name = "discount_apply", nullable = false)
-    private DiscountApply discountApply;
+    private DiscountApplyFor discountApplyFor;
 
     @Column(name = "discount_value", precision = 10, scale = 2, nullable = false)
     private BigDecimal discountValue; // 30% or VNĐ

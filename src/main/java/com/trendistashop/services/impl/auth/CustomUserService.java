@@ -19,11 +19,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.security.Principal;
 import java.util.*;
 
 @Service
@@ -82,7 +84,7 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
 
     @Override
     @Transactional
-    public TypeResponse<UserDetailDTO> updateUser(UserUpdateDTO userUpdateDTO) {
+    public TypeResponse<UserDetailDTO> updateUser(Principal principal,UserUpdateDTO userUpdateDTO) {
         Optional<UserEntity> userOpt = userDetailRepository.findById(userUpdateDTO.getId());
         if (userOpt.isEmpty()) {
             return ResponseHelper.notFound(ResponseMessage.USER_NOT_FOUND);
@@ -99,28 +101,26 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         }
     }
 
-    // @Override
-    // @Transactional
-    // public TypeResponse<UserDetailDTO> updateAvatarUser(UUID userId,
-    // MultipartFile avatarFile) throws IOException {
-    // Optional<UserEntity> userOpt = userDetailRepository.findById(userId);
-    // if (userOpt.isEmpty()) {
-    // return ResponseHelper.notFound("Không tìm thấy người dùng");
-    // }
-    // UserEntity user = userOpt.get();
-    //
-    // if (avatarFile != null && !avatarFile.isEmpty() && user.getAvatar() != null)
-    // {
-    // cloudinaryService.deleteFile(user.getAvatar());
-    // }
-    // if (avatarFile != null && !avatarFile.isEmpty()) {
-    // String imageUrl = cloudinaryService.uploadFile(avatarFile, null, "AVATAR");
-    // user.setAvatar(imageUrl);
-    // }
-    // UserEntity updatedUser = userDetailRepository.save(user);
-    // return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), "Cập
-    // nhật ảnh đại diện người dùng thành công");
-    // }
+    @Override
+    @Transactional
+    public TypeResponse<UserDetailDTO> updateAvatarUser(Principal principal,String avatarUrl) {
+        Optional<UserEntity> userOpt = userDetailRepository.findByEmail(principal.getName());
+        if (userOpt.isEmpty()) {
+            return ResponseHelper.notFound(ResponseMessage.USER_NOT_FOUND);
+        }
+        UserEntity user = userOpt.get();
+        try {
+            if (user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+                cloudinaryService.deleteFile(user.getAvatar());
+            }
+            user.setAvatar(avatarUrl);
+            UserEntity updatedUser = userDetailRepository.save(user);
+            return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser),
+                    ResponseMessage.UPDATE_SUCCESS);
+        } catch (Exception e) {
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
+        }
+    }
 
     @Transactional
     public TypeResponse<UserDetailDTO> assignRolesToUser(UUID userId, Set<UUID> roleIds) {

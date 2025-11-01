@@ -1,0 +1,151 @@
+spring:
+  application:
+    name: TrendistaShop
+  datasource:
+#    url: jdbc:mysql://localhost:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
+#    username: root
+#    password: Nguyenloc2002
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+
+#     Docker configuration (commented)
+     url: jdbc:mysql://mysql:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
+     username: root
+     password: root
+
+    # Railway server configuration (commented)
+    # url: jdbc:mysql://junction.proxy.rlwy.net:18453/trendista
+    # username: root
+    # password: WXTxWwINhIsJsqtNiQCsBCJmxqwuPVlv
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+  # Mail Configuration
+  mail:
+    host: smtp.gmail.com
+    port: 465
+    username: nguyenlocit4.0@gmail.com
+    backup-email: hoainamadmin@gmail.com
+    password: iseegpjnfuylzzzs
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+            trust: smtp.gmail.com
+  # OAuth2 Google
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: 705118969097-891kpir8tbpgc84o6a5m5lsruh8mimud.apps.googleusercontent.com
+            client-secret: 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
+            redirect-uri: http://localhost:8080/login/oauth2/code/google
+            scope: openid,profile,email
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+  # Static Resources
+  web:
+    resources:
+      static-locations: classpath:/static/,classpath:/public/
+      add-mappings: true
+server:
+  port: 8080
+  # port: 5000  # Alternative port (commented)
+
+api:
+  prefix: /api/v1
+
+frontend:
+  dev:
+    url: http://localhost:3000
+  prod:
+    url: http://localhost:4000
+
+admin:
+  dev:
+    url: http://localhost:5173
+  prod:
+    url: http://localhost:5183
+
+search:
+  suggestion:
+    limit: 5
+
+# Open API / Swagger UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    enabled: true
+
+application-title: API TRENDISTA
+
+# JWT Configuration
+jwt:
+  auth:
+    app: trendistaShop
+    secret_key: 7yFeP6uWa+Sa2LdMmAkS3UtQo/nzFRTO8r99Ep1ZCOQ=
+    expires_in: 86400
+    refresh_token:
+      expires_in: 604800
+    verification:
+      expires_in: 86400
+
+# Verification
+verification:
+  max_attempts: 5
+
+
+# Logging (uncomment to enable detailed logs)
+# logging:
+#   level:
+#     org.springframework.security: TRACE
+#     org.springframework.security.oauth2.client: TRACE
+#     org.springframework.security.oauth2.client.web: TRACE
+#     org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter: TRACE
+#     org.springframework.boot.autoconfigure.security: TRACE
+
+# VietQR Configuration
+vietqr:
+  client-id: 84527099-3ebc-476f-b28b-3378a70c7a70
+  api-key: c9f6f999-f5a8-452e-aef2-ec790274e92d
+  account-no: '5120778982'
+  account-name: NGUYEN DINH LOC
+  bank-id: ' 970418'  # Note: leading space preserve
+
+# PayOS Configuration
+PAYOS_CLIENT_ID: fc00707d-3953-4e8a-a19c-60ebd83eed12
+PAYOS_API_KEY: c6d8df43-e013-4c8d-a5ec-13e8687604b8
+PAYOS_CHECKSUM_KEY: 24d89af6fc72ea51844703911f9993fa211955d61f78baa98ad5250534b87c1c
+PAYOS_RETURN_URL: http://localhost:8080/api/v1/order/payment/callback
+PAYOS_CANCEL_URL: http://localhost:8080/api/v1/order/payment/callback
+PAYOS_PAY_RETRY: http://localhost:8080/api/v1/order/payment/retry
+# Momo Configuration
+momo:
+  partnerCode: MOMOVJJH20250728_TEST
+  accessKey: gBIRJKOzkNAeiNCd
+  secretKey: nadKZDVuGg4w9kxlSU6AJ51wqZ2XcPu5
+  redirectUrl: http://localhost:8080/api/v1/order/payment/callback/momo/ipn
+  ipnUrl: http://localhost:8080/api/v1/order/payment/callback/momo/ipn
+  endpoint: https://test-payment.momo.vn/v2/gateway/api/create
+  requestType: captureWallet

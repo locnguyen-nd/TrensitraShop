@@ -52,10 +52,15 @@ public class Order extends BaseEntity {
     @JsonManagedReference("order-items") // Parent side of order-items relationship
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    @ManyToOne
-    @JoinColumn(name = "discount_id") // Tạo khóa ngoại discount_id
-    private Discount discount; // Mã giảm giá được áp dụng
-    private Long orderCoder;
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "order_discount",
+            joinColumns = @JoinColumn(name = "order_id"),
+            inverseJoinColumns = @JoinColumn(name = "discount_id")
+    )
+    private List<Discount> discounts = new ArrayList<>();
+    @Column(name = "order_code", nullable = false)
+    private Long orderCode;
     private String note;
     private LocalDateTime expiredAt;
     private LocalDateTime orderDate;

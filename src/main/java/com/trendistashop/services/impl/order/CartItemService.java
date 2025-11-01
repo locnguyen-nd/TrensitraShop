@@ -17,9 +17,8 @@ import java.util.Objects;
 public class CartItemService {
     @Autowired
     private ProductRepository productRepository;
-    public CartItem createItemForCart (CartDTO cartDTO, Cart useCart) throws OrderCreationException {
+    public CartItem createItemForCart (CartDTO cartDTO, Cart userCart) throws OrderCreationException {
         Product product = productRepository.findById(cartDTO.getProductId()).get();
-
 
         // check product variant
         ProductVariant productVariant = product.getProductVariants().stream()
@@ -28,17 +27,16 @@ public class CartItemService {
                 .orElseThrow(() -> new OrderCreationException("Invalid product variant"));
 
         // Check product image
-        ProductImage productImage = product.getImages().stream().
-                filter(image -> image.getIsThumbnail()&&Objects.equals(image.getColor().getId(), productVariant.getColor().getId()))
+        ProductImage productImage = product.getImages().stream()
+                .filter(image ->
+                        image.getIsThumbnail()
+                                && Objects.equals(image.getColor().getId(), productVariant.getColor().getId())
+                                && Objects.equals(image.getSize().getId(), productVariant.getSize().getId())
+                )
                 .findFirst()
                 .orElseThrow(() -> new OrderCreationException("Invalid product image"));
-
-        // Check stock availability
-        if (productVariant.getStockQuantity() < cartDTO.getQuantity()) {
-            throw new OrderCreationException("Insufficient stock for product variant: " + productVariant.getProduct().getName());
-        }
         CartItem newItem = CartItem.builder()
-                .cart(useCart)
+                .cart(userCart)
                 .cartProduct(product)
                 .productVariantId(cartDTO.getVariantDTO().getId())
                 .productImageId(productImage.getId())

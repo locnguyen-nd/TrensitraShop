@@ -31,13 +31,12 @@ public class Payment extends BaseEntity {
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
-//    @Column(nullable = false)
-
     private String paymentStatus;
     @Lob
     @Column(columnDefinition = "MEDIUMTEXT")
     private String qrCode;
     private Long transactionId;
     private LocalDateTime paidAt;
+    private LocalDateTime cancelledAt;
     private String deepLink;
 }

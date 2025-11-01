@@ -16,6 +16,4 @@ public class OrderItemDTO {
     private VariantDTO variantDTO;
     private Integer quantity;
     private BigDecimal itemPrice;
-
-
 }

@@ -87,6 +87,7 @@ public class WebSecurityConfig {
             "/api/v1/test/**",
             "/api/v1/oauth2/**",
             "/api/v1/media/**",
+            "/api/v1/order/payment/callback/**",
             "/actuator/health/**",
             "/favicon.ico",
             "/*.html",
