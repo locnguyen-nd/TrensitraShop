@@ -63,7 +63,7 @@ public class HomeService implements IHomeService {
             }
             banner.setEvent(bannerDTO.getEvent());
             banner.setType(bannerDTO.getType());
-            banner.setIsActive(bannerDTO.getIsActive() != null ? bannerDTO.getIsActive() : true);
+            banner.setIsActive(bannerDTO.getIsActive() != null ? bannerDTO.getIsActive() : false);
             if (bannerDTO.getBannerImages() != null && !bannerDTO.getBannerImages().isEmpty()) {
                 List<BannerImage> bannerImages = bannerDTO.getBannerImages().stream()
                         .map(imageReq -> {
@@ -186,6 +186,40 @@ public class HomeService implements IHomeService {
         } catch (Exception e) {
             log.error("Error deleting banner: {}", e.getMessage());
             return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
+        }
+    }
+
+    @Override
+    public TypeResponse<BannerResponseDTO> setDisplay(Long id, Boolean isActive, BannerTypeEnum bannerTypeEnum) {
+        try {
+            Optional<Banner> existingBannerOpt = bannerRepository.findById(id);
+            if (existingBannerOpt.isEmpty()) {
+                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
+            }
+            Banner banner = existingBannerOpt.get();
+            if (Boolean.TRUE.equals(isActive)) {
+                int maxCount = bannerTypeEnum.getMaxCount();
+
+                long currentActiveCount = bannerRepository.countByTypeAndIsActiveTrue(bannerTypeEnum);
+                if (!banner.getIsActive() && currentActiveCount >= maxCount) {
+                    return ResponseHelper.badRequest(
+                            String.format(
+                                    "Đã đạt giới hạn hiển thị cho loại %s (tối đa %d). Hiện tại: %d",
+                                    bannerTypeEnum.getDisplayName(), maxCount, currentActiveCount
+                            )
+                    );
+                }
+            }
+
+            banner.setIsActive(isActive);
+            banner.setType(bannerTypeEnum);
+            bannerRepository.save(banner);
+            BannerResponseDTO bannerResponse = mapToBannerResponse(banner);
+            log.info("Cập nhật hiển thị banner ID: {}, isActive: {}, type: {}", id, isActive, bannerTypeEnum);
+            return ResponseHelper.ok(bannerResponse, ResponseMessage.UPDATE_SUCCESS);
+        } catch (Exception e) {
+            log.error("Lỗi cập nhật hiển thị banner ID: {}. Chi tiết: {}", id, e.getMessage(), e);
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
         }
     }
 

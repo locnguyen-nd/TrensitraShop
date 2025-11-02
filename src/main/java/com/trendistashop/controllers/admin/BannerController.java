@@ -90,4 +90,13 @@ public class BannerController {
         TypeResponse<Void> response = homeService.deleteBanner(id);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+    @PutMapping(value = "/toggle-status/{id}")
+    @Operation(summary = "Chuyển đổi trạng thái hiển thị của banner", description = "Chuyển đổi trạng thái hoạt động (active/inactive) của banner theo ID.")
+    public ResponseEntity<TypeResponse<BannerResponseDTO>> toggleBannerStatus(
+            @PathVariable Long id,
+            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(required = false) BannerTypeEnum bannerTypeEnum) {
+        TypeResponse<BannerResponseDTO> response = homeService.setDisplay(id, isActive, bannerTypeEnum);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }

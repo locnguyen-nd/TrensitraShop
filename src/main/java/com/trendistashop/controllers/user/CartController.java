@@ -17,6 +17,8 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,8 +53,13 @@ public class CartController {
     @Operation(summary = "Lấy danh sách sản phẩm trong giỏ hàng")
     @GetCartDocs
     @GetMapping
-    public ResponseEntity<TypeResponse<CartResponseDTO>> getCartProductHandler(Principal principal){
-        TypeResponse<CartResponseDTO> cart = iCartService.getCartProduct(principal);
+    public ResponseEntity<TypeResponse<CartResponseDTO>> getCart(
+            Principal principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+            ){
+        Pageable pageable = PageRequest.of(page, size);
+        TypeResponse<CartResponseDTO> cart = iCartService.getCartProduct(principal, pageable);
         return ResponseEntity.status(cart.getStatusCode()).body(cart);
     }
 

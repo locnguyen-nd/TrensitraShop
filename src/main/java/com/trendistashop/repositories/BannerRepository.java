@@ -12,4 +12,5 @@ import java.util.List;
 public interface BannerRepository extends JpaRepository<Banner,Long>, JpaSpecificationExecutor<Banner> {
     List<Banner> findBannerByTypeAndIsActiveTrue(BannerTypeEnum bannerTypeEnum);
     boolean existsByEvent(String event);
+    long countByTypeAndIsActiveTrue(BannerTypeEnum type);
 }

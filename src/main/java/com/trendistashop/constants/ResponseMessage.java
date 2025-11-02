@@ -67,7 +67,9 @@ public class ResponseMessage {
     public static final String BANNER_EVENT_EXISTS = "banner_event_exists";
     public static final String REQUIRED = "required";
     public static final String PAYMENT_CALLBACK_ERROR = "payment_callback_error";
-
+    public static final String ORDER_ALREADY_CANCELLED = "order_already_cancelled";
+    public static final String PAYMENT_NOT_FOUND = "payment_not_found";
+    public static final String MAX_CART = "max_cart_items_exceeded_20_items";
     private ResponseMessage() {
     }
 }

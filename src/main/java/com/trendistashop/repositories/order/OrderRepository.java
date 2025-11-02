@@ -4,6 +4,8 @@ import com.trendistashop.entities.user.Order;
 import com.trendistashop.entities.user.UserEntity;
 import com.trendistashop.enums.OrderStatus;
 import com.trendistashop.enums.PaymentStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,7 +21,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     /**
      * Tìm tất cả đơn hàng của một user
      */
-    List<Order> findByUser(UserEntity user);
+    Page<Order> findByUser(UserEntity user, Pageable pageable);
 
     /**
      * Tìm đơn hàng theo user và trạng thái
