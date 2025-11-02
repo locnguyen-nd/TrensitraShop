@@ -166,7 +166,7 @@ public class AuthController {
     /**
      * Quên mật khẩu.
      *
-     * @param email chứa email của người dùng cần quên mật khẩu.
+     * @param request chứa email của người dùng cần quên mật khẩu.
      * @return ResponseEntity chứa lỗi nếu email không tồn tại, hoặc không tồn tại.
      */
     @Operation(summary = "Quên mật khẩu")
@@ -181,7 +181,7 @@ public class AuthController {
     /**
      * Gửi lại quên mật khẩu.
      *
-     * @param email chứa email của người dùng cần quên mật khẩu.
+     * @param request chứa email của người dùng cần quên mật khẩu.
      * @return ResponseEntity chứa lỗi nếu email không tồn tại, hoặc không tồn tại.
      */
     @Operation(summary = "Gửi lại mã quên mật khẩu")

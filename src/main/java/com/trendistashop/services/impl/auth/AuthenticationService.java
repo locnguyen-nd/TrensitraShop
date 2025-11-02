@@ -102,6 +102,14 @@ public class AuthenticationService implements IAuthenticationService {
                     String verificationToken = jwtTokenHelper.generateVerificationToken(user.getEmail());
                     emailService.sendVerificationEmail(user, verificationToken);
                 }
+                if (user.getUserCart() == null && guard != GuardType.ADMIN) {
+                    Cart newCart = new Cart();
+                    newCart.setUser(user);
+                    newCart.setCartItems(new ArrayList<>());
+                    newCart.setCartTotal(BigDecimal.ZERO);
+                    user.setUserCart(newCart);
+                    userDetailRepository.save(user);
+                }
                 String token = jwtTokenHelper.generateToken(userName);
                 LoginResponse loginResponse = LoginResponse.builder()
                         .id(user.getId())

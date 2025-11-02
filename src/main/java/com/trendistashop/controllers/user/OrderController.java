@@ -5,16 +5,21 @@ import com.trendistashop.dto.request.CheckoutRequest;
 import com.trendistashop.dto.request.CreateOrder;
 import com.trendistashop.dto.response.OrderDetailDTO;
 import com.trendistashop.dto.response.OrderReview;
+import com.trendistashop.dto.response.PageDTO;
 import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.enums.OrderStatus;
 import com.trendistashop.exceptions.OrderCreationException;
 import com.trendistashop.services.IOrderService;
+import com.trendistashop.utils.ResponseHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
@@ -39,61 +44,64 @@ public class OrderController {
     @Autowired
     private MoMoConfig moMoConfig;
     @PostMapping("/preview")
-    @Operation(summary = "Xem trước đơn hàng", description = "Tính tiền + áp 1 mã giảm giá")
-    public ResponseEntity<OrderReview> previewOrder(
+    @Operation(summary = "Xem trước đơn hàng", description = "Tính tiền  khi áp 1 mã giảm giá")
+    public ResponseEntity<TypeResponse<OrderReview>> previewOrder(
             @Valid @RequestBody CreateOrder request,
             Principal principal) {
-        return ResponseEntity.ok(orderService.previewOrderReview(request, principal));
+        TypeResponse<OrderReview> response = orderService.previewOrderReview(request, principal);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PostMapping("/checkout")
     @Operation(summary = "Thanh toán từ giỏ hàng")
-    public ResponseEntity<OrderDetailDTO> checkout(
+    public ResponseEntity<TypeResponse<OrderDetailDTO>> checkout(
             @Valid @RequestBody CheckoutRequest request,
-            Principal principal) throws OrderCreationException {
-        return ResponseEntity.status(201).body(orderService.checkoutFromCart(request, principal));
+            Principal principal)  {
+        TypeResponse<OrderDetailDTO> response = orderService.checkoutFromCart(request, principal);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
     @GetMapping
-    @Operation(summary = "Lấy danh sách đơn hàng")
-    public ResponseEntity<TypeResponse<List<OrderDetailDTO>>> getUserOrders(
+    @Operation(summary = "Lấy danh sách đơn hàng của người dùng")
+    public ResponseEntity<TypeResponse<PageDTO<OrderDetailDTO>>> getUserOrders(
             @RequestParam(required = false) OrderStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             Principal principal) {
-        return ResponseEntity.ok(orderService.getAllOrder(status, principal));
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        TypeResponse<PageDTO<OrderDetailDTO>> response = orderService.getAllOrder(status, principal, pageable);
+        return ResponseEntity.ok(response);
     }
     @PostMapping("/payment/retry/{paymentMethod}/{orderId}/")
-    @Operation(summary = "Tạo lại link thanh toán")
-    public ResponseEntity<OrderDetailDTO> retryPayment(
+    @Operation(summary = "Tạo lại link thanh toán lại với  các đơn hàng đã hủy hoặc thanh toán thất bại")
+    public ResponseEntity<TypeResponse<OrderDetailDTO>> retryPayment(
             @PathVariable UUID orderId,
-            @PathVariable(required = false) String paymentMethod) throws Exception {
-        return ResponseEntity.ok(orderService.retryPayment(orderId, paymentMethod));
+            @PathVariable(required = false) String paymentMethod) {
+        TypeResponse<OrderDetailDTO> response = orderService.retryPayment(orderId, paymentMethod);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
     @PostMapping("/cancel/{orderId}")
     @Operation(summary = "Hủy đơn hàng")
-    public ResponseEntity<String> cancelOrder(@PathVariable UUID orderId, Principal principal) {
-        orderService.cancelOrderByOrderId(orderId, principal);
-        return ResponseEntity.ok("Đơn hàng đã hủy");
+    public ResponseEntity<TypeResponse<Void>> cancelOrder(@PathVariable UUID orderId, Principal principal) {
+        TypeResponse<Void> response = orderService.cancelOrderByOrderId(orderId, principal);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @PutMapping("/admin/{orderId}/status")
     @Operation(summary = "Admin cập nhật trạng thái")
-    public ResponseEntity<OrderDetailDTO> updateStatus(
+    public ResponseEntity<TypeResponse<OrderDetailDTO>> updateStatus(
             @PathVariable UUID orderId,
             @RequestParam OrderStatus status) {
-        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, status));
+        TypeResponse<OrderDetailDTO> response = orderService.updateOrderStatus(orderId, status);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     @GetMapping("/payment/callback")
-    public ResponseEntity<String> paymentCallback(
+    public ResponseEntity<TypeResponse<Void>> paymentCallback(
             @RequestParam("orderCode") Long orderCode,
             @RequestParam("status") String status,
             @RequestParam(name = "cancel", defaultValue = "false") boolean cancel) {
-
-        try {
-            orderService.updateOrderStatusFromPayment(orderCode, status, cancel);
-            return ResponseEntity.ok("Payment status updated successfully");
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error: " + e.getMessage());
-        }
+            TypeResponse<Void> response = orderService.updateOrderStatusFromPayment(orderCode, status, cancel);
+           return ResponseEntity.status(response.getStatusCode()).body(response);
     }
     /**
      * IPN - Server to Server callback từ MoMo

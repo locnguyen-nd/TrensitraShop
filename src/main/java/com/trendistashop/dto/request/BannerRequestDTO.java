@@ -23,9 +23,7 @@ public class BannerRequestDTO {
 
     @NotNull(message = "Type is required")
     private BannerTypeEnum type;
-
-    private Boolean isActive = true; // Default true
-
+    private Boolean isActive = false; // Default to false
     @NotNull(message = "At least one image required")
     @Size(min = 1, message = "At least one image required")
     private List<@Valid BannerImageRequest> bannerImages;

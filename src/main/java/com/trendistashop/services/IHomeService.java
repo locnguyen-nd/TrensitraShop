@@ -14,4 +14,5 @@ public interface IHomeService {
     TypeResponse<BannerResponseDTO> updateBanner(Long id, BannerRequestDTO bannerDTO) ;
     TypeResponse<List<BannerResponseDTO>> getBannerWithTypeAndFilter(String type, String event, Boolean isActive);
     TypeResponse<Void> deleteBanner(Long id);
+    TypeResponse<BannerResponseDTO> setDisplay(Long id, Boolean isActive, BannerTypeEnum bannerTypeEnum);
 }

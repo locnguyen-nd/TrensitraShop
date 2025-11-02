@@ -7,6 +7,7 @@ import com.trendistashop.entities.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Table(name = "cart-item")
@@ -34,6 +35,7 @@ public class CartItem extends BaseEntity {
     private Product cartProduct;
     private UUID productVariantId;
     private UUID productImageId;
+    private BigDecimal unitPrice;
     private Integer cartItemQuantity;
 
     @Override
