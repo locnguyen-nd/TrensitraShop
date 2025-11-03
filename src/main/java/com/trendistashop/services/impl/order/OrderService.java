@@ -3,20 +3,28 @@ package com.trendistashop.services.impl.order;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lowagie.text.pdf.BaseFont;
 import com.trendistashop.config.MoMoConfig;
 import com.trendistashop.config.PayOsConfig;
+import com.trendistashop.config.UploadConfig;
 import com.trendistashop.config.VietQRConfig;
 import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.dto.payos.MoMoPaymentResponse;
 import com.trendistashop.dto.request.CheckoutRequest;
 import com.trendistashop.dto.request.CreateOrder;
 import com.trendistashop.dto.response.*;
+import com.trendistashop.dto.response.record.RevenueReportDTO;
+import com.trendistashop.dto.response.record.StatusSummaryDTO;
+import com.trendistashop.dto.response.record.TopProductDTO;
 import com.trendistashop.entities.product.Discount;
+import com.trendistashop.entities.product.Product;
+import com.trendistashop.entities.product.ProductImage;
 import com.trendistashop.entities.product.ProductVariant;
 import com.trendistashop.entities.user.*;
 import com.trendistashop.enums.*;
 import com.trendistashop.exceptions.OrderCreationException;
 import com.trendistashop.exceptions.ResourceNotFoundEx;
+import com.trendistashop.helper.BarcodeImage;
 import com.trendistashop.repositories.order.*;
 import com.trendistashop.repositories.product.DiscountRepository;
 import com.trendistashop.repositories.product.ProductVariantRepository;
@@ -27,9 +35,17 @@ import com.trendistashop.services.impl.product.DiscountService;
 import com.trendistashop.utils.ResponseHelper;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -38,6 +54,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.xhtmlrenderer.pdf.ITextRenderer;
 import vn.payos.PayOS;
 import vn.payos.type.CheckoutResponseData;
 import vn.payos.type.ItemData;
@@ -45,10 +64,15 @@ import vn.payos.type.PaymentData;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -69,9 +93,12 @@ public class OrderService implements IOrderService {
     @Autowired private DiscountService discountService;
     @Autowired private EmailService emailService;
     @Autowired private MoMoConfig moMoConfig;
+    @Autowired
+    private UploadConfig uploadConfig;
+    @Autowired
+    private SpringTemplateEngine templateEngine;
     private final PayOS payOS;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
     public OrderService(PayOS payOS) {
         this.payOS = payOS;
     }
@@ -540,6 +567,210 @@ public class OrderService implements IOrderService {
     }
 
     @Override
+    public TypeResponse<RevenueReportDTO> getRevenueReport(LocalDate from, LocalDate to) {
+        try {
+            LocalDateTime start = from.atStartOfDay();
+            LocalDateTime end = to.atTime(23, 59, 59);
+
+            List<Order> orders = orderRepository.findByCreatedAtBetween(start, end);
+
+            BigDecimal totalRevenue = BigDecimal.ZERO;
+            BigDecimal totalRefund = BigDecimal.ZERO;
+            long totalOrders = 0;
+            long completedOrders = 0;
+            long cancelledOrders = 0;
+
+            for (Order order : orders) {
+                if (order.getOrderStatus() == OrderStatus.PROCESSING || order.getOrderStatus() == OrderStatus.DELIVERED) {
+                    totalRevenue = totalRevenue.add(order.getTotalAmount());
+                    completedOrders++;
+                } else if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+                    cancelledOrders++;
+                    totalRefund = totalRefund.add(order.getTotalAmount());
+                }
+                totalOrders++;
+            }
+
+            BigDecimal netRevenue = totalRevenue.subtract(totalRefund);
+
+            RevenueReportDTO report = new RevenueReportDTO(
+                    totalRevenue,
+                    totalRefund,
+                    netRevenue,
+                    totalOrders,
+                    completedOrders,
+                    cancelledOrders,
+                    "VND"
+            );
+
+            return ResponseHelper.ok(report, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            log.error("Lỗi báo cáo doanh thu: {}", e.getMessage(), e);
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
+    }
+
+    @Override
+    public TypeResponse<List<StatusSummaryDTO>> getOrderStatusSummary(LocalDate from, LocalDate to) {
+        try {
+            LocalDateTime start = (from != null) ? from.atStartOfDay() : LocalDateTime.now().minusYears(10);
+            LocalDateTime end = (to != null) ? to.atTime(23, 59, 59) : LocalDateTime.now();
+
+            List<Object[]> results = orderRepository.countOrdersByStatus(start, end);
+
+            List<StatusSummaryDTO> summary = results.stream()
+                    .map(row -> new StatusSummaryDTO(
+                            (OrderStatus) row[0],
+                            ((Number) row[1]).longValue(),
+                            (BigDecimal) row[2]
+                    ))
+                    .toList();
+
+            return ResponseHelper.ok(summary, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            log.error("Lỗi tóm tắt trạng thái: {}", e.getMessage(), e);
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
+    }
+
+    @Override
+    public TypeResponse<List<TopProductDTO>> getTopSellingProducts(int limit, LocalDate from, LocalDate to) {
+        try {
+            LocalDateTime start = (from != null) ? from.atStartOfDay() : LocalDateTime.now().minusYears(10);
+            LocalDateTime end = (to != null) ? to.atTime(23, 59, 59) : LocalDateTime.now();
+
+            Pageable pageable = PageRequest.of(0, limit);
+            List<Object[]> results = orderRepository.findTopSellingProducts(start, end, pageable);
+
+            List<TopProductDTO> topProducts = results.stream()
+                    .map(row -> {
+                        Product product = (Product) row[0];
+                        Long quantity = ((Number) row[1]).longValue();
+                        BigDecimal revenue = (BigDecimal) row[2];
+
+                        String thumbnail = product.getImages().stream()
+                                .filter(ProductImage::getIsThumbnail)
+                                .map(ProductImage::getUrl)
+                                .findFirst()
+                                .orElse(null);
+
+                        return new TopProductDTO(
+                                product.getId(),
+                                product.getName(),
+                                thumbnail,
+                                quantity,
+                                revenue
+                        );
+                    })
+                    .toList();
+
+            return ResponseHelper.ok(topProducts, ResponseMessage.FETCH_SUCCESS);
+        } catch (Exception e) {
+            log.error("Lỗi lấy sản phẩm bán chạy: {}", e.getMessage(), e);
+            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+        }
+    }
+
+    @Override
+    public TypeResponse<byte[]> exportInvoicePdf(UUID orderId) {
+        try {
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new ResourceNotFoundEx("Không tìm thấy đơn hàng"));
+
+            OrderDetailDTO orderDetailDTO = convertToOrderDetailDTO(order);
+            String trackingCode = generateTrackingCode(order.getId());
+            BarcodeImage barcodeImage = new BarcodeImage();
+            // Tạo ảnh barcode (PNG → base64)
+            byte[] barcodeImageBytes = barcodeImage.generateBarcodeImage(trackingCode);
+            String barcodeBase64 = barcodeImageBytes != null
+                    ? "data:image/png;base64," + Base64.getEncoder().encodeToString(barcodeImageBytes)
+                    : null;
+
+            // Tạo model
+            Map<String, Object> model = new HashMap<>();
+            model.put("order", orderDetailDTO);
+            model.put("shopName", "Trendista Shop");
+            model.put("shopPhone", "0123 456 789");
+            model.put("shopAddress", "123 Đường ABC, Phường 1, Quận 1, TP.HCM");
+            model.put("currentDate", LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+            model.put("shippingUnit", "Giao Hàng Nhanh");
+            model.put("trackingCode", trackingCode);
+            model.put("barcodeBase64", barcodeBase64); // ← Dữ liệu ảnh
+
+            String htmlContent = templateEngine.process("shipping-label-template",
+                    new Context(Locale.getDefault(), model));
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ITextRenderer renderer = new ITextRenderer();
+
+            // Font tiếng Việt
+            renderer.getFontResolver().addFont("fonts/DejaVuSans.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+
+            renderer.setDocumentFromString(htmlContent);
+            renderer.layout();
+            renderer.createPDF(outputStream);
+            renderer.finishPDF();
+
+            return ResponseHelper.ok(outputStream.toByteArray(), "Xuất tem vận chuyển thành công");
+
+        } catch (Exception e) {
+            log.error("Lỗi xuất tem vận chuyển: {}", e.getMessage(), e);
+            return ResponseHelper.serverError("Không thể tạo tem vận chuyển");
+        }
+    }
+    private String generateTrackingCode(UUID orderId) {
+        // Format: SPXVN + timestamp + mã ngẫu nhiên
+        String timestamp = String.valueOf(System.currentTimeMillis()).substring(7);
+        String random = orderId.toString().replace("-", "").substring(0, 6).toUpperCase();
+        return "SPXVN" + timestamp + random;
+    }
+
+    @Override
+    public TypeResponse<byte[]> exportOrdersToExcel(OrderStatus status, LocalDate from, LocalDate to) {
+        try {
+            LocalDateTime start = (from != null) ? from.atStartOfDay() : LocalDateTime.now().minusYears(10);
+            LocalDateTime end = (to != null) ? to.atTime(23, 59, 59) : LocalDateTime.now();
+
+            List<Order> orders = orderRepository.findByCreatedAtBetweenAndStatus(start, end, status);
+
+            Workbook workbook = new XSSFWorkbook();
+            Sheet sheet = workbook.createSheet("Đơn hàng");
+
+            // Header
+            Row header = sheet.createRow(0);
+            String[] columns = {"Mã đơn", "Khách hàng", "SĐT", "Ngày đặt", "Trạng thái", "Tổng tiền"};
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = header.createCell(i);
+                cell.setCellValue(columns[i]);
+            }
+
+            // Data
+            int rowNum = 1;
+            for (Order order : orders) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(order.getOrderCode());
+                row.createCell(1).setCellValue(order.getUser().getFullName());
+                row.createCell(2).setCellValue(order.getUser().getPhoneNumber());
+                row.createCell(3).setCellValue(order.getCreatedAt());
+                row.createCell(4).setCellValue(order.getOrderStatus().name());
+                row.createCell(5).setCellValue(order.getTotalAmount().doubleValue());
+            }
+
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            workbook.close();
+
+            return ResponseHelper.ok(out.toByteArray(), "Xuất Excel thành công");
+        } catch (Exception e) {
+            log.error("Lỗi xuất Excel: {}", e.getMessage(), e);
+            return ResponseHelper.serverError("Không thể xuất file Excel");
+        }
+    }
+    @Override
     public TypeResponse<Void> cancelOrderByOrderId(UUID id, Principal principal) {
         try {
         UserEntity user = getUser(principal);
@@ -690,6 +921,8 @@ public class OrderService implements IOrderService {
                 .totalAmount(order.getTotalAmount())
                 .payment(order.getPayment())
                 .orderItemList(order.getOrderItems().stream().map(this::toOrderItemDTO).toList())
+                .expectedDeliveryDate(order.getExpectedDeliveryDate())
+                .shipmentNumber(order.getShipmentTrackingNumber())
                 .address(order.getAddress() != null ? modelMapper.map(order.getAddress(), AddressDTO.class) : null)
                 .build();
     }
@@ -698,6 +931,7 @@ public class OrderService implements IOrderService {
         return OrderItemDTO.builder()
                 .productId(oi.getProduct().getId())
                 .productName(oi.getProduct().getName())
+                .productSlug(oi.getProduct().getSlug())
                 .quantity(oi.getQuantity())
                 .itemPrice(oi.getItemPrice())
                 .variantDTO(toVariantDTOFromOrderItem(oi))

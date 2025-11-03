@@ -14,10 +14,14 @@ import java.util.UUID;
 public class AddressRequest {
     private UUID id;
     private String name;
-    private String city;
-    private String district;
-    private String ward;
+    private String provinceId;
+    private String provinceName;
+    private String districtId;
+    private String districtName;
+    private String wardCode;
+    private String wardName;
     private String specAddress;
     private String phoneNumber;
     private Boolean isDefaultAddress;
+    private Boolean isShopAddress;
 }

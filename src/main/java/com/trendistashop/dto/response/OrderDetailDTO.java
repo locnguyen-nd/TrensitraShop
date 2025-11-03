@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -19,14 +20,14 @@ import java.util.UUID;
 @Builder
 public class OrderDetailDTO {
     private UUID id;
-    private Date orderDate;
+    private LocalDateTime orderDate;
     @JsonProperty("address")
     private AddressDTO address;
     private DiscountApply discountApply;
     private BigDecimal totalAmount;
     private OrderStatus orderStatus;
     private String shipmentNumber;
-    private Date expectedDeliveryDate;
+    private LocalDateTime expectedDeliveryDate;
     @JsonProperty("orderItems")
     private List<OrderItemDTO> orderItemList;
     private Payment payment;

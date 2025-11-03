@@ -20,6 +20,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -114,7 +115,7 @@ public class CategoryService implements ICategoryService {
             category.setDescription(categoryDTO.getDescription());
             category.setImageUrl(categoryDTO.getImageUrl());
             category.setIndexNum(categoryDTO.getIndex());
-            category.setCreatedAt(new Date());
+            category.setCreatedAt(LocalDateTime.now());
             Category savedCategory = categoryRepository.save(category);
             return ResponseHelper.created(convertToDTO(savedCategory), ResponseMessage.CREATE_SUCCESS);
         } catch (Exception e) {
@@ -157,7 +158,7 @@ public class CategoryService implements ICategoryService {
                 existingCategory.setGender(gender);
             }
             existingCategory.setIndexNum(categoryDTO.getIndex());
-            existingCategory.setUpdatedAt(new Date());
+            existingCategory.setUpdatedAt(LocalDateTime.now());
             Category updatedCategory = categoryRepository.save(existingCategory);
             return ResponseHelper.ok(convertToDTO(updatedCategory), ResponseMessage.UPDATE_SUCCESS);
         } catch (Exception e) {

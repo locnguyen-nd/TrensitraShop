@@ -114,7 +114,7 @@ public class UserEntity extends BaseEntity implements UserDetails {
                 System.out.println("Role permissions are null for role: " + role.getName());
             }
         }
-        System.out.println("User authorities: " + authorities);
+//        System.out.println("User authorities: " + authorities);
         return authorities;
     }
 
@@ -126,5 +126,8 @@ public class UserEntity extends BaseEntity implements UserDetails {
     @Override
     public String getUsername() {
         return this.email.toLowerCase();
+    }
+    public String getFullName() {
+        return this.firstName + " " + this.lastName;
     }
 }

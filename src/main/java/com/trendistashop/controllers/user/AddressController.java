@@ -9,6 +9,7 @@ import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.entities.user.Address;
 import com.trendistashop.services.IAddressService;
 
+import com.trendistashop.services.IShippingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -19,16 +20,39 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${api.prefix}/address")
 @CrossOrigin
-@Tag(name = "Address")
+@Tag(name = "Address", description = "Tạo địa chỉ nhận hàng, chuẩn GHN")
 public class AddressController {
     @Autowired
     private IAddressService addressService;
+    @Autowired
+    private IShippingService shippingService;
+    @GetMapping("/provinces")
+    @Operation(summary = "Lấy danh sách tỉnh thành", description = "Lấy danh sách tỉnh thành từ GHN")
+    public ResponseEntity<TypeResponse<List<Map<String, Object>>>> getProvinces() {
+        TypeResponse<List<Map<String, Object>>> response = shippingService.getProvinces();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 
+    @GetMapping("/districts")
+    @Operation(summary = "Lấy danh sách quận huyện", description = "Lấy danh sách quận huyện theo tỉnh thành từ GHN")
+    public ResponseEntity<TypeResponse<List<Map<String, Object>>>> getDistricts(@RequestParam String provinceId) {
+        TypeResponse<List<Map<String, Object>>> response = shippingService.getDistricts(provinceId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @GetMapping("/wards")
+    @Operation(summary = "Lấy danh sách phường xã", description = "Lấy danh sách phường xã theo quận huyện từ GHN")
+    public ResponseEntity<TypeResponse<List<Map<String, Object>>>> getWards(@RequestParam String districtId) {
+        TypeResponse<List<Map<String, Object>>> response = shippingService.getWards(districtId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
     @Operation(summary = "Tạo địa chỉ mới", description = "Tạo địa chỉ mới cho người dùng")
     @CreateAddressDocs
     @PostMapping
@@ -61,7 +85,7 @@ public class AddressController {
         @RequestBody AddressRequest addressRequest,
         Principal principal
     ) {
-            TypeResponse<Address> response = addressService.updateAddress(addressRequest,principal);
+        TypeResponse<Address> response = addressService.updateAddress(addressRequest,principal);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

@@ -12,7 +12,6 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,7 +44,7 @@ public class Order extends BaseEntity {
     private PaymentMethod paymentMethod;
     private String shipmentTrackingNumber; // Số theo dõi lô hàng
     @Temporal(TemporalType.TIMESTAMP)
-    private Date expectedDeliveryDate; // ngày giao dự kiến
+    private LocalDateTime expectedDeliveryDate; // ngày giao dự kiến
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

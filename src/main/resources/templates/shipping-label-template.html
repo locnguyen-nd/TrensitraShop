@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Tem vận chuyển</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: 100mm 150mm;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 10px;
+            line-height: 1.3;
+            width: 100mm;
+            height: 150mm;
+            padding: 0;
+            margin: 0;
+        }
+
+        .shipping-label {
+            width: 100mm;
+            height: 150mm;
+            border: 2px solid #000;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+
+        .tracking-code {
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin: 3px 0;
+        }
+
+        .header-date {
+            font-size: 8px;
+            color: #666;
+        }
+
+        /* Barcode */
+        .barcode-section {
+            text-align: center;
+            margin: 5px 0;
+            padding: 5px 0;
+            border-top: 1px dashed #333;
+            border-bottom: 1px dashed #333;
+            background: #f9f9f9;
+        }
+
+        .barcode-section img {
+            width: 85mm;
+            height: auto;
+            max-height: 25mm;
+        }
+
+        .barcode-text {
+            font-size: 8px;
+            margin-top: 2px;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-weight: bold;
+            font-size: 9px;
+            text-transform: uppercase;
+            color: #fff;
+            background: #333;
+            padding: 2px 4px;
+            margin-bottom: 3px;
+        }
+
+        .address-box {
+            background: white;
+            border: 1px solid #333;
+            padding: 4px;
+        }
+
+        .info-line {
+            margin-bottom: 2px;
+            line-height: 1.4;
+        }
+
+        .label-text {
+            font-weight: bold;
+            font-size: 9px;
+            color: #666;
+        }
+
+        .customer-name {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .phone {
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .address-text {
+            font-size: 9px;
+            line-height: 1.5;
+        }
+
+        /* Products */
+        .products-section {
+            flex-grow: 1;
+            margin-bottom: 6px;
+        }
+
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 3px;
+            font-size: 8px;
+        }
+
+        .products-table th {
+            background: #e0e0e0;
+            padding: 3px 2px;
+            text-align: left;
+            border: 1px solid #999;
+            font-weight: bold;
+        }
+
+        .products-table td {
+            padding: 3px 2px;
+            border: 1px solid #ccc;
+            vertical-align: top;
+        }
+
+        /* Payment */
+        .payment-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding: 5px;
+            background: #fff9e6;
+            border: 2px solid #ffa500;
+            margin-bottom: 5px;
+        }
+
+        .payment-left {
+            flex: 1;
+        }
+
+        .payment-right {
+            text-align: right;
+        }
+
+        .payment-label {
+            font-size: 8px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+
+        .payment-method {
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        .cod-amount {
+            font-size: 14px;
+            font-weight: bold;
+            color: #d32f2f;
+        }
+
+        /* Footer */
+        .footer {
+            padding-top: 4px;
+            border-top: 1px solid #000;
+            font-size: 8px;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        .order-id {
+            margin-bottom: 2px;
+            font-weight: bold;
+        }
+
+        .warning {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="shipping-label">
+    <!-- Header -->
+    <div class="header">
+        <h1 th:text="${shippingUnit}">GIAO HÀNG NHANH</h1>
+        <div class="tracking-code" th:text="${order.shipmentNumber ?: trackingCode}">SPXVN1234567890</div>
+        <div class="header-date" th:text="${currentDate}">01/11/2025 14:30</div>
+    </div>
+
+    <!-- Barcode -->
+    <div class="barcode-section">
+        <div th:if="${barcodeBase64 != null}">
+            <img th:src="${barcodeBase64}" alt="Barcode"/>
+        </div>
+        <div th:if="${barcodeBase64 == null}" class="barcode-text" th:text="${trackingCode}">
+            SPXVN1234567890
+        </div>
+        <div class="barcode-text" th:text="${trackingCode}">SPXVN1234567890</div>
+    </div>
+
+    <!-- Người gửi -->
+    <div class="section">
+        <div class="section-title">📦 NGƯỜI GỬI</div>
+        <div class="address-box">
+            <div class="customer-name" th:text="${shopName}">Trendista Shop</div>
+            <div class="info-line">
+                <span class="label-text">☎</span>
+                <span class="phone" th:text="${shopPhone}">0123 456 789</span>
+            </div>
+            <div class="info-line">
+                <span class="label-text">📍</span>
+                <span class="address-text" th:text="${shopAddress}">123 Đường ABC, Phường 1, Quận 1, TP.HCM</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Người nhận -->
+    <div class="section">
+        <div class="section-title">📍 NGƯỜI NHẬN</div>
+        <div class="address-box">
+            <div class="customer-name" th:text="${order.address?.name}">Nguyễn Văn A</div>
+            <div class="info-line">
+                <span class="label-text">☎</span>
+                <span class="phone" th:text="${order.address?.phoneNumber}">0987 654 321</span>
+            </div>
+            <div class="info-line">
+                <span class="label-text">📍</span>
+                <span class="address-text">
+                    <span th:text="${order.address?.specAddress}">Số 1, Ngõ 1</span><span th:if="${order.address?.ward != null and !#strings.isEmpty(order.address.ward)}">, </span><span th:text="${order.address?.ward}"></span><span th:if="${order.address?.city != null}">, </span><span th:text="${order.address?.city}">TP.HCM</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sản phẩm -->
+    <div class="section products-section">
+        <div class="section-title">📋 SẢN PHẨM</div>
+        <table class="products-table">
+            <thead>
+            <tr>
+                <th style="width: 55%;">Sản phẩm</th>
+                <th style="width: 15%; text-align: center;">SL</th>
+                <th style="width: 30%;">Phân loại</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="item : ${order.orderItemList}">
+                <td th:text="${item.productName}">Áo thun nam</td>
+                <td style="text-align: center;" th:text="${item.quantity}">2</td>
+                <td>
+                    <span th:if="${item.variantDTO != null}">
+                        <span th:if="${item.variantDTO.colorName != null and !#strings.isEmpty(item.variantDTO.colorName)}" th:text="${item.variantDTO.colorName}"></span>
+                        <span th:if="${item.variantDTO.colorName != null and item.variantDTO.sizeName != null}"> - </span>
+                        <span th:if="${item.variantDTO.sizeName != null and !#strings.isEmpty(item.variantDTO.sizeName)}" th:text="${item.variantDTO.sizeName}"></span>
+                    </span>
+                    <span th:if="${item.variantDTO == null}">-</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Thông tin thanh toán -->
+    <div class="payment-info">
+        <div class="payment-left">
+            <div class="payment-label">Hình thức thanh toán</div>
+            <div class="payment-method">
+                <span th:if="${order.payment?.paymentMethod?.toString() == 'COD'}">Thu hộ (COD)</span>
+                <span th:if="${order.payment?.paymentMethod?.toString() != 'COD'}">Đã thanh toán</span>
+            </div>
+        </div>
+        <div class="payment-right">
+            <div class="payment-label">Số tiền thu hộ</div>
+            <div class="cod-amount">
+                <span th:if="${order.payment?.paymentMethod?.toString() == 'COD'}"
+                      th:text="${#numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + 'đ'}">1.500.000đ</span>
+                <span th:if="${order.payment?.paymentMethod?.toString() != 'COD'}">0đ</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="order-id">
+            Mã đơn: <span th:text="${#strings.substring(order.id.toString(), 0, 13) + '...'}">xxxxxxxx-xxxx</span>
+        </div>
+        <div class="warning">⚠️ Vui lòng kiểm tra hàng trước khi nhận</div>
+    </div>
+</div>
+</body>
+</html>

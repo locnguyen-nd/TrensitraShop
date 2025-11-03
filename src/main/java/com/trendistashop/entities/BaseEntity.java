@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
@@ -20,32 +21,26 @@ import java.util.TimeZone;
 public class BaseEntity {
     @Column(nullable = false, updatable = false, name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
-    private Date createdAt;
+    private LocalDateTime createdAt;
     @Column(nullable = true, name = "updated_at")
     @Temporal(TemporalType.TIMESTAMP)
-    private Date updatedAt;
+    private LocalDateTime updatedAt;
     @Column(nullable = true, name = "deleted_at")
     @Temporal(TemporalType.TIMESTAMP)
-    private Date deletedAt;
+    private LocalDateTime deletedAt;
     @PrePersist
     public void prePersist() {
-        TimeZone vietnamTimeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
-        Calendar calendar = Calendar.getInstance(vietnamTimeZone);
-        this.createdAt = calendar.getTime();
+        this.createdAt = LocalDateTime.now();
         this.updatedAt = null;
         this.deletedAt = null;
     }
 
     @PreUpdate
     public void preUpdate() {
-        TimeZone vietnamTimeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
-        Calendar calendar = Calendar.getInstance(vietnamTimeZone);
-        this.updatedAt = calendar.getTime();
+        this.updatedAt = LocalDateTime.now();
     }
     @PreDestroy
     public void preDestroy() {
-        TimeZone vietnamTimeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
-        Calendar calendar = Calendar.getInstance(vietnamTimeZone);
-        this.deletedAt = calendar.getTime();
+        this.deletedAt = LocalDateTime.now();
     }
 }
