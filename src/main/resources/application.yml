@@ -2,15 +2,15 @@ spring:
   application:
     name: TrendistaShop
   datasource:
-#    url: jdbc:mysql://localhost:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
-#    username: root
-#    password: Nguyenloc2002
-#    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: Nguyenloc2002
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
 #     Docker configuration (commented)
-     url: jdbc:mysql://mysql:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
-     username: root
-     password: root
+#     url: jdbc:mysql://mysql:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
+#     username: root
+#     password: root
 
     # Railway server configuration (commented)
     # url: jdbc:mysql://junction.proxy.rlwy.net:18453/trendista
@@ -20,7 +20,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -149,3 +149,11 @@ momo:
   ipnUrl: http://localhost:8080/api/v1/order/payment/callback/momo/ipn
   endpoint: https://test-payment.momo.vn/v2/gateway/api/create
   requestType: captureWallet
+
+app:
+  upload-dir: ./download
+  #Shiping configuration
+  shipping:
+    apiUrl: https://dev-online-gateway.ghn.vn
+    token: 02313f36-b865-11f0-b040-4e257d8388b4
+    shopId: 197889

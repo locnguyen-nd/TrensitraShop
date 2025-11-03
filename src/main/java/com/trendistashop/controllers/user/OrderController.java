@@ -71,6 +71,14 @@ public class OrderController {
         TypeResponse<PageDTO<OrderDetailDTO>> response = orderService.getAllOrder(status, principal, pageable);
         return ResponseEntity.ok(response);
     }
+    @GetMapping(value = "/{orderCode}")
+    @Operation(summary = "Lấy chi tiết đơn hàng theo mã đơn hàng")
+    public ResponseEntity<TypeResponse<OrderDetailDTO>> getOrderByOrderCode(
+            @PathVariable Long orderCode,
+            Principal principal) {
+        TypeResponse<OrderDetailDTO> response = orderService.getOrderByOrderCode(orderCode, principal);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
     @PostMapping("/payment/retry/{paymentMethod}/{orderId}/")
     @Operation(summary = "Tạo lại link thanh toán lại với  các đơn hàng đã hủy hoặc thanh toán thất bại")
     public ResponseEntity<TypeResponse<OrderDetailDTO>> retryPayment(

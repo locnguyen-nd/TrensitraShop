@@ -20,14 +20,23 @@ public class Address extends BaseEntity {
     private UUID id;
     private String name;
     @Column(nullable = false)
-    private String city;//TP
+    private String provinceId;   // Mã tỉnh (GHN)
     @Column(nullable = false)
-    private String ward;//Phường
+    private String provinceName; // Tên tỉnh
     @Column(nullable = false)
-    private String specAddress;
+    private String districtId;   // Mã huyện (GHN)
+    @Column(nullable = false)
+    private String districtName; // Tên huyện
+    @Column(nullable = false)
+    private String wardCode;     // Mã phường (GHN)
+    @Column(nullable = false)
+    private String wardName;     // Tên phường
+    @Column(nullable = false)
+    private String specAddress;  // Số nhà, đường...
     @Column(nullable = false)
     private String phoneNumber;
     private Boolean isDefaultAddress;
+    private Boolean isShopAddress = false;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore

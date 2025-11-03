@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -84,7 +85,7 @@ public class CartService implements ICartService {
                     return ResponseHelper.badRequest(ResponseMessage.STOCK_NOT_ENOUGH);
                 }
                 item.setCartItemQuantity(newQuantity);
-                item.setCreatedAt(new Date());
+                item.setCreatedAt(LocalDateTime.now());
                 BigDecimal additionalAmount = variantPrice.multiply(new BigDecimal(addQuantity));
                 userCart.setCartTotal(userCart.getCartTotal().add(additionalAmount));
 

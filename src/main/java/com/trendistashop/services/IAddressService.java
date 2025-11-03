@@ -1,6 +1,7 @@
 package com.trendistashop.services;
 
 import java.security.Principal;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.trendistashop.dto.request.AddressRequest;
@@ -11,4 +12,5 @@ public interface IAddressService {
     TypeResponse<Address> createAddress(AddressRequest addressRequest, Principal principal);
     TypeResponse<Address> updateAddress(AddressRequest addressRequest, Principal principal);
     TypeResponse<Void> deleteAddress(UUID addressId, Principal principal);
+    Optional<Address> getShopAddress();
 }
