@@ -27,7 +27,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${api.prefix}/address")
 @CrossOrigin
-@Tag(name = "Address", description = "Tạo địa chỉ nhận hàng, chuẩn GHN")
+@Tag(name = "Address API", description = "Tạo địa chỉ nhận hàng, chuẩn hóa theo đơn vị ship")
 public class AddressController {
     @Autowired
     private IAddressService addressService;

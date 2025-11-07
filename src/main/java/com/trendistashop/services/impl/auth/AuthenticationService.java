@@ -22,7 +22,6 @@ import com.trendistashop.helper.VerificationCodeGenerator;
 import com.trendistashop.repositories.auth.UserDetailRepository;
 import com.trendistashop.repositories.auth.VerificationAttemptRepository;
 import com.trendistashop.services.IAuthenticationService;
-import com.trendistashop.services.impl.notification.AccountNotificationService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,8 +59,6 @@ public class AuthenticationService implements IAuthenticationService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private AuthorizationService authorizationService;
-    @Autowired
-    private AccountNotificationService accountNotificationService;
 
     @Value("${verification.max_attempts}")
     private int maxAttempts = 5;
@@ -397,8 +394,6 @@ public class AuthenticationService implements IAuthenticationService {
             }
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             userDetailRepository.save(user);
-
-            accountNotificationService.notifyPasswordChanged(user.getId());
 
             return ResponseHelper.ok(null, ResponseMessage.UPDATE_SUCCESS);
 

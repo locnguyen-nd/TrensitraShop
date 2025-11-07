@@ -29,7 +29,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${api.prefix}/sizes")
 @CrossOrigin
-@Tag(name = "Sizes")
+@Tag(name = "Size API" , description = "API quản lý kích thước sản phẩm")
 public class SizeController {
     @Autowired
     private SizeService sizeService;

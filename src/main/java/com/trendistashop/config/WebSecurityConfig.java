@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 @Slf4j
 @Configuration
@@ -83,11 +84,11 @@ public class WebSecurityConfig {
             "/api/v1/permissions/**",
             "/api/v1/banner/**",
             "/api/v1/collections/**",
-            "/api/v1/notifications/**",
             "/api/v1/test/**",
             "/api/v1/oauth2/**",
             "/api/v1/media/**",
             "/api/v1/order/payment/callback/**",
+            "/ws-chat/**",
             "/actuator/health/**",
             "/favicon.ico",
             "/*.html",
@@ -96,12 +97,12 @@ public class WebSecurityConfig {
     };
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
         Map<String, Map<String, List<String>>> permissionMappings = permissionService.loadPermissions();
 
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, authException) -> {
@@ -123,7 +124,6 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(publicApis).permitAll();
                     auth.requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll();
-
                     permissionMappings.forEach((endPoint, methodMap) -> {
                         methodMap.forEach((httpMethod, permissions) -> {
                             String fullUrl = prefix + endPoint;
@@ -131,7 +131,6 @@ public class WebSecurityConfig {
                                     .hasAnyAuthority(permissions.toArray(new String[0]));
                         });
                     });
-
                     auth.anyRequest().authenticated();
                 })
 
@@ -284,14 +283,16 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                frontendDevUrl,
-                frontendProdUrl,
-                adminDevUrl,
-                adminProdUrl
-        ));
+        List<String> origins = Stream.of(frontendDevUrl, frontendProdUrl, adminDevUrl, adminProdUrl)
+                .filter(url -> url != null && !url.trim().isEmpty() && !url.contains("*"))
+                .map(String::trim)
+                .toList();
+        if (origins.isEmpty()) {
+            throw new IllegalStateException("Không có origin CORS nào được cấu hình hợp lệ!");
+        }
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

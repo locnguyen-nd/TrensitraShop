@@ -25,7 +25,7 @@ import java.util.*;
 @RestController
 @RequestMapping("${api.prefix}/products")
 @CrossOrigin
-@Tag(name = "Products")
+@Tag(name = "Product API", description = "API quản lý sản phẩm")
 public class ProductController {
     private final IProductService productService;
     private final PageConverter pageConvert;
@@ -37,19 +37,19 @@ public class ProductController {
     @Operation(summary = "Tạo sản phẩm")
     @PostMapping
     public ResponseEntity<TypeResponse<ProductDTO>> createProduct(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(schema = @Schema(implementation = ProductRequestDTO.class),
-                            examples = {
-                                    @ExampleObject(
-                                            name = "Create Product",
-                                            summary = "Create product example",
-                                            value = ProductRequestExamples.CREATE_PRODUCT_REQUEST
-                                    )
-                            }
-                    )
-            )
-            @RequestBody ProductRequestDTO productRequestDTO) {
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                required = true,
+                content = @Content(schema = @Schema(implementation = ProductRequestDTO.class),
+                        examples = {
+                                @ExampleObject(
+                                        name = "Create Product",
+                                        summary = "Create product example",
+                                        value = ProductRequestExamples.CREATE_PRODUCT_REQUEST
+                                )
+                        }
+                )
+        )
+        @RequestBody ProductRequestDTO productRequestDTO) {
         TypeResponse<ProductDTO> createdProduct = productService.createProduct(productRequestDTO);
         return ResponseEntity.status(createdProduct.getStatusCode()).body(createdProduct);
     }
@@ -158,20 +158,20 @@ public class ProductController {
     @Operation(summary = "Cập nhật sản phẩm")
     @PutMapping("/{id}")
     public ResponseEntity<TypeResponse<ProductDTO>> updateProduct(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(schema = @Schema(implementation = ProductRequestDTO.class),
-                            examples = {
-                                    @ExampleObject(
-                                            name = "Update Product",
-                                            summary = "Update product example",
-                                            value = ProductRequestExamples.UPDATE_PRODUCT_REQUEST
-                                    )
-                            }
-                    )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(schema = @Schema(implementation = ProductRequestDTO.class),
+                    examples = {
+                            @ExampleObject(
+                                    name = "Update Product",
+                                    summary = "Update product example",
+                                    value = ProductRequestExamples.UPDATE_PRODUCT_REQUEST
+                            )
+                    }
             )
-            @PathVariable UUID id,
-            @RequestBody ProductRequestDTO productDto
+    )
+    @PathVariable UUID id,
+    @RequestBody ProductRequestDTO productDto
     ) {
         TypeResponse<ProductDTO> updatedProduct = productService.updateProduct(id, productDto);
         return ResponseEntity.status(updatedProduct.getStatusCode()).body(updatedProduct);

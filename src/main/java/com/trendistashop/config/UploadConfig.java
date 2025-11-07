@@ -14,6 +14,8 @@ import java.nio.file.Paths;
  *
  * @author Locnd
  */
+
+/** Chưa cần dùng đến, đây là nơi lưu trữ ảnh, kho báo cáo ....*/
 @Configuration
 @RequiredArgsConstructor
 public class UploadConfig {
@@ -21,7 +23,7 @@ public class UploadConfig {
     @Value("${app.upload-dir}")
     private String uploadDir;
 
-    @PostConstruct
+//    @PostConstruct
     public void init() throws IOException {
         Path root = Paths.get(uploadDir);
         Path invoices = root.resolve("invoices");
@@ -31,11 +33,6 @@ public class UploadConfig {
         Files.createDirectories(invoices);
         Files.createDirectories(exports);
         Files.createDirectories(images);
-
-        System.out.println("Upload directories created:");
-        System.out.println("  - Invoices: " + invoices.toAbsolutePath());
-        System.out.println("  - Exports:  " + exports.toAbsolutePath());
-        System.out.println("  - Images:   " + images.toAbsolutePath());
     }
 
     public Path getUploadPath() {

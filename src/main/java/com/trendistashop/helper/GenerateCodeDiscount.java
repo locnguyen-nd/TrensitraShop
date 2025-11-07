@@ -1,10 +1,13 @@
 package com.trendistashop.helper;
 
 import com.trendistashop.repositories.product.DiscountRepository;
+import org.hibernate.annotations.Comment;
+import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 import java.util.Random;
 
+@Component
 public class GenerateCodeDiscount {
     // Các ký tự có thể dùng trong mã giảm giá: chữ in hoa và số
     private static final String CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

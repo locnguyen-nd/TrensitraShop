@@ -30,7 +30,6 @@ import com.trendistashop.repositories.product.DiscountRepository;
 import com.trendistashop.repositories.product.ProductVariantRepository;
 import com.trendistashop.services.IOrderService;
 import com.trendistashop.services.impl.auth.EmailService;
-import com.trendistashop.services.impl.notification.OrderNotificationService;
 import com.trendistashop.services.impl.product.DiscountService;
 import com.trendistashop.utils.ResponseHelper;
 import jakarta.transaction.Transactional;
@@ -43,7 +42,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -64,18 +62,14 @@ import vn.payos.type.PaymentData;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 @Slf4j
@@ -87,7 +81,6 @@ public class OrderService implements IOrderService {
     @Autowired private ProductVariantRepository productVariantRepository;
     @Autowired private CartRepository cartRepository;
     @Autowired private PaymentRepository paymentRepository;
-    @Autowired private OrderNotificationService orderNotificationService;
     @Autowired private PayOsConfig payOsConfig;
     @Autowired private DiscountRepository discountRepository;
     @Autowired private DiscountService discountService;

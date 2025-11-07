@@ -29,7 +29,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${api.prefix}/users")
 @CrossOrigin
-@Tag(name = "User")
+@Tag(name = "User API", description = "APi Quản lý tài khoản người dùng")
 public class UserController {
     @Autowired
     private UserDetailsService userDetailsService;

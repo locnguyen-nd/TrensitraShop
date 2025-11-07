@@ -32,7 +32,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @CrossOrigin
 @Slf4j
-@Tag(name = "Order Report", description = "Thống kê & báo cáo đơn hàng (Admin)")
+@Tag(name = "Order Report API", description = "Thống kê & báo cáo đơn hàng (Admin)")
 public class OrderReportController {
     private final IOrderService orderService;
 
@@ -64,20 +64,17 @@ public class OrderReportController {
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
     @GetMapping(value = "/pdf/{orderId}", produces = MediaType.APPLICATION_PDF_VALUE)
+    @Operation(summary = "Xuất file pdf thông tin đơn hàng 2 mode: inline / download")
     public ResponseEntity<byte[]> exportOrderInvoicePdf(
             @PathVariable UUID orderId,
             @RequestParam(defaultValue = "inline") String mode) { // ?mode=inline hoặc ?mode=download
-
         TypeResponse<byte[]> response = orderService.exportInvoicePdf(orderId);
         if (response.getData() == null) {
             return ResponseEntity.status(response.getStatusCode()).build();
         }
-
         String filename = "Hóa_đơn_" + orderId + ".pdf";
         String encodedFilename = "filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8);
-
         String disposition = "download".equalsIgnoreCase(mode) ? "attachment" : "inline";
-
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; " + encodedFilename)
@@ -85,12 +82,11 @@ public class OrderReportController {
     }
 
     @GetMapping(value = "/excel", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    @Operation(summary = "Tải danh sách đơn hàng ra Excel")
+    @Operation(summary = "Tải danh sách đơn hàng ra Excel ")
     public ResponseEntity<byte[]> exportOrdersToExcel(
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-
         TypeResponse<byte[]> response = orderService.exportOrdersToExcel(status, from, to);
         if (response.getData() == null) {
             return ResponseEntity.status(response.getStatusCode()).build();
@@ -98,7 +94,6 @@ public class OrderReportController {
 
         String filename = "Danh_sách_đơn_hàng_" + LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) + ".xlsx";
         String encodedFilename = "filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8);
-
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; " + encodedFilename)

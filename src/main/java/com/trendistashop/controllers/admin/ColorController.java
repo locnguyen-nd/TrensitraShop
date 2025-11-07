@@ -23,7 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${api.prefix}/colors")
 @CrossOrigin
-@Tag(name = "Colors")
+@Tag(name = "Color API", description = "API quản lý màu sắc sản phẩm")
 public class ColorController {
     @Autowired
     private ColorService colorService;

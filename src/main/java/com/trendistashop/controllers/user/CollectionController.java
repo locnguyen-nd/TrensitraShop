@@ -29,7 +29,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("${api.prefix}/collections")
-@Tag(name = "Collection API", description = "API quản lý bộ sưu tập")
 @CrossOrigin
 @RequiredArgsConstructor
 @Tag(name = "Collection API" , description = "API quản lý bộ sưu tập")

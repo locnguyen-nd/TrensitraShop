@@ -27,7 +27,7 @@ import java.security.Principal;
 @RestController
 @RequestMapping(value = "${api.prefix}/cart")
 @CrossOrigin
-@Tag(name = "Cart")
+@Tag(name = "Cart API", description = "API quản lý giỏ hàng")
 public class CartController {
     @Autowired
     private ICartService iCartService;

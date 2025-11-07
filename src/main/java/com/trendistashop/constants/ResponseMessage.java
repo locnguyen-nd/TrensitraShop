@@ -70,6 +70,7 @@ public class ResponseMessage {
     public static final String ORDER_ALREADY_CANCELLED = "order_already_cancelled";
     public static final String PAYMENT_NOT_FOUND = "payment_not_found";
     public static final String MAX_CART = "max_cart_items_exceeded_20_items";
+    public static final String SEND_SUCCESS = "send_message_successes";
     private ResponseMessage() {
     }
 }

@@ -2,15 +2,15 @@ spring:
   application:
     name: TrendistaShop
   datasource:
-    url: jdbc:mysql://localhost:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: Nguyenloc2002
-    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://localhost:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
+#    username: root
+#    password: Nguyenloc2002
+#    driver-class-name: com.mysql.cj.jdbc.Driver
 
 #     Docker configuration (commented)
-#     url: jdbc:mysql://mysql:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
-#     username: root
-#     password: root
+     url: jdbc:mysql://mysql:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
+     username: root
+     password: root
 
     # Railway server configuration (commented)
     # url: jdbc:mysql://junction.proxy.rlwy.net:18453/trendista
@@ -78,7 +78,6 @@ frontend:
     url: http://localhost:3000
   prod:
     url: http://localhost:4000
-
 admin:
   dev:
     url: http://localhost:5173
@@ -131,7 +130,7 @@ vietqr:
   api-key: c9f6f999-f5a8-452e-aef2-ec790274e92d
   account-no: '5120778982'
   account-name: NGUYEN DINH LOC
-  bank-id: ' 970418'  # Note: leading space preserve
+  bank-id: '970418'  # Note: leading space preserve
 
 # PayOS Configuration
 PAYOS_CLIENT_ID: fc00707d-3953-4e8a-a19c-60ebd83eed12
@@ -151,6 +150,12 @@ momo:
   requestType: captureWallet
 
 app:
+  gemini:
+    api:
+      email: trolytrendista@gmail.com
+      url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+      model: gemini-2.5-flash
+      key: ${GEMINI_API_KEY}  #
   upload-dir: ./download
   #Shiping configuration
   shipping:
