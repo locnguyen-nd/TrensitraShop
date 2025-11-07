@@ -32,6 +32,7 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DEVTOOLS_RESTART_ENABLED: "true"
       SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
+      GEMINI_API_KEY: "AIzaSyALf-Gi1Ll1yVxd8af103orWp4fL2mibvw"
     depends_on:
       mysql:
         condition: service_healthy

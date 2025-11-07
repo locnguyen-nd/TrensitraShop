@@ -7,14 +7,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> {
-    @Query("SELECT cm FROM chat_message cm WHERE " +
-            "(cm.sender.id = :senderId AND cm.receiver.id = :receiverId) OR " +
-            "(cm.sender.id = :receiverId AND cm.receiver.id = :senderId) " +
-            "ORDER BY cm.createdAt ASC")
-    List<ChatMessage> findChatHistoryBetweenUsers(@Param("senderId") UUID senderId, @Param("receiverId") UUID receiverId);
+    List<ChatMessage> findByConversationIdOrderBySentAtAsc(UUID conversationId);
+    long countByConversationIdAndIsReadFalseAndReceiverId(UUID conversationId, UUID receiverId);
 
-    List<ChatMessage> findByReceiverId(UUID senderId);
+    @Query("SELECT m FROM ChatMessage m WHERE m.conversation.id = :convId AND m.isRead = false AND m.receiver.id = :receiverId")
+    List<ChatMessage> findUnreadByConversationAndReceiver(@Param("convId") UUID convId, @Param("receiverId") UUID receiverId);
 }

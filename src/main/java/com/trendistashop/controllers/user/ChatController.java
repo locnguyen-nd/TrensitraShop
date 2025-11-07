@@ -1,89 +1,117 @@
 package com.trendistashop.controllers.user;
 
-import com.trendistashop.dto.response.ChatMessageDTO;
-import com.trendistashop.services.CloudinaryService;
+import com.trendistashop.dto.chat.*;
+import com.trendistashop.dto.response.PageDTO;
+import com.trendistashop.dto.response.TypeResponse;
+import com.trendistashop.entities.user.UserEntity;
+import com.trendistashop.enums.ConversationStatus;
 import com.trendistashop.services.impl.notification.ChatService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${api.prefix}/chat")
-@CrossOrigin(origins = "http://127.0.0.1:5500")
+@CrossOrigin
+@Tag(name = "Chat API", description = "API quản lý chat, sử dụng Websocket")
+@Slf4j
 public class ChatController {
      @Autowired
      private ChatService chatService;
-     @Autowired
-     private CloudinaryService cloudinaryService;
 
-    @PostMapping("/send-message")
-    public ResponseEntity<ChatMessageDTO> sendMessage(
+     @PostMapping("/conversation")
+     @Operation(summary = "Tạo đoạn chat mới hoặc load lịch sử khi người dùng mở thanh chat")
+     public ResponseEntity<TypeResponse<ConversationResponseDTO>> createOrGetConversation(
+            @RequestBody(required = false) Map<String, Object> requestBody,
             Principal principal,
-            @RequestBody ChatMessageDTO request) {
-        ChatMessageDTO dto = ChatMessageDTO.builder()
-                .receiverId(request.getReceiverId())
-                .message(request.getMessage())
+            HttpServletRequest request) {
+            UUID guestSessionId = null;
+            UserEntity currentUser = null;
+            if (principal != null) {
+                Authentication auth = (Authentication) principal;
+                currentUser = (UserEntity) auth.getPrincipal();
+            }
+            // Case 2: Guest user (không có JWT hoặc JWT không hợp lệ)
+            else {
+                Object guestIdObj = requestBody.get("guestSessionId");
+                String guestIdStr = guestIdObj.toString();
+                guestSessionId = UUID.fromString(guestIdStr);
+            }
+
+            TypeResponse<ConversationResponseDTO> response = chatService.getOrCreateConversation(guestSessionId, currentUser);
+            return ResponseEntity.status(response.getStatusCode()).body(response);
+        }
+    /**
+     * Gửi tin nhắn
+     */
+    @PostMapping("/send")
+    @Operation(summary = "Gửi tin nhắn")
+    public ResponseEntity<TypeResponse<MessageResponseDTO>> sendMessage(@RequestBody SendMessageRequestDTO request) {
+            TypeResponse<MessageResponseDTO> response = chatService.sendMessage(request);
+            return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+    /**
+     * Lấy chi tiết conversation
+     */
+    @GetMapping("/conversation/{id}")
+    @Operation(summary = "Truy cập 1 đoạn chat")
+    public ResponseEntity<TypeResponse<ConversationResponseDTO>> getConversation(@PathVariable UUID id) {
+        TypeResponse<ConversationResponseDTO> response = chatService.getConversation(id);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    /**
+     *  Admin: Lấy danh sách tất cả sessions đang active
+     */
+    @GetMapping("/admin/sessions")
+    @Operation(summary = "Lấy danh sách session chat cho Admin",
+            description = "Hỗ trợ tìm kiếm, lọc, phân trang, sắp xếp")
+    public ResponseEntity<TypeResponse<PageDTO<ChatSessionDTO>>> getActiveSessions(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) ConversationStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
+            @RequestParam(defaultValue = "0") @Min(0) Integer page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer size,
+            @RequestParam(defaultValue = "lastMessageAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        FilterDTO filter = FilterDTO.builder()
+                .search(search)
+                .status(status)
+                .fromDate(fromDate)
+                .toDate(toDate)
+                .page(page != null ? page : 0)
+                .size(size != null ? size : 10)
+                .sortBy(StringUtils.hasText(sortBy) ? sortBy : "lastMessageAt")
+                .sortDir(StringUtils.hasText(sortDir) ? sortDir.toLowerCase() : "desc")
                 .build();
-        ChatMessageDTO response = chatService.sendMessage(dto, principal);
-        return ResponseEntity.ok(response);
-    }
-    @PostMapping(value = "/send-image", consumes = "multipart/form-data")
-    public ResponseEntity<ChatMessageDTO> sendImage(
-            Principal principal,
-            @RequestParam("receiverId") UUID receiverId,
-            @RequestParam(value = "caption", required = false) String caption,
-            @RequestParam("image") MultipartFile image) {
-        // Tạo tên file với receiverId, không cần phần mở rộng vì CloudinaryService sẽ xử lý
-        String fileName = "chat_" + receiverId.toString();
-        String imageUrl = new String();
-        ChatMessageDTO response = chatService.sendImage(principal, receiverId, imageUrl, caption);
-        return ResponseEntity.ok(response);
-    }
-    @PostMapping("/send-product-link")
-    public ResponseEntity<ChatMessageDTO> sendProductLink(
-            Principal principal,
-            @RequestBody ProductLinkRequest request) {
-        ChatMessageDTO response = chatService.sendProductLink(
-                principal,
-                request.getReceiverId(),
-                request.getProductId(),
-                request.getProductName(),
-                request.getProductImageUrl(),
-                request.getProductPrice()
-        );
-        return ResponseEntity.ok(response);
-    }
-    @GetMapping("/{receiverId}")
-    public ResponseEntity<List<?>> getChatHistory(
-            Principal principal,
-            @PathVariable UUID receiverId) {
-        return ResponseEntity.ok(chatService.getChatHistory(principal, receiverId));
-    }
-    static class ProductLinkRequest {
-        private UUID receiverId;
-        private String productId;
-        private String productName;
-        private String productImageUrl;
-        private String productPrice;
 
-        public UUID getReceiverId() { return receiverId; }
-        public String getProductId() { return productId; }
-        public String getProductName() { return productName; }
-        public String getProductImageUrl() { return productImageUrl; }
-        public String getProductPrice() { return productPrice; }
-
-        public void setReceiverId(UUID receiverId) { this.receiverId = receiverId; }
-        public void setProductId(String productId) { this.productId = productId; }
-        public void setProductName(String productName) { this.productName = productName; }
-        public void setProductImageUrl(String productImageUrl) { this.productImageUrl = productImageUrl; }
-        public void setProductPrice(String productPrice) { this.productPrice = productPrice; }
+        TypeResponse<PageDTO<ChatSessionDTO>> response = chatService.getActiveSessions(filter);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
-
-
+    /**
+     * Admin: Lấy thống kê chat
+     */
+    @GetMapping("/admin/statistics")
+    @Operation(summary = "Thống kê các thông tin kênh chat cho admin")
+    public ResponseEntity<TypeResponse<ChatStatisticsDTO>> getStatistics() {
+        TypeResponse<ChatStatisticsDTO> response = chatService.getStatistics();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }

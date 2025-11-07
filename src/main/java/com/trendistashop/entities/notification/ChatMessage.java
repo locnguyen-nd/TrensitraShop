@@ -1,45 +1,52 @@
 package com.trendistashop.entities.notification;
 
+import com.trendistashop.entities.BaseEntity;
 import com.trendistashop.entities.user.UserEntity;
+import com.trendistashop.enums.MessageType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity(name = "chat_message")
+@Entity
+@Table(name = "chat_message")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChatMessage {
+@ToString(exclude = {"conversation", "sender", "receiver"})
+public class ChatMessage extends BaseEntity {
     @Id
     @GeneratedValue
     private UUID id;
-    @ManyToOne
-    @JoinColumn(name = "sender_id")
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversation_id", nullable = false)
+    private ChatConversation conversation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_id", nullable = true)
     private UserEntity sender;
-    @ManyToOne
-    @JoinColumn(name = "receiver_id")
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiver_id", nullable = false)
     private UserEntity receiver;
-    private String message;
-    private LocalDateTime createdAt;
-    private boolean isRead;
-    // New fields to support rich content
-    private String messageType; // TEXT, IMAGE, PRODUCT_LINK, FILE
-    private String contentUrl; // URL for image, product, or file
-    private String thumbnailUrl; // For product thumbnail or image preview
-    private String contentMetadata; // JSON string with metadata (product info, image details, etc.)
+
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MessageType type;
+
+    @Column(name = "sent_at")
+    private LocalDateTime sentAt;
+
+    private boolean isRead = false;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        isRead = false;
-        if (messageType == null) {
-            messageType = "TEXT"; // Default type
-        }
+        this.sentAt = LocalDateTime.now();
     }
 }

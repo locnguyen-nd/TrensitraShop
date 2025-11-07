@@ -1,5 +1,4 @@
 package com.trendistashop.config;
-import io.jsonwebtoken.io.IOException;
 import lombok.extern.log4j.Log4j2;
 import org.modelmapper.ModelMapper;
 import org.springframework.context.annotation.Bean;
@@ -9,10 +8,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 import vn.payos.PayOS;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,20 +32,18 @@ public class WebConfig {
         return new ModelMapper();
     }
 
-    @Bean
+    /**
+     * RestTemplate cho internal services (có interceptor)
+     */
+    @Bean(name = "restTemplate")
     public RestTemplate restTemplate() {
         RestTemplate restTemplate = new RestTemplate();
-
-        // Add message converters
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
         converter.setSupportedMediaTypes(Arrays.asList(
                 MediaType.APPLICATION_JSON,
                 MediaType.APPLICATION_OCTET_STREAM
         ));
-
         restTemplate.getMessageConverters().add(0, converter);
-
-        // Add interceptor for logging
         restTemplate.setInterceptors(Collections.singletonList(new ClientHttpRequestInterceptor() {
             @Override
             public ClientHttpResponse intercept(HttpRequest request, byte[] body,
@@ -55,10 +54,27 @@ public class WebConfig {
                 return response;
             }
         }));
+        return restTemplate;
+    }
+    /**
+     * RestTemplate cho external API (KHÔNG có interceptor)
+     * Dùng riêng cho Gemini, payment gateway, etc.
+     */
+
+    @Bean(name = "externalRestTemplate")
+    public RestTemplate externalRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000);
+        factory.setReadTimeout(30000);
+
+        RestTemplate restTemplate = new RestTemplate(factory);
+
+        // Đảm bảo có Jackson converter
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+        restTemplate.getMessageConverters().add(0, converter);
 
         return restTemplate;
     }
-
     private void logRequest(HttpRequest request, byte[] body) {
         log.debug("Request URI: {}", request.getURI());
         log.debug("Request Method: {}", request.getMethod());

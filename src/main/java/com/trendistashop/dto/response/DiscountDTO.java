@@ -42,6 +42,8 @@ public class DiscountDTO {
     private LocalDateTime endDate;
     private BigDecimal valueApply;
     private Boolean isActive;
+    private Integer usageLimit;
+    private Integer maxUsagePerCustomer;
     private List<UUID> categoryApplies;
     private List<ProductApplyDTO> productApplies;
 

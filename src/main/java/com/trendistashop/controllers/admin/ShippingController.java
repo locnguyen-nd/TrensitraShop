@@ -25,25 +25,24 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${api.prefix}/shipping")
 @RequiredArgsConstructor
-@Tag(name = "Shipping Location")
+@Tag(name = "Shipping API", description = "API quản lý vận chuyển")
 public class ShippingController {
     private final IShippingService shippingService;
 
     @PostMapping("/create")
-    @Operation(summary = "Tạo đơn vận chuyển GHN")
+    @Operation(summary = "Tạo đơn vận chuyển GHN, không cần vào hệ thống GHN nhập thủ công nữa")
     public TypeResponse<String> createShipment(@RequestBody CreateShipmentRequest request) {
         return shippingService.createShipment(request);
     }
 
     @GetMapping("/label/{shipmentCode}")
-    @Operation(summary = "In tem vận chuyển")
+    @Operation(summary = "In tem vận chuyển, tem này sẽ được dán lên bưu kiện (có thể dùng trực tiếp trên web GHN)")
     public ResponseEntity<byte[]> printLabel(@PathVariable String shipmentCode,
                                              @RequestParam(defaultValue = "inline") String mode) {
         TypeResponse<byte[]> response = shippingService.printShipmentLabel(shipmentCode);
         if (response.getData() == null) {
             return ResponseEntity.status(response.getStatusCode()).build();
         }
-
         String filename = "Tem_GHN_" + shipmentCode + ".pdf";
         String encoded = "filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8);
         String disposition = "download".equalsIgnoreCase(mode) ? "attachment" : "inline";
@@ -55,7 +54,7 @@ public class ShippingController {
     }
 
     @GetMapping("/track/{shipmentCode}")
-    @Operation(summary = "Theo dõi vận đơn")
+    @Operation(summary = "Theo dõi vận đơn, cho khách xem trạng thái vận đơn từ đơn vị ship")
     public ResponseEntity<TypeResponse<String>> track(@PathVariable String shipmentCode) {
         TypeResponse<String> response = shippingService.trackShipmentStatus(shipmentCode);
         return ResponseEntity.status(response.getStatusCode()).body(response);

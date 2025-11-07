@@ -42,7 +42,7 @@ import jakarta.validation.Valid;
 @RestController
 @CrossOrigin
 @RequestMapping("${api.prefix}/auth")
-@Tag(name = "OAuth")
+@Tag(name = "OAuth API" , description = "API cho xác thực người dùng")
 public class AuthController {
 
     private final IAuthenticationService iAuthenticationService;

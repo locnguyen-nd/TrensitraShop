@@ -369,10 +369,12 @@ public class ProductService implements IProductService {
     }
 
     private void updateDiscounts(Product product, List<UUID> discountIds) {
-        List<Discount> discounts = (discountIds != null && !discountIds.isEmpty())
-                ? discountRepository.findAllById(discountIds)
-                : new ArrayList<>();
-        product.setDiscounts(discounts);
+        product.getDiscounts().clear();
+        if (discountIds != null && !discountIds.isEmpty()) {
+            List<Discount> discounts = discountRepository.findAllById(discountIds);
+            product.getDiscounts().addAll(discounts);
+        }
+        discountService.calculateFinalPriceAndUpdateProduct(product.getId());
     }
 
     private void updateVariants(Product managedProduct, List<VariantRequestDTO> variants) {
@@ -501,6 +503,7 @@ public class ProductService implements IProductService {
     }
 
     public ProductDTO mapToProductDto(Product product) {
+        BigDecimal finalProductPrice = discountService.calculateFinalPriceAndUpdateProduct(product.getId());
         return ProductDTO.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -512,7 +515,7 @@ public class ProductService implements IProductService {
                 .status(product.getStatus())
 //                .discountValue(getFinalPriceAfterDiscount(product.getId()))
                 .originPrice(product.getOriginPrice())
-                .price(product.getPrice())
+                .price(finalProductPrice)
                 .isFreeShip(product.getIsFreeShip())
                 .availableQuantities(product.getProductVariants()
                         .stream().filter(Objects::nonNull)

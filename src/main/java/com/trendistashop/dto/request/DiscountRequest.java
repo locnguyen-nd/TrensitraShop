@@ -29,4 +29,6 @@ public class DiscountRequest {
         private BigDecimal maxDiscountValueTo;
         private BigDecimal minOrderValueFrom;
         private BigDecimal minOrderValueTo;
+        private Integer usageLimit;
+        private Integer maxUsagePerCustomer;
 }

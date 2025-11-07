@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.trendistashop.entities.notification.ChatMessage;
 import com.trendistashop.entities.notification.Notification;
 import com.trendistashop.entities.BaseEntity;
+import com.trendistashop.entities.notification.NotificationRecipient;
 import com.trendistashop.enums.ProviderEnum;
 import jakarta.persistence.*;
 import lombok.*;
@@ -59,6 +60,7 @@ public class UserEntity extends BaseEntity implements UserDetails {
     private LocalDateTime codeExpiry;
     private boolean enabled = false;
     private boolean locked = false;
+
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, orphanRemoval = true)
     @ToString.Exclude
     private List<Address> addressList;
@@ -66,10 +68,12 @@ public class UserEntity extends BaseEntity implements UserDetails {
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "user" , orphanRemoval = true)
     @JsonManagedReference("user-orders")
     private List<Order> orders = new ArrayList<>();
+
     @OneToOne(cascade = CascadeType.ALL,mappedBy = "user", orphanRemoval = true)
     @Builder.Default
     @EqualsAndHashCode.Exclude
     private Cart userCart = new Cart() ;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "auth_user_authority",
@@ -78,31 +82,34 @@ public class UserEntity extends BaseEntity implements UserDetails {
     )
     private List<RoleEntity> roles = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user")
-    private List<Notification> notifications;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @JsonIgnore
+    private Set<NotificationRecipient> notificationRecipients = new HashSet<>();
 
     @OneToMany(mappedBy = "sender")
+    @ToString.Exclude
+    @JsonIgnore
     private List<ChatMessage> sentMessages;
 
     @OneToMany(mappedBy = "receiver")
+    @ToString.Exclude
+    @JsonIgnore
     private List<ChatMessage> receivedMessages;
+
     @Override
     public Collection<? extends  GrantedAuthority> getAuthorities() {
         String prefixRole = "ROLE_";
         List<GrantedAuthority> authorities = new ArrayList<>();
-        // Add roles as authorities
         for (RoleEntity role : roles) {
             if (role.getName() != null) {
                 authorities.add(new SimpleGrantedAuthority(prefixRole + role.getName().toUpperCase()));
-//                System.out.println("Added role: " + prefixRole + role.getName().toUpperCase());
             }
             if (roles != null) {
-                // Add permissions for each role
                 if (role.getPermissions() != null) {
                     for (PermissionEntity permission : role.getPermissions()) {
                         if (permission.getName() != null) {
                             authorities.add(new SimpleGrantedAuthority(permission.getName()));
-//                            System.out.println("Added permission: " + permission.getName());
                         } else {
                             System.out.println("Permission name is null for permission: " + permission);
                         }
@@ -114,7 +121,6 @@ public class UserEntity extends BaseEntity implements UserDetails {
                 System.out.println("Role permissions are null for role: " + role.getName());
             }
         }
-//        System.out.println("User authorities: " + authorities);
         return authorities;
     }
 

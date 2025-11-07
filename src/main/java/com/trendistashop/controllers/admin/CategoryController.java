@@ -19,7 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${api.prefix}/categories")
 @CrossOrigin
-@Tag(name = "Categories")
+@Tag(name = "Category API", description = "API quản lý gender và category")
 public class CategoryController {
 
     @Autowired

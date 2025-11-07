@@ -22,7 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("${api.prefix}/banner")
 @CrossOrigin
-@Tag(name = "Banner API", description = "API quản lý banner")
+@Tag(name = "Banner API", description = "API quản lý banner hiển thị ở trang chủ,...")
 public class BannerController {
     @Autowired
     private IHomeService homeService;

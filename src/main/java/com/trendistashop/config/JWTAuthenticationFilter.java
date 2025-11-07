@@ -55,17 +55,20 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         String requestURI = request.getRequestURI();
         log.info("Processing request: {}", requestURI);
         // Bỏ qua các endpoint OAuth2 và login
-        if (requestURI.startsWith("/oauth2/")
-                || requestURI.equals("/error")
-                || requestURI.startsWith("/login/")
-                || requestURI.startsWith("/login/oauth2/")
-                || requestURI.equals("/api/v1/oauth2/")
-                || requestURI.startsWith("/.well-known/")){
+        if (requestURI.contains("/oauth2/")
+                || requestURI.contains("/error")
+                || requestURI.contains("/login/")
+                || requestURI.contains("/login/oauth2/")
+                || requestURI.contains("/api/v1/oauth2/")
+                || requestURI.contains("/ws-chat/")
+                || requestURI.contains("/websocket")
+                || requestURI.contains("/.well-known/")){
             filterChain.doFilter(request, response);
             return;
         }
         String authHeader = request.getHeader("Authorization");
-        if (null == authHeader || !authHeader.startsWith("Bearer")) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.info("No token found, allowing as guest for: {}", requestURI);
             filterChain.doFilter(request, response);
             return;
         }

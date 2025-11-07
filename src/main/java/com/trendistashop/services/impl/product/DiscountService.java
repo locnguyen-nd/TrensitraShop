@@ -8,19 +8,20 @@ import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.entities.category.Category;
 import com.trendistashop.entities.product.Discount;
 import com.trendistashop.entities.product.Product;
+import com.trendistashop.entities.product.ProductVariant;
 import com.trendistashop.entities.user.CartItem;
 import com.trendistashop.enums.DiscountApplyFor;
 import com.trendistashop.enums.DiscountType;
 import com.trendistashop.exceptions.ResourceNotFoundEx;
 import com.trendistashop.helper.GenerateCodeDiscount;
 import com.trendistashop.repositories.category.CategoryRepository;
-import com.trendistashop.repositories.order.OrderRepository;
 import com.trendistashop.repositories.product.DiscountRepository;
 import com.trendistashop.repositories.product.ProductRepository;
 import com.trendistashop.services.CloudinaryService;
 import com.trendistashop.specifications.DiscountSpec;
 import com.trendistashop.utils.ResponseHelper;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -28,283 +29,309 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Slf4j
+@Transactional
+@AllArgsConstructor
 public class DiscountService {
-    @Autowired
-    private DiscountRepository discountRepository;
-    @Autowired
-    private OrderRepository orderRepository;
-    @Autowired
-    private CloudinaryService cloudinaryService;
-    @Autowired
-    private CategoryRepository categoryRepository;
-    @Autowired
-    private ProductRepository productRepository;
-    private GenerateCodeDiscount generateCodeDiscount;
 
-    // Create
+    private final DiscountRepository discountRepository;
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final CloudinaryService cloudinaryService;
+    private final GenerateCodeDiscount generateCodeDiscount;
     @Transactional
-    public TypeResponse<DiscountDTO> createDiscount(DiscountRequest discountDto,
-                                       List<UUID> categoryTds,
-                                       List<UUID> productIds)  {
-        if (discountDto.getCode() == null || discountDto.getCode().isBlank()) {
-            discountDto.setCode(generateCodeDiscount.generateUniqueDiscountCode());
-        } else if (discountRepository.existsByCode(discountDto.getCode())) {
-           return ResponseHelper.validationError(discountDto.getCode(),ResponseMessage.DISCOUNT_EXIST);
-        }
-
+    public TypeResponse<DiscountDTO> createDiscount(DiscountRequest dto,
+                                                    List<UUID> categoryIds,
+                                                    List<UUID> productIds) {
         try {
-            // Validate dates
-            discountDto = validateDiscount(discountDto);
+            dto = validateAndPrepare(dto);
+
+            if (discountRepository.existsByCode(dto.getCode())) {
+                return ResponseHelper.validationError("code", ResponseMessage.DISCOUNT_EXIST);
+            }
+
             Discount discount = Discount.builder()
-                    .code(discountDto.getCode())
-                    .description(discountDto.getDescription())
-                    .discountType(discountDto.getDiscountType())
-                    .discountApplyFor(discountDto.getDiscountApplyFor())
-                    .discountValue(discountDto.getDiscountValue())
-                    .frame(discountDto.getFrame())
-                    .maxDiscountValue(discountDto.getMaxDiscountValue())
-                    .minOrderValue(discountDto.getMinOrderValue())
-                    .startDate(discountDto.getStartDate())
-                    .endDate(discountDto.getEndDate())
-                    .isActive(discountDto.getIsActive() != null ? discountDto.getIsActive() : true)
+                    .code(dto.getCode())
+                    .description(dto.getDescription())
+                    .discountType(dto.getDiscountType())
+                    .discountApplyFor(dto.getDiscountApplyFor())
+                    .discountValue(dto.getDiscountValue())
+                    .frame(dto.getFrame())
+                    .maxDiscountValue(dto.getMaxDiscountValue())
+                    .minOrderValue(dto.getMinOrderValue())
+                    .startDate(dto.getStartDate())
+                    .endDate(dto.getEndDate())
+                    .isActive(dto.getIsActive())
+                    .usageLimit(dto.getUsageLimit())
+                    .maxUsagePerCustomer(dto.getMaxUsagePerCustomer())
                     .build();
-            Discount createDiscount = discountRepository.save(discount);
-            // For Categories
-            if (categoryTds != null && !categoryTds.isEmpty()) {
-                List<Category> categories = categoryRepository.findAllById(categoryTds);
-                categories.forEach(category -> category.getDiscounts().add(createDiscount));
-                categoryRepository.saveAll(categories);
-            }
-            // For Products
-            if (productIds != null && !productIds.isEmpty()) {
-                List<Product> products = productRepository.findAllById(productIds);
-                products.forEach(product -> product.getDiscounts().add(createDiscount));
-                productRepository.saveAll(products);
-            }
-            return ResponseHelper.ok(mapToDiscountDto(createDiscount), ResponseMessage.FETCH_SUCCESS);
+
+            discount = discountRepository.save(discount);
+
+            attachToCategories(discount, categoryIds);
+            attachToProductsAndUpdatePrice(discount, productIds);
+
+            return ResponseHelper.ok(mapToDiscountDto(discount), ResponseMessage.CREATE_SUCCESS);
         } catch (Exception e) {
-            log.error("Error when create discount: {}", e.getMessage());
+            log.error("Error creating discount", e);
             return ResponseHelper.badRequest(ResponseMessage.BAD_REQUEST);
         }
     }
 
-    private DiscountRequest validateDiscount(DiscountRequest discountDTO) {
-        if (discountDTO.getStartDate() == null) {
-            discountDTO.setStartDate(LocalDateTime.now());
-        }
-        if (discountDTO.getStartDate().isAfter(discountDTO.getEndDate())) {
-            throw new ResourceNotFoundEx("Start date must be before end date");
-        }
-        if (discountDTO.getEndDate() == null || discountDTO.getEndDate().isBefore(discountDTO.getStartDate())) {
-            throw new IllegalArgumentException("Invalid discount end date");
-        }
-        //  validate discount value on type
-        if (discountDTO.getDiscountType() == DiscountType.PERCENT) {
-            if (discountDTO.getDiscountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
-                throw new IllegalArgumentException("Percentage discount cannot exceed 100%");
-            }
-        }
-        // Max discount is set for percentage discount
-        if (discountDTO.getMaxDiscountValue() == null) {
-            discountDTO.setMaxDiscountValue(BigDecimal.valueOf(1000));
-        }
-        // Default to active if not specified
-        if (discountDTO.getIsActive() == null) {
-            discountDTO.setIsActive(true);
-        }
-        return discountDTO;
-    }
-
-    // Read One
-    public TypeResponse<DiscountDTO> getDiscountById(UUID id) {
-        try {
-            Discount discount = discountRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundEx("Discount not found"));
-            DiscountDTO discountDTO = mapToDiscountDto(discount);
-            return ResponseHelper.ok(discountDTO, ResponseMessage.FETCH_SUCCESS);
-        } catch (Exception e) {
-            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
-        }
-    }
-
-    public TypeResponse<Page<DiscountDTO>> getAllDiscount(DiscountRequest discountRequest, Pageable pageable) {
-        try {
-            Page<Discount> discounts = discountRepository.findAll(DiscountSpec.filter(discountRequest), pageable);
-            Page<DiscountDTO> discountDTOPage = discounts.map(this::mapToDiscountDto);
-            return ResponseHelper.ok(discountDTOPage, ResponseMessage.FETCH_SUCCESS);
-        } catch (Exception e) {
-            log.error("Failed to fetch discounts: {}", e.getMessage(), e);
-            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
-        }
-    }
-    // Update
     @Transactional
     public TypeResponse<DiscountDTO> updateDiscount(UUID id,
-                                      DiscountRequest discountDto,
-                                      List<UUID> categoryTds,
-                                      List<UUID> productIds)  {
+                                                    DiscountRequest dto,
+                                                    List<UUID> categoryIds,
+                                                    List<UUID> productIds) {
         try {
-            // Validate dates
-            discountDto = validateDiscount(discountDto);
-            // Find existing discount
-            Discount existingDiscount = discountRepository.findById(id).get();
-            if (existingDiscount == null){
-                ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
+            Discount discount = discountRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx(ResponseMessage.NOT_FOUND));
 
-            }
-            // Update discount
-            existingDiscount.setCode(discountDto.getCode());
-            existingDiscount.setDescription(discountDto.getDescription());
-            existingDiscount.setDiscountType(discountDto.getDiscountType());
-            existingDiscount.setDiscountApplyFor(discountDto.getDiscountApplyFor());
-            existingDiscount.setDiscountValue(discountDto.getDiscountValue());
-            existingDiscount.setMaxDiscountValue(discountDto.getMaxDiscountValue());
-            existingDiscount.setMinOrderValue(discountDto.getMinOrderValue());
-            existingDiscount.setStartDate(discountDto.getStartDate());
-            existingDiscount.setEndDate(discountDto.getEndDate());
-            existingDiscount.setIsActive(discountDto.getIsActive() != null ? discountDto.getIsActive() : true);
-            // Delete ảnh
-            if (existingDiscount.getFrame() != null && !existingDiscount.getFrame().equals(discountDto.getFrame())) {
-                cloudinaryService.deleteFile(existingDiscount.getFrame());
-                existingDiscount.setFrame(discountDto.getFrame());
-            } else {
-                existingDiscount.setFrame(discountDto.getFrame());
-            }
-            Discount updatedDiscount = discountRepository.save(existingDiscount);
-            // For Categories
-            if (categoryTds != null && !categoryTds.isEmpty()) {
-                List<Category> categories = categoryRepository.findAllById(categoryTds);
-                // Remove old relationships
-                List<Category> oldCategories = categoryRepository.findAll().stream()
-                        .filter(category -> category.getDiscounts().contains(existingDiscount))
-                        .collect(Collectors.toList());
-                oldCategories.forEach(category -> category.getDiscounts().remove(existingDiscount));
-                categoryRepository.saveAll(oldCategories);
+            dto = validateAndPrepare(dto);
 
-                categories.forEach(category -> category.getDiscounts().add(updatedDiscount));
-                categoryRepository.saveAll(categories);
-            } else {
-                List<Category> oldCategories = categoryRepository.findAll().stream()
-                        .filter(category -> category.getDiscounts().contains(existingDiscount))
-                        .collect(Collectors.toList());
-                oldCategories.forEach(category -> category.getDiscounts().remove(existingDiscount));
-                categoryRepository.saveAll(oldCategories);
+            discount.setCode(dto.getCode());
+            discount.setDescription(dto.getDescription());
+            discount.setDiscountType(dto.getDiscountType());
+            discount.setDiscountApplyFor(dto.getDiscountApplyFor());
+            discount.setDiscountValue(dto.getDiscountValue());
+            discount.setMaxDiscountValue(dto.getMaxDiscountValue());
+            discount.setMinOrderValue(dto.getMinOrderValue());
+            discount.setStartDate(dto.getStartDate());
+            discount.setEndDate(dto.getEndDate());
+            discount.setIsActive(dto.getIsActive());
+            discount.setUsageLimit(dto.getUsageLimit());
+            discount.setMaxUsagePerCustomer(dto.getMaxUsagePerCustomer());
+
+            if (dto.getFrame() != null && !dto.getFrame().equals(discount.getFrame())) {
+                if (discount.getFrame() != null) {
+                    cloudinaryService.deleteFile(discount.getFrame());
+                }
+                discount.setFrame(dto.getFrame());
             }
 
-            // For Products
-            if (productIds != null && !productIds.isEmpty()) {
-                List<Product> products = productRepository.findAllById(productIds);
-                List<Product> oldProducts = productRepository.findAll().stream()
-                        .filter(product -> product.getDiscounts().contains(existingDiscount))
-                        .collect(Collectors.toList());
-                oldProducts.forEach(product -> product.getDiscounts().remove(existingDiscount));
-                productRepository.saveAll(oldProducts);
+            discount = discountRepository.save(discount);
 
-                products.forEach(product -> product.getDiscounts().add(updatedDiscount));
-                productRepository.saveAll(products);
-            } else {
-                List<Product> oldProducts = productRepository.findAll().stream()
-                        .filter(product -> product.getDiscounts().contains(existingDiscount))
-                        .collect(Collectors.toList());
-                oldProducts.forEach(product -> product.getDiscounts().remove(existingDiscount));
-                productRepository.saveAll(oldProducts);
-            }
-            return ResponseHelper.created(mapToDiscountDto(updatedDiscount), ResponseMessage.UPDATE_SUCCESS);
+            // Cập nhật quan hệ
+            detachFromAllCategories(discount);
+            detachFromAllProducts(discount);
+
+            attachToCategories(discount, categoryIds);
+            attachToProductsAndUpdatePrice(discount, productIds);
+
+            return ResponseHelper.ok(mapToDiscountDto(discount), ResponseMessage.UPDATE_SUCCESS);
+        } catch (ResourceNotFoundEx e) {
+            return ResponseHelper.notFound(e.getMessage());
         } catch (Exception e) {
+            log.error("Error updating discount", e);
             return ResponseHelper.badRequest(ResponseMessage.UPDATE_FAILED);
         }
-
     }
 
-    // Delete
+    @Transactional
     public TypeResponse<Void> deleteDiscount(UUID id) {
         try {
-            Discount discount = discountRepository.findById(id).get();
-            if (discount == null){
-                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
+            Discount discount = discountRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx(ResponseMessage.NOT_FOUND));
+
+            detachFromAllCategories(discount);
+            detachFromAllProducts(discount);
+
+            if (discount.getFrame() != null) {
+                cloudinaryService.deleteFile(discount.getFrame());
             }
-            for (Product product : discount.getProducts()) {
-                product.getDiscounts().remove(discount);
-            }
-            for (Category category : discount.getCategories()) {
-                category.getDiscounts().remove(discount);
-            }
-            discountRepository.save(discount);
-            cloudinaryService.deleteFile(discount.getFrame());
+
             discountRepository.delete(discount);
             return ResponseHelper.ok(null, ResponseMessage.DELETE_SUCCESS);
+        } catch (ResourceNotFoundEx e) {
+            return ResponseHelper.notFound(e.getMessage());
         } catch (Exception e) {
+            log.error("Error deleting discount", e);
             return ResponseHelper.serverError(ResponseMessage.DELETE_FAILED);
         }
     }
 
-
-    // Additional method to manage discount activation
-    public TypeResponse<Void> setDiscountStatus(UUID id, boolean status) {
-        try{
-            Discount discount = discountRepository.findById(id).get();
-            if (discount == null){
-                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
-            }
-            discount.setIsActive(status);
-            discountRepository.save(discount);
-            return ResponseHelper.ok(null, ResponseMessage.UPDATE_SUCCESS);
-        } catch (Exception e){
-            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
-        }
+    public TypeResponse<DiscountDTO> getDiscountById(UUID id) {
+        return discountRepository.findById(id)
+                .map(d -> ResponseHelper.ok(mapToDiscountDto(d), ResponseMessage.FETCH_SUCCESS))
+                .orElseGet(() -> ResponseHelper.notFound(ResponseMessage.NOT_FOUND));
     }
 
-    public TypeResponse<BigDecimal> applyDiscountToNewProduct(String discountCode, BigDecimal price) {
+    public TypeResponse<Page<DiscountDTO>> getAllDiscount(DiscountRequest filter, Pageable pageable) {
         try {
-            Discount discountOptional = discountRepository.findDiscountByCode(discountCode);
-            if (discountOptional == null){
-                return ResponseHelper.notFound(ResponseMessage.NOT_FOUND);
-            }
-            if (!discountOptional.getIsActive()
-                    || LocalDateTime.now().isBefore(discountOptional.getStartDate())
-                    || LocalDateTime.now().isAfter(discountOptional.getEndDate())) {
-                return ResponseHelper.ok(price, ResponseMessage.FETCH_SUCCESS);
-            }
-            BigDecimal discountAmount = calculateDiscountAmount(discountOptional, price);
-            BigDecimal priceAfterDiscount = price.subtract(discountAmount);
-            return ResponseHelper.ok(priceAfterDiscount.max(BigDecimal.ZERO), ResponseMessage.FETCH_SUCCESS);
+            Page<Discount> page = discountRepository.findAll(DiscountSpec.filter(filter), pageable);
+            return ResponseHelper.ok(page.map(this::mapToDiscountDto), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error("Error fetching discounts", e);
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
+    public TypeResponse<Void> setDiscountStatus(UUID id, boolean status) {
+        try {
+            Discount discount = discountRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundEx(ResponseMessage.NOT_FOUND));
+            discount.setIsActive(status);
+            discountRepository.save(discount);
 
+            updatePricesForAffectedProducts(discount);
+            return ResponseHelper.ok(null, ResponseMessage.UPDATE_SUCCESS);
+        } catch (ResourceNotFoundEx e) {
+            return ResponseHelper.notFound(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error updating discount status", e);
+            return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
+        }
+    }
+    @Transactional
+    public BigDecimal calculateFinalPriceAndUpdateProduct(UUID productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
 
-    private BigDecimal calculateDiscountAmount(Discount discount, BigDecimal price) {
-        BigDecimal discountAmount;
-        if (discount.getDiscountApplyFor() == DiscountApplyFor.PRODUCT) {
-            if (discount.getDiscountType() == DiscountType.PERCENT) {
-                discountAmount = price.multiply(discount.getDiscountValue().divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP));
-            } else {
-                discountAmount = discount.getDiscountValue();
-            }
-        } else {
-            if (price.compareTo(discount.getMinOrderValue()) < 0) {
-                return BigDecimal.ZERO;
-            }
-            if (discount.getDiscountType() == DiscountType.PERCENT) {
-                discountAmount = price.multiply(discount.getDiscountValue().divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP));
-                if (discount.getMaxDiscountValue() != null) {
-                    discountAmount = discountAmount.min(discount.getMaxDiscountValue());
-                }
-            } else {
-                discountAmount = discount.getDiscountValue();
+        BigDecimal finalPrice = calculateFinalPriceForProduct(product);
+        product.setPrice(finalPrice.max(BigDecimal.ZERO));
+        if(product.getProductVariants() != null) {
+            for (ProductVariant variant : product.getProductVariants()) {
+                BigDecimal variantFinalPrice = calculateFinalPriceForVariant(variant, product);
+                variant.setPrice(variantFinalPrice.max(BigDecimal.ZERO));
             }
         }
-        return discountAmount;
+        productRepository.save(product);
+        return finalPrice;
     }
 
-    // Helper method to convert Discount to DiscountDto
+    private BigDecimal calculateFinalPriceForProduct(Product product) {
+        List<Discount> applicable = getApplicableProductDiscounts(product);
+        return applicable.isEmpty()
+                ? product.getOriginPrice()
+                : applyDiscount(product.getOriginPrice(), getBestDiscount(applicable));
+    }
+    private BigDecimal calculateFinalPriceForVariant(ProductVariant variant, Product product) {
+        BigDecimal basePrice = (variant.getPrice() != null && variant.getPrice().compareTo(BigDecimal.ZERO) > 0)
+                ? variant.getPrice()
+                : product.getPrice();
+
+        List<Discount> discounts = getApplicableProductDiscounts(product);
+        return discounts.isEmpty() ? basePrice : applyDiscount(basePrice, getBestDiscount(discounts));
+    }
+    private List<Discount> getApplicableProductDiscounts(Product product) {
+        LocalDateTime now = LocalDateTime.now();
+
+        return Stream.concat(
+                        product.getDiscounts().stream(),
+                        getAllCategoryDiscounts(product.getCategory())
+                )
+                .filter(d -> Boolean.TRUE.equals(d.getIsActive()))
+                .filter(d -> d.getDiscountApplyFor() == DiscountApplyFor.PRODUCT)
+                .filter(d -> !now.isBefore(d.getStartDate()) && !now.isAfter(d.getEndDate()))
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private Stream<Discount> getAllCategoryDiscounts(Category category) {
+        if (category == null) return Stream.empty();
+        Stream<Discount> current = category.getDiscounts().stream();
+        Stream<Discount> parentDiscounts = getAllCategoryDiscounts(category.getParent());
+        return Stream.concat(current, parentDiscounts);
+    }
+
+    private Discount getBestDiscount(List<Discount> discounts) {
+        return discounts.stream()
+                .max(Comparator.comparing(this::getEffectiveDiscountValue))
+                .orElseThrow();
+    }
+
+    private BigDecimal getEffectiveDiscountValue(Discount d) {
+        return d.getDiscountType() == DiscountType.PERCENT
+                ? d.getDiscountValue()
+                : d.getDiscountValue().divide(BigDecimal.valueOf(1000), 4, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal applyDiscount(BigDecimal basePrice, Discount discount) {
+        BigDecimal priceAfter = switch (discount.getDiscountType()) {
+            case PERCENT -> {
+                BigDecimal rate = BigDecimal.ONE.subtract(
+                        discount.getDiscountValue().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+                );
+                yield basePrice.multiply(rate);
+            }
+            case AMOUNT -> basePrice.subtract(discount.getDiscountValue());
+            default -> basePrice;
+        };
+
+        if (discount.getMaxDiscountValue() != null) {
+            BigDecimal actualDiscount = basePrice.subtract(priceAfter);
+            if (actualDiscount.compareTo(discount.getMaxDiscountValue()) > 0) {
+                priceAfter = basePrice.subtract(discount.getMaxDiscountValue());
+            }
+        }
+
+        return priceAfter.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private DiscountRequest validateAndPrepare(DiscountRequest dto) {
+        if (dto.getStartDate() == null) dto.setStartDate(LocalDateTime.now());
+        if (dto.getEndDate() == null || dto.getEndDate().isBefore(dto.getStartDate())) {
+            throw new IllegalArgumentException("End date must be after start date");
+        }
+        if (dto.getDiscountType() == DiscountType.PERCENT
+                && dto.getDiscountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("Percentage cannot exceed 100%");
+        }
+        if (dto.getIsActive() == null) dto.setIsActive(true);
+        if (dto.getMaxDiscountValue() == null) dto.setMaxDiscountValue(BigDecimal.ZERO);
+        if (dto.getCode() == null || dto.getCode().isBlank()) {
+            dto.setCode(generateCodeDiscount.generateUniqueDiscountCode());
+        }
+        return dto;
+    }
+
+    private void attachToCategories(Discount discount, List<UUID> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) return;
+        List<Category> categories = categoryRepository.findAllById(categoryIds);
+        categories.forEach(c -> c.getDiscounts().add(discount));
+        categoryRepository.saveAll(categories);
+    }
+
+    private void attachToProductsAndUpdatePrice(Discount discount, List<UUID> productIds) {
+        if (productIds == null || productIds.isEmpty()) return;
+        List<Product> products = productRepository.findAllById(productIds);
+        products.forEach(p -> p.getDiscounts().add(discount));
+        productRepository.saveAll(products);
+        products.forEach(p -> calculateFinalPriceAndUpdateProduct(p.getId()));
+    }
+
+    private void detachFromAllCategories(Discount discount) {
+        categoryRepository.findAll().stream()
+                .filter(c -> c.getDiscounts().contains(discount))
+                .forEach(c -> c.getDiscounts().remove(discount));
+    }
+
+    private void detachFromAllProducts(Discount discount) {
+        productRepository.findAll().stream()
+                .filter(p -> p.getDiscounts().contains(discount))
+                .forEach(p -> {
+                    p.getDiscounts().remove(discount);
+                    calculateFinalPriceAndUpdateProduct(p.getId());
+                });
+    }
+
+    public void updatePricesForAffectedProducts(Discount discount) {
+        Set<UUID> productIds = new HashSet<>();
+        productIds.addAll(discount.getProducts().stream().map(Product::getId).toList());
+        discount.getCategories().forEach(cat -> collectProductIdsFromCategory(cat, productIds));
+        productIds.forEach(this::calculateFinalPriceAndUpdateProduct);
+    }
+
+    private void collectProductIdsFromCategory(Category cat, Set<UUID> ids) {
+        if (cat == null) return;
+        cat.getProducts().forEach(p -> ids.add(p.getId()));
+    }
     public DiscountDTO mapToDiscountDto(Discount discount) {
         return DiscountDTO.builder()
                 .id(discount.getId())
@@ -319,16 +346,14 @@ public class DiscountService {
                 .startDate(discount.getStartDate())
                 .endDate(discount.getEndDate())
                 .isActive(discount.getIsActive())
+                .usageLimit(discount.getUsageLimit())
+                .maxUsagePerCustomer(discount.getMaxUsagePerCustomer())
                 .categoryApplies(
-                        Optional.ofNullable(discount.getCategories())
-                                .orElse(Collections.emptyList())
-                                .stream()
-                                .map(Category::getId)
-                                .toList()
+                        Optional.ofNullable(discount.getCategories()).orElse(List.of())
+                                .stream().map(Category::getId).toList()
                 )
                 .productApplies(
-                        Optional.ofNullable(discount.getProducts())
-                                .orElse(Collections.emptyList())
+                        Optional.ofNullable(discount.getProducts()).orElse(List.of())
                                 .stream()
                                 .map(p -> new DiscountDTO.ProductApplyDTO(p.getId(), p.getName()))
                                 .toList()
@@ -336,177 +361,65 @@ public class DiscountService {
                 .build();
     }
 
-    public BigDecimal calculateFinalPriceAndUpdateProduct(UUID productId) {
-        Product product = findProductById(productId);
-        BigDecimal discountValue = calculateDiscount(product);
-        updateProductPrice(product);
-        return discountValue;
-    }
-    private Product findProductById(UUID productId) {
-        return productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
-    }
-
-    private BigDecimal calculateDiscount(Product product) {
-        if (!isValidProduct(product)) {
-            setOriginalPrice(product);
-            return BigDecimal.ZERO;
-        }
-
-        List<Discount> applicableDiscounts = findApplicableDiscounts(product);
-        if (applicableDiscounts.isEmpty()) {
-            setOriginalPrice(product);
-            return BigDecimal.ZERO;
-        }
-
-        Discount highestDiscount = findHighestDiscount(applicableDiscounts);
-        return calculateAndApplyDiscount(product, highestDiscount);
-    }
-
-    private boolean isValidProduct(Product product) {
-        return product != null && product.getCategory() != null;
-    }
-    private void setOriginalPrice(Product product) {
-        product.setPrice(product.getOriginPrice());
-    }
-
-    private List<Discount> findApplicableDiscounts(Product product) {
-        List<UUID> discountIds = new ArrayList<>();
-        discountIds.addAll(getProductDiscountIds(product));
-        discountIds.addAll(getCategoryDiscountIds(product.getCategory()));
-
-        return discountRepository.findAllById(discountIds);
-    }
-
-    private List<UUID> getProductDiscountIds(Product product) {
-        return product.getDiscounts().stream()
-                .filter(discount -> discount.getIsActive() == true)
-                .map(Discount::getId)
-                .collect(Collectors.toList());
-    }
-
-    private List<UUID> getCategoryDiscountIds(Category category) {
-        return category.getDiscounts().stream()
-                .filter(discount -> discount.getIsActive() == true)
-                .map(Discount::getId)
-                .collect(Collectors.toList());
-    }
-
-    private Discount findHighestDiscount(List<Discount> discounts) {
-        return discounts.stream()
-                .max(Comparator.comparing(Discount::getDiscountValue))
-                .orElseThrow(() -> new IllegalStateException("No discount found in non-empty discount list"));
-    }
-
-    private BigDecimal calculateAndApplyDiscount(Product product, Discount discount) {
-        BigDecimal basePrice = product.getOriginPrice();
-        BigDecimal discountValue;
-        BigDecimal finalPrice;
-
-        if (discount.getDiscountType() == DiscountType.PERCENT) {
-            discountValue = discount.getDiscountValue();
-            finalPrice = calculatePercentageDiscount(basePrice, discountValue);
-        } else {
-            finalPrice = calculateFixedDiscount(basePrice, discount.getDiscountValue());
-            discountValue = calculateEffectiveDiscountPercentage(basePrice, discount.getDiscountValue());
-        }
-        if(DiscountApplyFor.PRODUCT.equals(discount.getDiscountApplyFor()))
-        {
-            product.setPrice(finalPrice.max(BigDecimal.ZERO));
-        }
-         discountValue = applyMaxDiscountLimit(basePrice, finalPrice, discount);
-
-        return discountValue;
-    }
-
-    private BigDecimal calculatePercentageDiscount(BigDecimal basePrice, BigDecimal discountPercentage) {
-        return basePrice.multiply(
-                BigDecimal.valueOf(100).subtract(discountPercentage)
-                        .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP)
-        );
-    }
-
-    private BigDecimal calculateFixedDiscount(BigDecimal basePrice, BigDecimal discountAmount) {
-        return basePrice.subtract(discountAmount);
-    }
-
-    private BigDecimal calculateEffectiveDiscountPercentage(BigDecimal basePrice, BigDecimal discountAmount) {
-        return discountAmount.divide(basePrice, 4, BigDecimal.ROUND_HALF_UP)
-                .multiply(BigDecimal.valueOf(100));
-    }
-
-    private BigDecimal applyMaxDiscountLimit(BigDecimal basePrice, BigDecimal finalPrice, Discount discount) {
-        if (discount.getMaxDiscountValue() != null) {
-            BigDecimal actualDiscount = basePrice.subtract(finalPrice);
-            if (actualDiscount.compareTo(discount.getMaxDiscountValue()) > 0) {
-                return basePrice.subtract(discount.getMaxDiscountValue());
-            }
-        }
-        return finalPrice;
-    }
-
-    private void updateProductPrice(Product product) {
-        productRepository.save(product);
-    }
-
-
     public DiscountApply previewDiscountForOrder(UUID id, BigDecimal subtotal, List<CartItem> items) {
         Discount discount = discountRepository.findById(id).orElse(null);
-        if (discount == null || !discount.getIsActive()) return null;
+        if (discount == null || !Boolean.TRUE.equals(discount.getIsActive())) return null;
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(discount.getStartDate()) || now.isAfter(discount.getEndDate())) return null;
         if (discount.getMinOrderValue() != null && subtotal.compareTo(discount.getMinOrderValue()) < 0) return null;
 
-        BigDecimal discountAmount = BigDecimal.ZERO;
+        BigDecimal saved = BigDecimal.ZERO;
         if (discount.getDiscountApplyFor() == DiscountApplyFor.ORDER) {
-            if (discount.getDiscountType() == DiscountType.PERCENT) {
-                discountAmount = subtotal.multiply(discount.getDiscountValue())
-                        .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
-                if (discount.getMaxDiscountValue() != null) {
-                    discountAmount = discountAmount.min(discount.getMaxDiscountValue());
-                }
-            } else {
-                discountAmount = discount.getDiscountValue();
-                if (discount.getMaxDiscountValue() != null) {
-                    discountAmount = discountAmount.min(discount.getMaxDiscountValue());
-                }
-            }
-        }
-
-        // === GIẢM PHÍ SHIP (SHIPPING) ===
-        else if (discount.getDiscountApplyFor() == DiscountApplyFor.SHIPPING) {
-            BigDecimal defaultShippingFee = BigDecimal.valueOf(30000);
-
-            if (discount.getDiscountType() == DiscountType.AMOUNT) {
-                discountAmount = discount.getDiscountValue();
-                if (discountAmount.compareTo(defaultShippingFee) >= 0) {
-                    discountAmount = defaultShippingFee; // free ship
-                }
-            } else if (discount.getDiscountType() == DiscountType.PERCENT) {
-                if (discount.getDiscountValue().compareTo(BigDecimal.valueOf(100)) >= 0) {
-                    discountAmount = defaultShippingFee; // 100% → free ship
-                } else {
-                    discountAmount = defaultShippingFee.multiply(discount.getDiscountValue())
-                            .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
-                }
-            }
-        }
-
-        // Nếu không phải ORDER hoặc SHIPPING → không áp dụng
-        else {
+            saved = calculateOrderDiscount(subtotal, discount);
+        } else if (discount.getDiscountApplyFor() == DiscountApplyFor.SHIPPING) {
+            saved = calculateShippingDiscount(discount);
+        } else {
             return null;
         }
 
         return DiscountApply.builder()
                 .id(id)
                 .code(discount.getCode())
-                .valueApply(discountAmount)
-                .saved(discountAmount)
-                .applyType(discount.getDiscountApplyFor() == DiscountApplyFor.ORDER
-                        ? DiscountApplyFor.ORDER
-                        : DiscountApplyFor.SHIPPING)
+                .valueApply(saved)
+                .saved(saved)
+                .applyType(discount.getDiscountApplyFor())
                 .build();
     }
-}
 
+    private BigDecimal calculateOrderDiscount(BigDecimal subtotal, Discount d) {
+        BigDecimal amount = d.getDiscountType() == DiscountType.PERCENT
+                ? subtotal.multiply(d.getDiscountValue()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP)
+                : d.getDiscountValue();
+        return d.getMaxDiscountValue() != null ? amount.min(d.getMaxDiscountValue()) : amount;
+    }
+
+    private BigDecimal calculateShippingDiscount(Discount d) {
+        BigDecimal fee = BigDecimal.valueOf(30000);
+        if (d.getDiscountType() == DiscountType.AMOUNT) {
+            return d.getDiscountValue().min(fee);
+        } else {
+            BigDecimal percentOff = d.getDiscountValue().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            return percentOff.compareTo(BigDecimal.ONE) >= 0 ? fee : fee.multiply(percentOff);
+        }
+    }
+    public TypeResponse<BigDecimal> applyDiscountToNewProduct(String code, BigDecimal price) {
+        Discount discount = discountRepository.findDiscountByCode(code);
+        if (discount == null || !isDiscountActive(discount)) {
+            return ResponseHelper.ok(price, ResponseMessage.FETCH_SUCCESS);
+        }
+        BigDecimal finalPrice = applyDiscount(price, discount);
+        return ResponseHelper.ok(finalPrice, ResponseMessage.FETCH_SUCCESS);
+    }
+
+    private boolean isDiscountActive(Discount d) {
+        LocalDateTime now = LocalDateTime.now();
+        return Boolean.TRUE.equals(d.getIsActive())
+                && !now.isBefore(d.getStartDate())
+                && !now.isAfter(d.getEndDate());
+    }
+    public List<Discount> getExpiredDiscounts() {
+        LocalDateTime now = LocalDateTime.now();
+        return discountRepository.findByIsActiveTrueAndEndDateBefore(now);
+    }
+}

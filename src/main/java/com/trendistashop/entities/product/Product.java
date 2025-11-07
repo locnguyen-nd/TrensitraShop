@@ -58,7 +58,7 @@ public class Product extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
-    @OneToMany(fetch = FetchType.EAGER )
+    @OneToMany(fetch = FetchType.EAGER , cascade = CascadeType.ALL)
     private List<ProductVariant> productVariants;
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @JoinTable(

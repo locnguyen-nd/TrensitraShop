@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @RequestMapping("${api.prefix}/media")
 @AllArgsConstructor
 @CrossOrigin
-@Tag(name = "Media", description = "API cho phép upload, update, delete media (ảnh và video) lên Cloudinary.")
+@Tag(name = "Media API", description = "API cho phép upload, update, delete media (ảnh và video) lên Cloudinary.")
 public class MediaController {
     private final CloudinaryService cloudinaryService;
 

@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @RequestMapping("${api.prefix}/role")
 @CrossOrigin
 @RequiredArgsConstructor
-@Tag(name = "Role")
+@Tag(name = "Role API" , description = "API quản lý vai trò (role) cho user")
 public class AuthorizationController {
     private final IAuthorizationService roleService;
     @PostMapping

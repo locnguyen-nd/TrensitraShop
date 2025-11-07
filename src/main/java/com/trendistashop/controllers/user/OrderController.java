@@ -37,7 +37,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @CrossOrigin
 @Slf4j
-@Tag(name = "Order", description = "Quản lý đơn hàng & thanh toán")
+@Tag(name = "Order API", description = "Quản lý đơn hàng & thanh toán")
 public class OrderController {
 
     private final IOrderService orderService;

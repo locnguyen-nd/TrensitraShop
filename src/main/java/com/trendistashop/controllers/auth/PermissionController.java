@@ -15,7 +15,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${api.prefix}/permissions")
 @RequiredArgsConstructor
-@Tag(name = "Permissions")
+@Tag(name = "Permission API", description = "API phân quyền người dùng")
 public class PermissionController {
     private final PermissionService permissionService;
     @PostMapping
