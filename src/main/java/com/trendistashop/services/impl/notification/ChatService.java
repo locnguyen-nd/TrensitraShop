@@ -264,15 +264,19 @@ public class ChatService {
      * AUTO REPLY
      */
     private void triggerAutoReply(ChatConversation conv, ChatMessage userMsg) {
-        // 1. Rule-based tự động trả lời theo rule đã config
-        autoReplyRepo.findByEnabledTrue().stream()
-                .filter(cfg -> userMsg.getContent().toLowerCase()
-                        .contains(cfg.getTriggerKeyword().toLowerCase()))
-                .findFirst()
-                .ifPresent(cfg -> sendBotReply(conv, cfg.getReplyMessage()));
-
+        // 1. Tự động tra lời theo cấu hình cài sẵn
+        String userContent = userMsg.getContent().trim();
+        if (userContent.isBlank()) return;
+        String normalizedContent = userContent.toLowerCase()
+                .replaceAll("[^a-z0-9À-ỹ\\s]", " ");
+        List<AutoReplyConfig> matchingRules = autoReplyRepo
+                .findByMessageContainingKeyword(normalizedContent);
+        if (!matchingRules.isEmpty()) {
+            AutoReplyConfig rule = matchingRules.get(0);
+            sendBotReply(conv, rule.getReplyMessage());
+        }
         // 2. Grok AI fallback (chỉ nếu có rule nào bật)
-        if (!isAutoChatEnabled() && !autoReplyRepo.findByEnabledTrue().isEmpty()) {
+        if (!isAutoChatEnabled()) {
             String aiReply = AIChatService.generateReply(userMsg.getContent(), null);
             if (aiReply != null && !aiReply.contains("không hiểu") && !aiReply.contains("lỗi")) {
                 sendBotReply(conv, aiReply);
