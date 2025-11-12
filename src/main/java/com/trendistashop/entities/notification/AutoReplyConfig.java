@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -23,10 +25,6 @@ public class AutoReplyConfig extends BaseEntity {
     @Id
     @GeneratedValue
     private UUID id;
-
-    @Column(nullable = false)
-    private String triggerKeyword;
-
     @Column(columnDefinition = "TEXT")
     private String replyMessage;
 
@@ -35,5 +33,16 @@ public class AutoReplyConfig extends BaseEntity {
     @Column(nullable = false)
     private String scope;
     @Column(nullable = false)
-    private boolean autoChatEnabled = true;
+    private boolean autoChatEnabled = true;@OneToMany(mappedBy = "rule", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TriggerKeyword> triggerKeywords = new HashSet<>();
+    public void addTriggerKeyword(TriggerKeyword keyword) {
+        triggerKeywords.add(keyword);
+        keyword.setRule(this);
+    }
+
+    public void removeTriggerKeyword(TriggerKeyword keyword) {
+        triggerKeywords.remove(keyword);
+        keyword.setRule(null);
+    }
+
 }

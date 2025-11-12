@@ -2,6 +2,8 @@ package com.trendistashop.dto.chat;
 
 import lombok.Data;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -11,9 +13,9 @@ import java.util.UUID;
 @Data
 public class AutoReplyConfigDTO {
     private UUID id;
-    private String triggerKeyword;
+    private Set<String> triggerKeywords = new HashSet<>();
     private String replyMessage;
-    private boolean enabled;
+    private boolean enabled = true;
     private String scope;
-    private boolean autoChatEnabled;
+    private boolean autoChatEnabled = true;
 }
