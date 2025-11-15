@@ -109,6 +109,9 @@ public class AutoReplyService {
                     .autoChatEnabled(true)
                     .build();
             // Thêm nhiều trigger keyword
+            if (defaultRule.getTriggerKeywords() == null) {
+                defaultRule.setTriggerKeywords(new HashSet<>());
+            }
             Set<TriggerKeyword> keywords = Set.of(
                     createKeyword("hello"),
                     createKeyword("xin chào"),

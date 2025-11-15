@@ -11,6 +11,7 @@ spring:
      url: jdbc:mysql://mysql:3306/trendista?useSSL=false&allowPublicKeyRetrieval=true
      username: root
      password: root
+     driver-class-name: com.mysql.cj.jdbc.Driver
 
     # Railway server configuration (commented)
     # url: jdbc:mysql://junction.proxy.rlwy.net:18453/trendista
