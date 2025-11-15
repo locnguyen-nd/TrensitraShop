@@ -2,6 +2,7 @@ package com.trendistashop.entities.notification;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.UUID;
 
@@ -14,6 +15,7 @@ import java.util.UUID;
         @UniqueConstraint(columnNames = {"keyword", "rule_id"})
 })
 @Data
+@EqualsAndHashCode(exclude = "rule")
 public class TriggerKeyword {
     @Id
     @GeneratedValue
