@@ -186,7 +186,7 @@ public class WebSecurityConfig {
                                 log.info("JWT token generated for user: {}", email);
 
                                 // Redirect to frontend with token
-                                String redirectUrl = String.format("%s/oauth2?token=%s&email=%s&expiresIn=%s",
+                                String redirectUrl = String.format("%s/login?oauth2=google&token=%s&email=%s&expiresIn=%s",
                                         oauth2RedirectUrl,
                                         URLEncoder.encode(token, StandardCharsets.UTF_8),
                                         URLEncoder.encode(email, StandardCharsets.UTF_8),
