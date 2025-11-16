@@ -1,6 +1,7 @@
 package com.trendistashop.services.impl.auth;
 
 import com.trendistashop.utils.ResponseHelper;
+import com.trendistashop.utils.ReflectUtil;
 import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.dto.request.UserUpdateDTO;
 import com.trendistashop.dto.response.UserDetailDTO;
@@ -89,13 +90,11 @@ public class CustomUserService implements UserDetailsService, ICustomUserService
         if (userOpt.isEmpty()) {
             return ResponseHelper.notFound(ResponseMessage.USER_NOT_FOUND);
         }
-        UserEntity user = userOpt.get();
         try {
-            user.setFirstName(userUpdateDTO.getFirstName());
-            user.setLastName(userUpdateDTO.getLastName());
+            UserEntity user = userOpt.get();
+            ReflectUtil.copyNonNull(userUpdateDTO, user, true, Set.of("id"));
             UserEntity updatedUser = userDetailRepository.save(user);
-            return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser),
-                    ResponseMessage.UPDATE_SUCCESS);
+            return ResponseHelper.ok(userDetailMapper.convertToDto(updatedUser), ResponseMessage.UPDATE_SUCCESS);
         } catch (Exception e) {
             return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
         }
