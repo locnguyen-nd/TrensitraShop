@@ -12,6 +12,5 @@ public interface ICartService {
     public TypeResponse<CartResponseDTO> addProductToCart(CartDTO cart, Principal principal) ;
     public TypeResponse<CartResponseDTO> getCartProduct (Principal principal, Pageable pageable);
     public TypeResponse<CartResponseDTO> removeProductFromCart(CartDTO cartDTO, Principal principal);
-    public TypeResponse<Cart> changeQuantity(CartDTO cartDTO , Principal principal, int quantity);
     public TypeResponse<CartResponseDTO> clearCart(Principal principal);
 }

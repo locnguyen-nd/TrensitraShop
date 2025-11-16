@@ -20,6 +20,7 @@ public class Cart extends BaseEntity {
     @GeneratedValue
     private UUID id;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "cart", fetch = FetchType.EAGER, orphanRemoval = true)
+    @OrderBy("createdAt DESC")
     @EqualsAndHashCode.Exclude
     private List<CartItem> cartItems ;
     private BigDecimal cartTotal = BigDecimal.ZERO;
