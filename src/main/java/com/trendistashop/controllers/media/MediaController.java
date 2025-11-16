@@ -1,5 +1,6 @@
 package com.trendistashop.controllers.media;
 
+import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.docs.media.MediaDocs;
 import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.enums.CloudinaryEnum;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -25,218 +25,206 @@ import java.util.stream.Collectors;
 @RequestMapping("${api.prefix}/media")
 @AllArgsConstructor
 @CrossOrigin
-@Tag(name = "Media API", description = "API cho phép upload, update, delete media (ảnh và video) lên Cloudinary.")
+@Tag(name = "Media API", description = "Quản lý media: upload, list, rename, move, delete")
 public class MediaController {
     private final CloudinaryService cloudinaryService;
 
-    /**
-     * Upload a single file to Cloudinary.
-     */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @MediaDocs
-    @Operation(summary = "Upload a single media file (image or video) to Cloudinary")
+    @Operation(summary = "Upload một file")
     public ResponseEntity<TypeResponse<List<Map<String, Object>>>> uploadMedia(
             @RequestParam("folder") CloudinaryEnum folder,
             @RequestParam(value = "subFolder", required = false) String subFolder,
             @RequestParam("file") MultipartFile file) {
 
-        // Validate folder
-        if (folder == null) {
-            return ResponseEntity.badRequest()
-                    .body(ResponseHelper.badRequest("Folder parameter is required"));
-        }
-
-        // Validate file
-        if (file == null || file.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(ResponseHelper.badRequest("No file provided for upload."));
-        }
-
-        // Validate file type and size
-        if (!FileValidationUtil.isValidMedia(file)) {
-            return ResponseEntity.status(422)
-                    .body(ResponseHelper.validationError(file.getOriginalFilename(),
-                            "Invalid file. Allowed types: images (jpeg, png, gif, webp up to 10MB) and videos (mp4, mpeg, quicktime, avi up to 50MB)."));
-        }
-
         try {
-            // Upload file
+            FileValidationUtil.validateMediaFile(file);
             Map<String, String> result = cloudinaryService.uploadFile(file, null, folder, subFolder);
-            List<Map<String, Object>> response = List.of(Map.of(
-                    "url", result.get("url"),
-                    "public_id", result.get("public_id"),
-                    "isThumbnail", false
+
+            return ResponseEntity.status(201).body(ResponseHelper.created(
+                    List.of(Map.of(
+                            "url", result.get("url"),
+                            "public_id", result.get("public_id"),
+                            "isThumbnail", false
+                    )),
+                    "Upload thành công"
             ));
-            return ResponseEntity.status(201)
-                    .body(ResponseHelper.created(response, "File uploaded successfully."));
-        } catch (IOException e) {
-            return ResponseEntity.status(500)
-                    .body(ResponseHelper.serverError("Failed to upload file: " + file.getOriginalFilename()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(422).body(ResponseHelper.validationError(file.getOriginalFilename(), e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(ResponseHelper.serverError("Upload thất bại: " + e.getMessage()));
         }
     }
 
-    /**
-     * Upload multiple files to Cloudinary.
-     */
     @PostMapping(value = "/upload-multiple", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @MediaDocs
-    @Operation(summary = "Upload multiple media files (images or videos) to Cloudinary")
+    @Operation(summary = "Upload nhiều file")
     public CompletableFuture<ResponseEntity<TypeResponse<List<Map<String, Object>>>>> uploadMultipleMedia(
             @RequestParam("folder") CloudinaryEnum folder,
             @RequestParam(value = "subFolder", required = false) String subFolder,
             @RequestParam("files") List<MultipartFile> files) {
-        // Validate folder
-        if (folder == null) {
-            return CompletableFuture.completedFuture(
-                    ResponseEntity.badRequest()
-                            .body(ResponseHelper.badRequest("Folder parameter is required")));
-        }
-
-        // Validate files
-        if (files == null || files.isEmpty()) {
-            return CompletableFuture.completedFuture(
-                    ResponseEntity.badRequest()
-                            .body(ResponseHelper.badRequest("No files provided for upload.")));
-        }
-
-        // Validate each file
         for (MultipartFile file : files) {
-            if (!FileValidationUtil.isValidMedia(file)) {
+            try {
+                FileValidationUtil.validateMediaFile(file);
+            } catch (IllegalArgumentException e) {
                 return CompletableFuture.completedFuture(
                         ResponseEntity.status(422)
-                                .body(ResponseHelper.validationError(file.getOriginalFilename(),
-                                        "Invalid file. Allowed types: images (jpeg, png, gif, webp up to 10MB) and videos (mp4, mpeg, quicktime, avi up to 50MB).")));
+                                .body(ResponseHelper.validationError(file.getOriginalFilename(), e.getMessage()))
+                );
             }
         }
 
         return cloudinaryService.uploadFilesAsync(files, folder, subFolder)
-                .thenApplyAsync(results -> {
-                    // Log results
+                .thenApply(results -> {
+                    List<Map<String, String>> success = results.stream()
+                            .filter(r -> !r.containsKey("error"))
+                            .toList();
+
                     List<String> errors = results.stream()
-                            .filter(result -> result.containsKey("error"))
-                            .map(result -> result.get("error"))
-                            .collect(Collectors.toList());
+                            .filter(r -> r.containsKey("error"))
+                            .map(r -> r.get("error"))
+                            .toList();
+
                     if (!errors.isEmpty()) {
-                        // Return partial success with HTTP 207 (Multi-Status)
-                        return ResponseEntity.status(207)
-                                .body(ResponseHelper.partialSuccess(
-                                        results.stream()
-                                                .filter(result -> !result.containsKey("error"))
-                                                .map(result -> {
-                                                    Map<String, Object> convertedMap = new HashMap<>();
-                                                    convertedMap.put("url", result.get("url"));
-                                                    convertedMap.put("public_id", result.get("public_id"));
-                                                    convertedMap.put("isThumbnail", false);
-                                                    return convertedMap;
-                                                })
-                                                .collect(Collectors.toList()),
-                                        "Some files uploaded successfully, but some failed: " + String.join(", ", errors)));
+                        return ResponseEntity.status(207).body(ResponseHelper.partialSuccess(
+                                success.stream()
+                                        .map(r -> Map.<String, Object>of(
+                                                "url", r.get("url"),
+                                                "public_id", r.get("public_id"),
+                                                "isThumbnail", false
+                                        ))
+                                        .collect(Collectors.toList()),
+                                "Một số file upload thất bại: " + String.join(", ", errors)
+                        ));
                     }
-
-                    // Convert List<Map<String, String>> to List<Map<String, Object>>
-                    List<Map<String, Object>> response = results.stream()
-                            .map(result -> {
-                                Map<String, Object> convertedMap = new HashMap<>();
-                                convertedMap.put("url", result.get("url"));
-                                convertedMap.put("public_id", result.get("public_id"));
-                                convertedMap.put("isThumbnail", false);
-                                return convertedMap;
-                            })
-                            .collect(Collectors.toList());
-
-                    return ResponseEntity.status(201)
-                            .body(ResponseHelper.created(response, "Files uploaded successfully."));
-                }, cloudinaryService.getExecutor())
-                .exceptionally(throwable -> {
-                    return ResponseEntity.status(500)
-                            .body(ResponseHelper.serverError("Failed to upload files: " + throwable.getMessage()));
+                    return ResponseEntity.status(201).body(ResponseHelper.created(
+                            success.stream()
+                                    .map(r -> Map.<String, Object>of(
+                                            "url", r.get("url"),
+                                            "public_id", r.get("public_id"),
+                                            "isThumbnail", false
+                                    ))
+                                    .collect(Collectors.toList()),
+                            "Upload tất cả thành công"
+                    ));
                 });
     }
 
-    /**
-     * Delete a file from Cloudinary.
-     */
-    @DeleteMapping("/delete")
-    @MediaDocs
-    @Operation(summary = "Delete a file from Cloudinary using its URL")
-    public ResponseEntity<TypeResponse<Void>> deleteFile(@RequestParam("url") String url) {
-        if (url == null || url.trim().isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(ResponseHelper.badRequest("File URL is required"));
+    @GetMapping("/list")
+    @Operation(summary = "Lấy danh sách media theo folder")
+    public CompletableFuture<ResponseEntity<TypeResponse<Map<String, Object>>>> listMedia(
+            @RequestParam("folder") CloudinaryEnum folder,
+            @RequestParam(value = "subFolder", required = false) String subFolder,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "created_at") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+
+        return cloudinaryService.listResourcesAsync(folder, subFolder, search, type, page, size, sortBy, sortDir)
+                .thenApply(result -> ResponseEntity.ok(ResponseHelper.ok(result, ResponseMessage.FETCH_SUCCESS)))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    return ResponseEntity.status(500)
+                            .body(ResponseHelper.serverError("Lỗi lấy danh sách: " + cause.getMessage()));
+                });
+    }
+
+    @PutMapping("/rename")
+    @Operation(summary = "Đổi tên file")
+    public ResponseEntity<TypeResponse<Map<String, Object>>> renameFile(
+            @RequestParam("publicId") String publicId,
+            @RequestParam("newName") String newName) {
+
+        if (publicId == null || newName == null || newName.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(ResponseHelper.badRequest("Thiếu publicId hoặc newName"));
         }
+
         try {
-            cloudinaryService.deleteFile(url);
-            return ResponseEntity.ok(ResponseHelper.ok(null, "File deleted successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.status(500)
-                    .body(ResponseHelper.serverError("Failed to delete file: " + e.getMessage()));
+            Map<String, Object> result = cloudinaryService.renameFile(publicId, newName.trim());
+            return ResponseEntity.ok(ResponseHelper.ok(result, "Đổi tên thành công"));
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(ResponseHelper.serverError("Đổi tên thất bại: " + e.getMessage()));
         }
     }
 
-    /**
-     * Update a file in Cloudinary by replacing it with a new file.
-     */
+    @PutMapping("/move")
+    @Operation(summary = "Di chuyển file sang folder khác")
+    public ResponseEntity<TypeResponse<Map<String, Object>>> moveFile(
+            @RequestParam("publicId") String publicId,
+            @RequestParam("toFolder") CloudinaryEnum toFolder,
+            @RequestParam(value = "toSubFolder", required = false) String toSubFolder) {
+
+        try {
+            String newUrl = cloudinaryService.moveFile(publicId, toFolder, toSubFolder);
+            return ResponseEntity.ok(ResponseHelper.ok(
+                    Map.of("url", newUrl, "public_id", extractPublicId(newUrl)),
+                    "Di chuyển thành công"
+            ));
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(ResponseHelper.serverError("Di chuyển thất bại: " + e.getMessage()));
+        }
+    }
+
     @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @MediaDocs
-    @Operation(summary = "Update a file on Cloudinary")
+    @Operation(summary = "Cập nhật file (xóa cũ, upload mới)")
     public ResponseEntity<TypeResponse<Map<String, Object>>> updateFile(
             @RequestParam("oldUrl") String oldUrl,
             @RequestParam("folder") CloudinaryEnum folder,
             @RequestParam(value = "subFolder", required = false) String subFolder,
             @RequestParam("file") MultipartFile file) {
 
-        // Validate parameters
-        if (oldUrl == null || oldUrl.trim().isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(ResponseHelper.badRequest("Old file URL is required"));
-        }
-        if (folder == null) {
-            return ResponseEntity.badRequest()
-                    .body(ResponseHelper.badRequest("Folder parameter is required"));
-        }
-        if (!FileValidationUtil.isValidMedia(file)) {
-            return ResponseEntity.status(422)
-                    .body(ResponseHelper.validationError(file.getOriginalFilename(),
-                            "Invalid file. Allowed types: images (jpeg, png, gif, webp up to 10MB) and videos (mp4, mpeg, quicktime, avi up to 50MB)."));
-        }
-
         try {
-            // Delete old file
+            FileValidationUtil.validateMediaFile(file);
             cloudinaryService.deleteFile(oldUrl);
-            // Upload new file
             Map<String, String> result = cloudinaryService.uploadFile(file, null, folder, subFolder);
-            Map<String, Object> response = Map.of(
-                    "url", result.get("url"),
-                    "public_id", result.get("public_id"),
-                    "isThumbnail", false
-            );
-            return ResponseEntity.ok(ResponseHelper.ok(response, "File updated successfully"));
-        } catch (IOException e) {
-            return ResponseEntity.status(500)
-                    .body(ResponseHelper.serverError("Failed to update file: " + e.getMessage()));
+
+            return ResponseEntity.ok(ResponseHelper.ok(
+                    Map.of(
+                            "url", result.get("url"),
+                            "public_id", result.get("public_id"),
+                            "isThumbnail", false
+                    ),
+                    "Cập nhật thành công"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(422).body(ResponseHelper.validationError(file.getOriginalFilename(), e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(ResponseHelper.serverError("Cập nhật thất bại: " + e.getMessage()));
         }
     }
 
-    /**
-     * Delete a folder and its contents in Cloudinary.
-     */
+    @DeleteMapping("/delete")
+    @Operation(summary = "Xóa file theo URL")
+    public ResponseEntity<TypeResponse<Void>> deleteFile(@RequestParam("url") String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(ResponseHelper.badRequest("URL không được trống"));
+        }
+        try {
+            cloudinaryService.deleteFile(url);
+            return ResponseEntity.ok(ResponseHelper.ok(null, "Xóa thành công"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(ResponseHelper.serverError("Xóa thất bại: " + e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/delete-folder")
-    @MediaDocs
-    @Operation(summary = "Delete a folder and its contents in Cloudinary")
+    @Operation(summary = "Xóa toàn bộ file trong folder + folder")
     public ResponseEntity<TypeResponse<Void>> deleteFolder(
             @RequestParam("folder") CloudinaryEnum folder,
             @RequestParam(value = "subFolder", required = false) String subFolder) {
-        if (folder == null) {
-            return ResponseEntity.badRequest()
-                    .body(ResponseHelper.badRequest("Folder parameter is required"));
-        }
+
         try {
             cloudinaryService.deleteFilesInFolder(folder, subFolder);
             cloudinaryService.deleteFolder(folder, subFolder);
-            return ResponseEntity.ok(ResponseHelper.ok(null, "Folder deleted successfully"));
+            return ResponseEntity.ok(ResponseHelper.ok(null, "Xóa folder thành công"));
         } catch (Exception e) {
-            return ResponseEntity.status(500)
-                    .body(ResponseHelper.serverError("Failed to delete folder: " + e.getMessage()));
+            return ResponseEntity.status(500).body(ResponseHelper.serverError("Xóa folder thất bại: " + e.getMessage()));
         }
+    }
+
+    private String extractPublicId(String url) {
+        return url.split("/upload/")[1].split("\\.")[0];
     }
 }

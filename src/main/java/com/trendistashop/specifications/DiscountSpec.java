@@ -33,7 +33,7 @@ public class DiscountSpec {
             // Lọc theo discountApply
             if (discountRequest.getDiscountApplyFor() != null) {
                 predicates.add(criteriaBuilder.equal(
-                        root.get("discountApply"),
+                        root.get("discountApplyFor"),
                         discountRequest.getDiscountApplyFor()
                 ));
             }
