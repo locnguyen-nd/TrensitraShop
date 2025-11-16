@@ -142,21 +142,29 @@ public class ProductService implements IProductService {
             // Tạo sản phẩm cơ bản
             Product product = buildBasicProduct(productDto);
 
+            productRepository.save(product);
             // Cập nhật các phần liên quan
             updateCategory(product, productDto.getCategoryId());
             updateDiscounts(product, productDto.getDiscountIds());
-            productRepository.save(product);
             updateVariants(product, productDto.getVariants());
             handleImages(product, productDto.getVariants());
             productRepository.save(product);
             return ResponseHelper.ok(mapToProductDto(product), ResponseMessage.CREATE_SUCCESS);
         } catch (ResourceNotFoundEx e) {
+            log.warn("Không tìm thấy tài nguyên: {}", e.getMessage());
             return ResponseHelper.notFound(e.getMessage());
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Dữ liệu không hợp lệ: {}", e.getMessage());
+            return ResponseHelper.badRequest("Dữ liệu không hợp lệ: " + e.getMessage());
+
         } catch (RuntimeException e) {
+            log.warn("Lỗi nghiệp vụ: {}", e.getMessage());
             return ResponseHelper.badRequest(e.getMessage());
+
         } catch (Exception e) {
-            log.error("Error creating product", e);
-            throw e;
+            log.error("Lỗi hệ thống khi tạo sản phẩm", e);
+            return ResponseHelper.serverError("Tạo sản phẩm thất bại. Vui lòng thử lại!"); // KHÔNG THROW e
         }
     }
 
@@ -369,14 +377,21 @@ public class ProductService implements IProductService {
     }
 
     private void updateDiscounts(Product product, List<UUID> discountIds) {
+        if (product.getDiscounts() == null) {
+            product.setDiscounts(new ArrayList<>());
+        }
         product.getDiscounts().clear();
+
         if (discountIds != null && !discountIds.isEmpty()) {
             List<Discount> discounts = discountRepository.findAllById(discountIds);
             product.getDiscounts().addAll(discounts);
+            try {
+                discountService.calculateFinalPriceAndUpdateProduct(product.getId());
+            } catch (Exception e) {
+                log.warn("Không thể tính giá sau giảm (có thể discount không hợp lệ): {}", e.getMessage());
+            }
         }
-        discountService.calculateFinalPriceAndUpdateProduct(product.getId());
     }
-
     private void updateVariants(Product managedProduct, List<VariantRequestDTO> variants) {
         List<ProductVariant> existingVariants = managedProduct.getProductVariants() != null ? managedProduct.getProductVariants() : new ArrayList<>();
         if (existingVariants.isEmpty()) {

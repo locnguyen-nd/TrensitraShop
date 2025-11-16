@@ -3,237 +3,268 @@ package com.trendistashop.services;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.trendistashop.enums.CloudinaryEnum;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.net.UnknownHostException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
-public class CloudinaryService {
-    private static final Logger logger = LoggerFactory.getLogger(CloudinaryService.class);
+@Slf4j
+public class CloudinaryService { 
     private final Cloudinary cloudinary;
     private final Executor taskExecutor;
-    private static final int MAX_RETRIES = 3;
-    private static final long RETRY_DELAY_MS = 1000;
+    private static final int CACHE_TTL_SECONDS = 300;
+    private final Map<String, CacheEntry> listCache = new ConcurrentHashMap<>();
 
     public CloudinaryService(Cloudinary cloudinary, @Qualifier("taskExecutor") Executor taskExecutor) {
         this.cloudinary = cloudinary;
         this.taskExecutor = taskExecutor;
     }
-
     public Executor getExecutor() {
         return taskExecutor;
     }
-
     @Async("taskExecutor")
-    public CompletableFuture<Map<String, String>> uploadFileAsync(MultipartFile file, String fileName, CloudinaryEnum folderEnum, String subFolder) {
-        return uploadFileWithRetry(file, fileName, folderEnum, subFolder, 0);
+    public CompletableFuture<Map<String, Object>> listResourcesAsync(
+            CloudinaryEnum folderEnum, String subFolder, String search, String type,
+            int page, int size, String sortBy, String sortDir) {
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return listResources(folderEnum, subFolder, search, type, page, size, sortBy, sortDir);
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+                throw new CompletionException(e);
+            }
+        }, taskExecutor);
     }
 
-    private CompletableFuture<Map<String, String>> uploadFileWithRetry(
-            MultipartFile file, String fileName, CloudinaryEnum folderEnum, String subFolder, int retryCount) {
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> listResources(
+            CloudinaryEnum folderEnum, String subFolder, String search, String type,
+            int page, int size, String sortBy, String sortDir) throws Exception {
 
-        try {
-            if (file == null || file.isEmpty()) {
-                return CompletableFuture.completedFuture(Map.of(
-                        "url", "",
-                        "public_id", "",
-                        "error", "File is empty or null"
-                ));
-            }
+        String prefix = buildFolderPath(folderEnum, subFolder) + "/";
+        String cacheKey = prefix + "|" + (search != null ? search : "") + "|" +
+                (type != null ? type : "") + "|" + page + "|" + size + "|" + sortBy + "|" + sortDir;
 
-            String originalFilename = Optional.ofNullable(file.getOriginalFilename()).orElse("unknown");
-            String contentType = file.getContentType();
-            String resourceType = (contentType != null && contentType.startsWith("video")) ? "video" : "image";
-
-            long maxFileSize = resourceType.equals("video") ? 50L * 1024 * 1024 : 10L * 1024 * 1024;
-            if (file.getSize() > maxFileSize) {
-                return CompletableFuture.completedFuture(Map.of(
-                        "url", "",
-                        "public_id", "",
-                        "error", "File size exceeds limit of " + (resourceType.equals("video") ? "50MB" : "10MB")
-                ));
-            }
-
-            String uniqueFileName = generateUniqueFileName(fileName, originalFilename);
-            String folderPath = buildFolderPath(folderEnum, subFolder);
-
-            Map<String, Object> uploadOptions = new HashMap<>();
-            uploadOptions.put("folder", folderPath);
-            uploadOptions.put("public_id", uniqueFileName);
-            uploadOptions.put("overwrite", true);
-            uploadOptions.put("resource_type", resourceType);
-
-            if ("image".equals(resourceType)) {
-                uploadOptions.put("quality", "auto");
-                uploadOptions.put("fetch_format", "auto");
-                uploadOptions.put("transformation", "c_limit,w_1920");
-            }
-
-            long startTime = System.currentTimeMillis();
-            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadOptions);
-            logger.info("Upload successful for file: {} in {} ms",
-                    uniqueFileName, System.currentTimeMillis() - startTime);
-
-            return CompletableFuture.completedFuture(Map.of(
-                    "url", uploadResult.get("secure_url").toString(),
-                    "public_id", uploadResult.get("public_id").toString()
-            ));
-        } catch (UnknownHostException e) {
-            if (retryCount < MAX_RETRIES) {
-                logger.warn("Retry {}/{} for file {} due to network error",
-                        retryCount + 1, MAX_RETRIES, file.getOriginalFilename());
-                return CompletableFuture.supplyAsync(() -> null,
-                                CompletableFuture.delayedExecutor(RETRY_DELAY_MS, TimeUnit.MILLISECONDS))
-                        .thenCompose(v -> uploadFileWithRetry(file, fileName, folderEnum, subFolder, retryCount + 1));
-            }
-            return CompletableFuture.completedFuture(Map.of(
-                    "url", "",
-                    "public_id", "",
-                    "error", "Failed after retries: " + e.getMessage()
-            ));
-        } catch (Exception e) {
-            logger.error("Unexpected error uploading file {}: {}", file.getOriginalFilename(), e.getMessage(), e);
-            return CompletableFuture.completedFuture(Map.of(
-                    "url", "",
-                    "public_id", "",
-                    "error", "Unexpected error: " + e.getMessage()
-            ));
+        CacheEntry cached = listCache.get(cacheKey);
+        if (cached != null && !cached.isExpired()) {
+            return cached.data;
         }
+
+        Map<String, Object> options = new HashMap<>();
+        options.put("max_results", Math.min(size, 500));
+        options.put("type", "upload");
+
+        if (search != null && !search.trim().isEmpty()) {
+            options.remove("prefix");
+        } else {
+            options.put("prefix", prefix);
+            options.put("resource_type", getValidResourceType(type));
+        }
+
+        List<Map<String, Object>> allResources = new ArrayList<>();
+        String nextCursor = null;
+
+        do {
+            if (nextCursor != null) options.put("next_cursor", nextCursor);
+            Map<String, Object> result = cloudinary.api().resources(options);
+            List<Map<String, Object>> batch = (List<Map<String, Object>>) result.get("resources");
+            if (batch == null || batch.isEmpty()) break;
+            allResources.addAll(batch);
+            nextCursor = (String) result.get("next_cursor");
+        } while (nextCursor != null && allResources.size() < (page + 1) * size + 200);
+
+        Stream<Map<String, Object>> stream = allResources.stream();
+        if (search != null && !search.trim().isEmpty()) {
+            String keyword = search.trim().toLowerCase();
+            stream = stream.filter(r -> {
+                String publicId = (String) r.get("public_id");
+                String fileName = publicId.substring(publicId.lastIndexOf("/") + 1);
+                return fileName.toLowerCase().contains(keyword);
+            });
+        }
+
+        List<Map<String, Object>> processed = stream
+                .map(res -> {
+                    String publicId = (String) res.get("public_id");
+                    String fileName = publicId.substring(publicId.lastIndexOf("/") + 1);
+                    String folderPath = publicId.substring(0, publicId.lastIndexOf("/"));
+
+                    Map<String, Object> r = new HashMap<>(res);
+                    r.put("url", res.get("secure_url"));
+                    r.put("public_id", publicId);
+                    r.put("filename", fileName);
+                    r.put("folder", folderPath);
+                    return r;
+                })
+                .collect(Collectors.toList());
+
+        Comparator<Map<String, Object>> comparator = switch (sortBy == null ? "created_at" : sortBy) {
+            case "filename" -> Comparator.comparing(m -> (String) m.get("filename"));
+            case "bytes" -> Comparator.comparingLong(m -> (Long) m.get("bytes"));
+            default -> Comparator.comparing(m -> (String) m.get("created_at"));
+        };
+        if ("desc".equalsIgnoreCase(sortDir == null ? "desc" : sortDir)) {
+            comparator = comparator.reversed();
+        }
+
+        List<Map<String, Object>> finalList = processed.stream()
+                .sorted(comparator)
+                .skip((long) page * size)
+                .limit(size)
+                .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("items", finalList);
+        result.put("total", processed.size());
+        result.put("page", page);
+        result.put("size", size);
+        result.put("hasMore", processed.size() > (page + 1) * size);
+        listCache.put(cacheKey, new CacheEntry(result, System.currentTimeMillis()));
+        log.info("Get list media success !");
+        return result;
+    }
+
+    private String getValidResourceType(String type) {
+        if (type == null || type.trim().isEmpty()) return "image";
+        return "video".equalsIgnoreCase(type.trim()) ? "video" : "image";
+    }
+    @Async("taskExecutor")
+    public CompletableFuture<Map<String, String>> uploadFileAsync(MultipartFile file, String fileName, CloudinaryEnum folderEnum, String subFolder) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String resourceType = file.getContentType() != null && file.getContentType().startsWith("video") ? "video" : "image";
+                String folderPath = buildFolderPath(folderEnum, subFolder);
+                String publicId = generateUniqueFileName(fileName, file.getOriginalFilename());
+
+                Map<String, Object> options = Map.of(
+                        "folder", folderPath,
+                        "public_id", publicId,
+                        "overwrite", true,
+                        "resource_type", resourceType,
+                        "quality", "auto",
+                        "fetch_format", "auto"
+                );
+
+                long start = System.currentTimeMillis();
+                Map result = cloudinary.uploader().upload(file.getBytes(), options);
+                log.info("Uploaded {} in {}ms", publicId, System.currentTimeMillis() - start);
+
+                return Map.of(
+                        "url", result.get("secure_url").toString(),
+                        "public_id", result.get("public_id").toString()
+                );
+            } catch (Exception e) {
+                log.error("Upload failed: {}", e.getMessage(), e);
+                return Map.of("error", "Upload failed: " + e.getMessage());
+            }
+        }, taskExecutor);
+    }
+    @Async("taskExecutor")
+    public CompletableFuture<List<Map<String, String>>> uploadFilesAsync(List<MultipartFile> files, CloudinaryEnum folderEnum, String subFolder) {
+        List<CompletableFuture<Map<String, String>>> futures = files.stream()
+                .map(f -> uploadFileAsync(f, null, folderEnum, subFolder))
+                .toList();
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(v -> futures.stream().map(CompletableFuture::join).toList());
     }
 
     public Map<String, String> uploadFile(MultipartFile file, String fileName, CloudinaryEnum folderEnum, String subFolder) throws IOException {
         Map<String, String> result = uploadFileAsync(file, fileName, folderEnum, subFolder).join();
-        if (result.containsKey("error")) {
-            throw new IOException(result.get("error"));
-        }
+        if (result.containsKey("error")) throw new IOException(result.get("error"));
         return result;
-    }
-
-    @Async("taskExecutor")
-    public CompletableFuture<List<Map<String, String>>> uploadFilesAsync(List<MultipartFile> files, CloudinaryEnum folderEnum, String subFolder) {
-        if (files == null || files.isEmpty()) {
-            throw new IllegalArgumentException("No files provided for upload");
-        }
-
-        long startTime = System.currentTimeMillis();
-
-        List<CompletableFuture<Map<String, String>>> futures = files.parallelStream()
-                .map(file -> uploadFileAsync(file, null, folderEnum, subFolder))
-                .collect(Collectors.toList());
-
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .thenApply(v -> {
-                    List<Map<String, String>> results = futures.stream()
-                            .map(CompletableFuture::join)
-                            .collect(Collectors.toList());
-
-                    long successCount = results.stream().filter(r -> !r.containsKey("error")).count();
-                    logger.info("Uploaded {} of {} files in {} ms",
-                            successCount, files.size(), System.currentTimeMillis() - startTime);
-
-                    if (successCount < files.size()) {
-                        logger.warn("Some files failed. Success: {}, Fail: {}",
-                                successCount, files.size() - successCount);
-                    }
-                    return results;
-                })
-                .exceptionally(ex -> {
-                    logger.error("Error uploading files: {}", ex.getMessage(), ex);
-                    return Collections.emptyList();
-                });
     }
 
     public List<Map<String, String>> uploadFiles(List<MultipartFile> files, CloudinaryEnum folderEnum, String subFolder) throws IOException {
         List<Map<String, String>> results = uploadFilesAsync(files, folderEnum, subFolder).join();
-        List<String> errors = results.stream()
-                .filter(result -> result.containsKey("error"))
-                .map(result -> result.get("error"))
-                .collect(Collectors.toList());
-        if (!errors.isEmpty()) {
-            throw new IOException("Failed to upload some files: " + String.join(", ", errors));
-        }
+        List<String> errors = results.stream().filter(r -> r.containsKey("error")).map(r -> r.get("error")).toList();
+        if (!errors.isEmpty()) throw new IOException("Upload failed: " + String.join(", ", errors));
         return results;
+    }
+    public Map<String, Object> renameFile(String publicId, String newName) throws IOException {
+        try {
+            String folder = publicId.substring(0, publicId.lastIndexOf("/"));
+            String newPublicId = folder + "/" + newName.trim();
+            Map result = cloudinary.uploader().rename(publicId, newPublicId, ObjectUtils.asMap("overwrite", true, "invalidate", true));
+            listCache.clear();
+            return Map.of("old_public_id", publicId, "new_public_id", newPublicId, "url", result.get("secure_url"));
+        } catch (Exception e) {
+            throw new IOException("Rename failed: " + e.getMessage(), e);
+        }
+    }
+
+    public String moveFile(String publicId, CloudinaryEnum toFolder, String toSubFolder) throws IOException {
+        try {
+            String fileName = publicId.substring(publicId.lastIndexOf("/") + 1);
+            String newFolder = buildFolderPath(toFolder, toSubFolder);
+            String newPublicId = newFolder + "/" + fileName;
+            Map result = cloudinary.uploader().rename(publicId, newPublicId, ObjectUtils.asMap("overwrite", true, "invalidate", true));
+            listCache.clear();
+            return (String) result.get("secure_url");
+        } catch (Exception e) {
+            throw new IOException("Move failed", e);
+        }
     }
 
     public void deleteFile(String url) {
         try {
-            String publicId = extractPublicIdFromUrl(url);
+            String publicId = url.split("/upload/")[1].split("\\.")[0];
             cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("invalidate", true));
-            logger.info("Deleted file with public_id: {}", publicId);
         } catch (Exception e) {
-            logger.error("Error deleting file from Cloudinary: {}", e.getMessage());
-        }
-    }
-
-    public String moveFile(String url, CloudinaryEnum folderEnum, String subFolder) throws IOException {
-        try {
-            String oldPublicId = extractPublicIdFromUrl(url);
-            String newFolderPath = buildFolderPath(folderEnum, subFolder);
-            String fileName = oldPublicId.substring(oldPublicId.lastIndexOf("/") + 1);
-            String newPublicId = newFolderPath + "/" + fileName;
-
-            Map<?, ?> result = cloudinary.uploader().rename(oldPublicId, newPublicId, ObjectUtils.asMap("overwrite", true));
-            logger.info("Moved file from {} to {}", oldPublicId, newPublicId);
-            return result.get("secure_url").toString();
-        } catch (Exception e) {
-            logger.error("Error moving file from {} to {}: {}", url, folderEnum.getFolderPath(), e.getMessage());
-            throw new IOException("Failed to move file", e);
+            log.error("Delete failed: {}", e.getMessage());
         }
     }
 
     public void deleteFilesInFolder(CloudinaryEnum folderEnum, String subFolder) {
-        String folderPath = buildFolderPath(folderEnum, subFolder);
+        String path = buildFolderPath(folderEnum, subFolder);
         try {
-            cloudinary.api().deleteResourcesByPrefix(folderPath, ObjectUtils.asMap("invalidate", true));
-            logger.info("All files deleted in folder: {}", folderPath);
+            cloudinary.api().deleteResourcesByPrefix(path, ObjectUtils.asMap("invalidate", true));
         } catch (Exception e) {
-            logger.error("Error deleting files in folder '{}': {}", folderPath, e.getMessage());
+            log.error("Delete folder content failed: {}", e.getMessage());
         }
     }
 
     public void deleteFolder(CloudinaryEnum folderEnum, String subFolder) {
-        String folderPath = buildFolderPath(folderEnum, subFolder);
+        String path = buildFolderPath(folderEnum, subFolder);
         try {
-            cloudinary.api().deleteFolder(folderPath, ObjectUtils.emptyMap());
-            logger.info("Cloudinary folder deleted: {}", folderPath);
+            cloudinary.api().deleteFolder(path, ObjectUtils.emptyMap());
         } catch (Exception e) {
-            logger.error("Error deleting folder '{}': {}", folderPath, e.getMessage());
+            log.error("Delete folder failed: {}", e.getMessage());
         }
     }
 
     private String generateUniqueFileName(String fileName, String originalFileName) {
-        String baseName = fileName != null && !fileName.trim().isEmpty()
-                ? fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf(".")) : fileName
+        String base = fileName != null && !fileName.trim().isEmpty()
+                ? fileName.substring(0, fileName.lastIndexOf('.') > 0 ? fileName.lastIndexOf('.') : fileName.length())
                 : originalFileName != null && originalFileName.contains(".")
-                ? originalFileName.substring(0, originalFileName.lastIndexOf("."))
+                ? originalFileName.substring(0, originalFileName.lastIndexOf('.'))
                 : UUID.randomUUID().toString();
-        return baseName + "_" + UUID.randomUUID().toString();
+        return base + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
 
     private String buildFolderPath(CloudinaryEnum folderEnum, String subFolder) {
-        String baseFolder = folderEnum != null ? folderEnum.getFolderPath() : "root";
-        return subFolder != null && !subFolder.trim().isEmpty()
-                ? baseFolder + "/" + subFolder
-                : baseFolder;
+        String base = folderEnum != null ? folderEnum.getFolderPath() : "root";
+        return subFolder != null && !subFolder.trim().isEmpty() ? base + "/" + subFolder.trim() : base;
     }
 
-    private String extractPublicIdFromUrl(String url) {
-        String[] parts = url.split("/upload/");
-        if (parts.length < 2) {
-            throw new IllegalArgumentException("Invalid Cloudinary URL: " + url);
+    private static class CacheEntry {
+        final Map<String, Object> data;
+        final long timestamp;
+        CacheEntry(Map<String, Object> data, long timestamp) {
+            this.data = data;
+            this.timestamp = timestamp;
         }
-        String path = parts[1].substring(parts[1].indexOf("/") + 1);
-        return path.substring(0, path.lastIndexOf("."));
+        boolean isExpired() {
+            return System.currentTimeMillis() - timestamp > CACHE_TTL_SECONDS * 1000;
+        }
     }
 }
