@@ -24,11 +24,7 @@ public class CartResponseDTO {
     private Object items;
     // === OPTION 1: Không phân trang ===
     public static CartResponseDTO fromEntity(Cart cart, ProductService productService) {
-        List<CartItem> sortedItems = cart.getCartItems().stream()
-                .sorted(Comparator.comparing(CartItem::getCreatedAt).reversed())
-                .toList();
-
-        List<CartItemDTO> itemDTOs = sortedItems.stream()
+        List<CartItemDTO> itemDTOs = cart.getCartItems().stream()
                 .map(item -> CartItemDTO.fromEntity(item, productService))
                 .collect(Collectors.toList());
 
@@ -37,22 +33,21 @@ public class CartResponseDTO {
 
     // === OPTION 2: Có phân trang ===
     public static CartResponseDTO fromEntity(Cart cart, ProductService productService, Pageable pageable) {
-        List<CartItem> sortedItems = cart.getCartItems().stream()
-                .sorted(Comparator.comparing(CartItem::getCreatedAt).reversed())
-                .toList();
+        List<CartItem> items = cart.getCartItems();
+        int total = items.size();
+        int pageSize = Math.max(1, pageable.getPageSize());
+        int start = Math.min((int) pageable.getOffset(), total);
+        int end = Math.min(start + pageSize, total);
 
-        int start = Math.min((int) pageable.getOffset(), sortedItems.size());
-        int end = Math.min(start + pageable.getPageSize(), sortedItems.size());
-
-        List<CartItemDTO> pagedItems = sortedItems.subList(start, end).stream()
+        List<CartItemDTO> pagedItems = items.subList(start, end).stream()
                 .map(item -> CartItemDTO.fromEntity(item, productService))
                 .collect(Collectors.toList());
 
         PageDTO<CartItemDTO> pageDTO = new PageDTO<>();
         pageDTO.setPage(pageable.getPageNumber());
-        pageDTO.setSize(pageable.getPageSize());
-        pageDTO.setTotal(sortedItems.size());
-        pageDTO.setTotalPage((int) Math.ceil((double) sortedItems.size() / pageable.getPageSize()));
+        pageDTO.setSize(pageSize);
+        pageDTO.setTotal(total);
+        pageDTO.setTotalPage((int) Math.ceil((double) total / pageSize));
         pageDTO.setContent(pagedItems);
         return new CartResponseDTO(cart.getId(), cart.getCartTotal(), pageDTO);
     }

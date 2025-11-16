@@ -176,11 +176,6 @@ public class CartService implements ICartService {
     }
 
     @Override
-    public TypeResponse<Cart> changeQuantity(CartDTO cartDTO, Principal principal, int quantity) {
-        return null;
-    }
-
-    @Override
     @Transactional
     public TypeResponse<CartResponseDTO> clearCart(Principal principal) {
         try {
