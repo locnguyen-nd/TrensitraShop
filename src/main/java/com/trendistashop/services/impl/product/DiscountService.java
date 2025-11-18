@@ -212,10 +212,12 @@ public class DiscountService {
                 : applyDiscount(product.getOriginPrice(), getBestDiscount(applicable));
     }
     private BigDecimal calculateFinalPriceForVariant(ProductVariant variant, Product product) {
-        BigDecimal basePrice = (variant.getPrice() != null && variant.getPrice().compareTo(BigDecimal.ZERO) > 0)
-                ? variant.getPrice()
-                : product.getPrice();
-
+        BigDecimal basePrice;
+        if (variant.getOriginPrice() != null && variant.getOriginPrice().compareTo(BigDecimal.ZERO) > 0) {
+            basePrice = variant.getOriginPrice(); // Giá gốc của variant
+        } else {
+            basePrice = product.getOriginPrice(); // Giá gốc của product
+        }
         List<Discount> discounts = getApplicableProductDiscounts(product);
         return discounts.isEmpty() ? basePrice : applyDiscount(basePrice, getBestDiscount(discounts));
     }

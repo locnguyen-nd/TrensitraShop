@@ -25,5 +25,7 @@ public class VariantDTO {
     private String codeVariant;
     private Integer order;
     private BigDecimal price;
+    private BigDecimal originPrice;
+    private BigDecimal discountValue;
     private List<ProductImageDTO> productImages;
 }

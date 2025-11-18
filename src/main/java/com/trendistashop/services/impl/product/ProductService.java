@@ -87,30 +87,40 @@ public class ProductService implements IProductService {
             if (keyword == null || keyword.trim().isEmpty()) {
                 return ResponseHelper.badRequest(ResponseMessage.BAD_REQUEST);
             }
+            // Xử lý keyword tìm kiếm để tìm kiếm ở mức cao
+            String raw = keyword.trim();
+            String lower = raw.toLowerCase();
+            String[] words = lower.split("\\s+");
+            String likePattern = "%" + String.join("%", words) + "%";
+            String exactSlugStyle   = lower.replace(" ", "-");
+            String startsWithName   = lower.replace(" ", "") + "%";
+
+            Pageable pageable = PageRequest.of(0, suggestionLimit);
             List<Product> products = productRepository.findProductNames(
-                    keyword.toLowerCase().trim(),
-                    PageRequest.of(0, suggestionLimit));
-            List<Object[]> categories = categoryRepository.findCategoryNameAndSlugs(keyword,
-                    PageRequest.of(0, suggestionLimit));
+                    likePattern, exactSlugStyle, startsWithName, pageable);
+
+            List<Object[]> categories = categoryRepository.findCategoryNameAndSlugs(
+                    likePattern, exactSlugStyle, startsWithName, pageable);
 
             SearchSuggestionDTO result = new SearchSuggestionDTO();
             result.setProducts(products.stream()
                     .map(this::mapToProductDto)
                     .collect(Collectors.toList()));
-            result.setCategories(
-                    categories.stream()
-                            .map(c -> {
-                                SearchSuggestionDTO.NameSlugDTO dto = new SearchSuggestionDTO.NameSlugDTO();
-                                dto.setName((String) c[0]);
-                                dto.setSlug((String) c[1]);
-                                return dto;
-                            })
-                            .collect(Collectors.toList()));
-            if (result.getProducts().size() == 0 && result.getCategories().size() == 0) {
+            result.setCategories(categories.stream()
+                    .map(c -> {
+                        SearchSuggestionDTO.NameSlugDTO dto = new SearchSuggestionDTO.NameSlugDTO();
+                        dto.setName((String) c[0]);
+                        dto.setSlug((String) c[1]);
+                        return dto;
+                    })
+                    .collect(Collectors.toList()));
+            if (result.getProducts().isEmpty() && result.getCategories().isEmpty()) {
                 return ResponseHelper.badRequest(ResponseMessage.PRODUCT_NOT_FOUND);
             }
+            log.info("Search product and category successfully!");
             return ResponseHelper.ok(result, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
+            log.error("Error in getSuggestion: ", e);
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
@@ -141,15 +151,16 @@ public class ProductService implements IProductService {
             }
             // Tạo sản phẩm cơ bản
             Product product = buildBasicProduct(productDto);
-
             productRepository.save(product);
             // Cập nhật các phần liên quan
             updateCategory(product, productDto.getCategoryId());
-            updateDiscounts(product, productDto.getDiscountIds());
             updateVariants(product, productDto.getVariants());
             handleImages(product, productDto.getVariants());
-            productRepository.save(product);
-            return ResponseHelper.ok(mapToProductDto(product), ResponseMessage.CREATE_SUCCESS);
+            updateDiscounts(product, productDto.getDiscountIds());
+            Product savedProduct = productRepository.save(product);
+            discountService.calculateFinalPriceAndUpdateProduct(savedProduct.getId());
+            Product createProduct = productRepository.findById(product.getId()).orElseThrow();
+            return ResponseHelper.ok(mapToProductDto(createProduct), ResponseMessage.CREATE_SUCCESS);
         } catch (ResourceNotFoundEx e) {
             log.warn("Không tìm thấy tài nguyên: {}", e.getMessage());
             return ResponseHelper.notFound(e.getMessage());
@@ -157,10 +168,6 @@ public class ProductService implements IProductService {
         } catch (IllegalArgumentException e) {
             log.warn("Dữ liệu không hợp lệ: {}", e.getMessage());
             return ResponseHelper.badRequest("Dữ liệu không hợp lệ: " + e.getMessage());
-
-        } catch (RuntimeException e) {
-            log.warn("Lỗi nghiệp vụ: {}", e.getMessage());
-            return ResponseHelper.badRequest(e.getMessage());
 
         } catch (Exception e) {
             log.error("Lỗi hệ thống khi tạo sản phẩm", e);
@@ -178,11 +185,13 @@ public class ProductService implements IProductService {
             updateBasicFields(product, productDto);
             // Cập nhật các phần liên quan
             updateCategory(product, productDto.getCategoryId());
-            updateDiscounts(product, productDto.getDiscountIds());
             updateVariants(product, productDto.getVariants());
             handleImages(product, productDto.getVariants());
-            productRepository.save(product);
-            return ResponseHelper.ok(mapToProductDto(product), ResponseMessage.UPDATE_SUCCESS);
+            updateDiscounts(product, productDto.getDiscountIds());
+            Product savedProduct = productRepository.save(product);
+            discountService.calculateFinalPriceAndUpdateProduct(savedProduct.getId());
+            Product updatedProduct = productRepository.findById(productId).orElseThrow();
+            return ResponseHelper.ok(mapToProductDto(updatedProduct), ResponseMessage.UPDATE_SUCCESS);
         } catch (Exception e) {
             log.error("Error updating product", e);
             return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);
@@ -273,7 +282,7 @@ public class ProductService implements IProductService {
                 spec = spec.and(ProductSpecification.hasPriceBetween(minPrice, maxPrice));
             }
             Page<Product> productPage = productRepository.findAll(spec, pageRequest);
-            log.info("Get product successfully: {} product", productPage.getTotalElements());
+            log.info("Get product successfully !");
             return ResponseHelper.ok(productPage.map(this::mapToProductDto), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -381,17 +390,12 @@ public class ProductService implements IProductService {
             product.setDiscounts(new ArrayList<>());
         }
         product.getDiscounts().clear();
-
         if (discountIds != null && !discountIds.isEmpty()) {
             List<Discount> discounts = discountRepository.findAllById(discountIds);
             product.getDiscounts().addAll(discounts);
-            try {
-                discountService.calculateFinalPriceAndUpdateProduct(product.getId());
-            } catch (Exception e) {
-                log.warn("Không thể tính giá sau giảm (có thể discount không hợp lệ): {}", e.getMessage());
-            }
         }
     }
+
     private void updateVariants(Product managedProduct, List<VariantRequestDTO> variants) {
         List<ProductVariant> existingVariants = managedProduct.getProductVariants() != null ? managedProduct.getProductVariants() : new ArrayList<>();
         if (existingVariants.isEmpty()) {
@@ -399,8 +403,7 @@ public class ProductService implements IProductService {
             List<ProductVariant> newVariants = variantService.createProductVariant(managedProduct, variants);
             managedProduct.setProductVariants(newVariants);
             log.info("Tạo mới {} variants", newVariants.size());
-        }
-        else {
+        } else {
             // Trường hợp cập nhật
             List<ProductVariant> updatedVariants = variantService.updateVariant(managedProduct, variants);
             managedProduct.getProductVariants().clear();
@@ -501,7 +504,6 @@ public class ProductService implements IProductService {
                 }
             }
         });
-
         // Thiết lập hình ảnh nổi bật
         Optional<ProductImage> thumbnailImage = newProductImages.stream()
                 .filter(ProductImage::getIsThumbnail)
@@ -512,13 +514,7 @@ public class ProductService implements IProductService {
         product.setImages(newProductImages);
     }
 
-    private BigDecimal getFinalPriceAfterDiscount(UUID productId) {
-        BigDecimal discountValue = discountService.calculateFinalPriceAndUpdateProduct(productId);
-        return discountValue;
-    }
-
     public ProductDTO mapToProductDto(Product product) {
-        BigDecimal finalProductPrice = discountService.calculateFinalPriceAndUpdateProduct(product.getId());
         return ProductDTO.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -528,9 +524,9 @@ public class ProductService implements IProductService {
                 .summary(product.getSummary())
                 .description(product.getDescription())
                 .status(product.getStatus())
-//                .discountValue(getFinalPriceAfterDiscount(product.getId()))
+                .discountValue(product.getOriginPrice().subtract(product.getPrice()))
                 .originPrice(product.getOriginPrice())
-                .price(finalProductPrice)
+                .price(product.getPrice())
                 .isFreeShip(product.getIsFreeShip())
                 .availableQuantities(product.getProductVariants()
                         .stream().filter(Objects::nonNull)
@@ -593,6 +589,8 @@ public class ProductService implements IProductService {
                 .sizeName(productVariant.getSize().getValue())
                 .stockQuantity(productVariant.getStockQuantity())
                 .price(productVariant.getPrice())
+                .originPrice(productVariant.getOriginPrice())
+                .discountValue(productVariant.getOriginPrice().subtract(productVariant.getPrice()))
                 .productImages(imageDTOs)
                 .build();
     }

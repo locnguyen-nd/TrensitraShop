@@ -9,14 +9,11 @@ import com.trendistashop.dto.response.LoginResponse;
 import com.trendistashop.dto.response.RegisterResponse;
 import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.services.IAuthenticationService;
+import com.trendistashop.utils.CookieUtils;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.trendistashop.docs.auth.ForgotPasswordDocs;
 import com.trendistashop.docs.auth.LoginDocs;
@@ -46,10 +43,12 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final IAuthenticationService iAuthenticationService;
+    private final CookieUtils cookieUtils;
 
     @Autowired
-    public AuthController(IAuthenticationService iAuthenticationService) {
+    public AuthController(IAuthenticationService iAuthenticationService, CookieUtils cookieUtils) {
         this.iAuthenticationService = iAuthenticationService;
+        this.cookieUtils = cookieUtils;
     }
 
     @Autowired
@@ -119,12 +118,11 @@ public class AuthController {
      *         thông tin không chính xác.
      */
     @Operation(summary = "Đăng nhập")
-    @LoginDocs
     @PostMapping("/login")
     public ResponseEntity<TypeResponse<LoginResponse>> login(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = RegisterRequest.class), examples = @ExampleObject(value = AuthRequestExamples.LOGIN_REQUEST))) @RequestBody @Valid LoginRequest request) {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = RegisterRequest.class), examples = @ExampleObject(value = AuthRequestExamples.LOGIN_REQUEST))) @RequestBody @Valid LoginRequest request, HttpServletResponse responseHttp) {
         TypeResponse<LoginResponse> response = iAuthenticationService.authenticateUser(request.getEmail(),
-                request.getPassword(), request.getGuard());
+                request.getPassword(), request.getGuard(),responseHttp);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -136,14 +134,18 @@ public class AuthController {
      *         token không hợp lệ.
      */
     @Operation(summary = "Đăng xuất")
-    @LogoutDocs
     @PostMapping("/logout")
-    public ResponseEntity<TypeResponse<Object>> logout(HttpServletRequest request) {
+    public ResponseEntity<TypeResponse<Object>> logout(
+            HttpServletRequest request,
+            HttpServletResponse responseHttp) {
+
         String token = jwtTokenHelper.getToken(request);
         if (token == null) {
             return ResponseEntity.badRequest().build();
         }
         TypeResponse<Object> response = iAuthenticationService.logout(token);
+        // Xóa cookie refreshToken
+        cookieUtils.clearRefreshTokenCookie(responseHttp);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
@@ -154,13 +156,16 @@ public class AuthController {
      * @return ResponseEntity chứa JWT token mới nếu làm mới thành công, hoặc lỗi
      *         nếu token không hợp lệ.
      */
-    @Operation(summary = "Làm mới token")
-    @RefreshTokenDocs
+    @Operation(summary = "Làm mới access token")
     @PostMapping("/refresh-token")
-    public ResponseEntity<TypeResponse<Map<String, String>>> refreshToken(
-            @RequestHeader("Refresh-Token") String refreshToken) {
-        TypeResponse<Map<String, String>> response = iAuthenticationService.refreshToken(refreshToken);
-        return ResponseEntity.status(response.getStatusCode()).body(response);
+    public ResponseEntity<TypeResponse<LoginResponse>> refreshToken(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response) {
+        TypeResponse<LoginResponse> result = iAuthenticationService.refreshToken(refreshToken);
+        if (result.isSuccess()) {
+            cookieUtils.setRefreshTokenCookie(response, refreshToken);
+        }
+        return ResponseEntity.status(result.getStatusCode()).body(result);
     }
 
     /**

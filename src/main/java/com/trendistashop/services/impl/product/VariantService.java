@@ -41,7 +41,10 @@ public class VariantService {
             Size size = sizeRepository.findById(variantRequest.getSizeId())
                     .orElseThrow(() -> new ResourceNotFoundEx("Size not found"));
             String codeName = product.getCode() + "-" + color.getName() + "-" + size.getValue();
-            BigDecimal price = variantRequest.getPrice() != null ? variantRequest.getPrice() : product.getPrice();
+            BigDecimal price = (variantRequest.getPrice() != null
+                    && variantRequest.getPrice().compareTo(BigDecimal.ZERO) > 0)
+                    ? variantRequest.getPrice()
+                    : product.getOriginPrice();
             return ProductVariant.builder()
                     .product(product)
                     .color(color)
@@ -49,6 +52,7 @@ public class VariantService {
                     .codeVariant(codeName.toUpperCase())
                     .order(variantRequest.getOrder())
                     .price(price)
+                    .originPrice(price)
                     .stockQuantity(variantRequest.getStockQuantity())
                     .build();
         }).collect(Collectors.toList());
@@ -76,7 +80,10 @@ public class VariantService {
                 Size size = sizeRepository.findById(variantRequest.getSizeId())
                         .orElseThrow(() -> new ResourceNotFoundEx("Size not found"));
                 String codeName = managedProduct.getCode() + "-" + color.getName() + "-" + size.getValue();
-                BigDecimal price = variantRequest.getPrice() != null ? variantRequest.getPrice() : managedProduct.getPrice();
+                BigDecimal price = (variantRequest.getPrice() != null
+                        && variantRequest.getPrice().compareTo(BigDecimal.ZERO) > 0)
+                        ? variantRequest.getPrice()
+                        : managedProduct.getOriginPrice();
                 // Kiểm tra xem ProductVariant đã tồn tại chưa
                 String variantKey = variantRequest.getColorId() + "-" + variantRequest.getSizeId();
                 ProductVariant existingVariant = existingVariantMap.get(variantKey);
@@ -85,6 +92,7 @@ public class VariantService {
                     existingVariant.setColor(color);
                     existingVariant.setSize(size);
                     existingVariant.setCodeVariant(codeName.toUpperCase());
+                    existingVariant.setOriginPrice(price);
                     existingVariant.setPrice(price);
                     existingVariant.setOrder(variantRequest.getOrder());
                     existingVariant.setStockQuantity(variantRequest.getStockQuantity());
@@ -98,6 +106,7 @@ public class VariantService {
                             .color(color)
                             .size(size)
                             .codeVariant(codeName.toUpperCase())
+                            .originPrice(price)
                             .price(price)
                             .stockQuantity(variantRequest.getStockQuantity())
                             .order(variantRequest.getOrder())

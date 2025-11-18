@@ -1,4 +1,6 @@
 spring:
+  server:
+    port: 8080
   application:
     name: TrendistaShop
   datasource:
@@ -12,7 +14,6 @@ spring:
      username: root
      password: root
      driver-class-name: com.mysql.cj.jdbc.Driver
-
     # Railway server configuration (commented)
     # url: jdbc:mysql://junction.proxy.rlwy.net:18453/trendista
     # username: root
@@ -67,9 +68,6 @@ spring:
     resources:
       static-locations: classpath:/static/,classpath:/public/
       add-mappings: true
-server:
-  port: 8080
-  # port: 5000  # Alternative port (commented)
 
 api:
   prefix: /api/v1
@@ -105,11 +103,11 @@ jwt:
   auth:
     app: trendistaShop
     secret_key: 7yFeP6uWa+Sa2LdMmAkS3UtQo/nzFRTO8r99Ep1ZCOQ=
-    expires_in: 86400
+    expires_in: 1200 # 20p
     refresh_token:
-      expires_in: 604800
+      expires_in: 604800 # 7ngày
     verification:
-      expires_in: 86400
+      expires_in: 900 # 15p
 
 # Verification
 verification:

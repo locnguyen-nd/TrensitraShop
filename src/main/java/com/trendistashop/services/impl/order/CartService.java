@@ -153,22 +153,46 @@ public class CartService implements ICartService {
                 return ResponseHelper.notFound(ResponseMessage.CART_EMPTY);
             }
             CartItem itemToUpdate = itemToUpdateOpt.get();
-            int newQuantity = itemToUpdate.getCartItemQuantity() - cartDTO.getQuantity();
+            BigDecimal unitPrice = itemToUpdate.getUnitPrice();
 
+            if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                log.error("Invalid unitPrice for cart item: {}", itemToUpdate.getId());
+                unitPrice = itemToUpdate.getCartProduct().getPrice();
+            }
+            int currentQuantity = itemToUpdate.getCartItemQuantity();
+            int removeQuantity = cartDTO.getQuantity();
+
+            if (removeQuantity > currentQuantity) {
+                log.warn("Remove quantity {} exceeds current quantity {} for user: {}",
+                        removeQuantity, currentQuantity, principal.getName());
+                return ResponseHelper.badRequest("Cannot remove more than current quantity");
+            }
+            int newQuantity = currentQuantity - removeQuantity;
             if (newQuantity <= 0) {
                 cart.getCartItems().remove(itemToUpdate);
-                cart.setCartTotal(cart.getCartTotal().subtract(
-                        itemToUpdate.getCartProduct().getPrice().multiply(
-                                new BigDecimal(itemToUpdate.getCartItemQuantity()))));
+                BigDecimal itemTotalValue = unitPrice.multiply(new BigDecimal(currentQuantity));
+                cart.setCartTotal(cart.getCartTotal().subtract(itemTotalValue));
+
+                log.info("Removed item completely from cart for user: {}", principal.getName());
+
             } else {
                 itemToUpdate.setCartItemQuantity(newQuantity);
-                cart.setCartTotal(cart.getCartTotal().subtract(
-                        itemToUpdate.getCartProduct().getPrice().multiply(
-                                new BigDecimal(cartDTO.getQuantity()))));
-            }
+                BigDecimal removedValue = unitPrice.multiply(new BigDecimal(removeQuantity));
+                cart.setCartTotal(cart.getCartTotal().subtract(removedValue));
 
-            return ResponseHelper.ok(CartResponseDTO.fromEntity(cartRepository.save(cart), productService),
-                    ResponseMessage.UPDATE_SUCCESS);
+                log.info("Updated item quantity from {} to {} for user: {}",
+                        currentQuantity, newQuantity, principal.getName());
+            }
+            if (cart.getCartTotal().compareTo(BigDecimal.ZERO) < 0) {
+                log.warn("Cart total became negative, resetting to 0");
+                cart.setCartTotal(BigDecimal.ZERO);
+            }
+            Cart savedCart = cartRepository.save(cart);
+            return ResponseHelper.ok(
+                    CartResponseDTO.fromEntity(savedCart, productService),
+                    ResponseMessage.UPDATE_SUCCESS
+            );
+
         } catch (Exception e) {
             log.error("Error removing product from cart for user: {}", principal.getName(), e);
             return ResponseHelper.serverError(ResponseMessage.UPDATE_FAILED);

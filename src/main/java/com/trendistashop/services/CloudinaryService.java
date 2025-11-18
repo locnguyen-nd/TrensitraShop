@@ -1,6 +1,7 @@
 package com.trendistashop.services;
 
 import com.cloudinary.Cloudinary;
+import com.cloudinary.Transformation;
 import com.cloudinary.utils.ObjectUtils;
 import com.trendistashop.enums.CloudinaryEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -95,14 +96,47 @@ public class CloudinaryService {
         List<Map<String, Object>> processed = stream
                 .map(res -> {
                     String publicId = (String) res.get("public_id");
+                    String originalSecureUrl = (String) res.get("secure_url");
                     String fileName = publicId.substring(publicId.lastIndexOf("/") + 1);
-                    String folderPath = publicId.substring(0, publicId.lastIndexOf("/"));
+                    String folderPath = publicId.substring(0, Math.max(publicId.lastIndexOf("/"), 0));
+                    String desktopThumbnail = cloudinary.url()
+                            .secure(true)
+                            .transformation(new Transformation()
+                                    .width(200).height(200).crop("fill").gravity("auto")
+                                    .quality("auto:best")
+                                    .fetchFormat("auto")
+                                    .flags("progressive"))
+                            .generate(publicId);
+
+                    String mobileThumbnail = cloudinary.url()
+                            .secure(true)
+                            .transformation(new Transformation()
+                                    .width(80).height(80).crop("limit")
+                                    .quality("auto:eco")
+                                    .fetchFormat("auto")
+                                    .dpr("auto")
+                                    .flags("progressive"))
+                            .generate(publicId);
+
+                    String placeholder = cloudinary.url()
+                            .secure(true)
+                            .transformation(new Transformation()
+                                    .width(20).height(20).crop("fill")
+                                    .quality("auto:low")
+                                    .effect("blur:1000")
+                                    .fetchFormat("auto"))
+                            .generate(publicId);
 
                     Map<String, Object> r = new HashMap<>(res);
-                    r.put("url", res.get("secure_url"));
+                    r.put("url", originalSecureUrl);
+                    r.put("thumbnail", desktopThumbnail);
+                    r.put("thumbnail_mobile", mobileThumbnail);
+                    r.put("placeholder", placeholder);
                     r.put("public_id", publicId);
                     r.put("filename", fileName);
-                    r.put("folder", folderPath);
+                    r.put("folder", folderPath.isEmpty() ? "/" : folderPath);
+                    r.put("resource_type", res.get("resource_type"));
+
                     return r;
                 })
                 .collect(Collectors.toList());

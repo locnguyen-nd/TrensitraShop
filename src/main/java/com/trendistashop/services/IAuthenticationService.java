@@ -10,6 +10,7 @@ import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.entities.user.UserEntity;
 import com.trendistashop.enums.GuardType;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.Map;
@@ -28,7 +29,7 @@ public interface IAuthenticationService {
      * @param password mật khẩu của người dùng (dưới dạng chuỗi ký tự).
      * @return LoginResponse chứa thông tin user được cấp nếu xác thực thành công.
      */
-    TypeResponse<LoginResponse> authenticateUser(String username, CharSequence password, GuardType guard);
+    TypeResponse<LoginResponse> authenticateUser(String username, CharSequence password, GuardType guard, HttpServletResponse response);
 
     /**
      * Tạo mới một người dùng trong hệ thống.
@@ -54,7 +55,7 @@ public interface IAuthenticationService {
 
     TypeResponse<Object> logout(String token);
 
-    TypeResponse<Map<String, String>> refreshToken(String refreshToken);
+    TypeResponse<LoginResponse> refreshToken(String refreshToken);
 
     TypeResponse<ErrorResponse> sendCodeResetPassword(String email);
 

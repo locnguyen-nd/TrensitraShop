@@ -26,8 +26,10 @@ public class ProductVariant {
     private Size size;
     @Column (nullable = false)
     private Integer stockQuantity;
-    @Column(nullable = false)
-    private BigDecimal price;
+    @Column(name = "origin_price", precision = 19, scale = 2)
+    private BigDecimal originPrice; // Giá gốc
+    @Column(name = "price", precision = 19, scale = 2)
+    private BigDecimal price; // Giá sau discount
     @Column(name = "variant_order" ,nullable = false)
     private Integer order;
     @Column(nullable = false)
