@@ -19,14 +19,26 @@ public interface ProductRepository extends JpaSpecificationExecutor<Product>, Jp
     Page<Product> findProductsByTag(ProductTagEnum tag, Pageable pageable);
 
     Product findProductsBySlug(String slug);
-    @Query("SELECT DISTINCT p FROM Product p " +
-            "WHERE LOWER(p.name) LIKE %:keyword% " +
-            "ORDER BY CASE " +
-            "  WHEN LOWER(p.name) = :keyword THEN 0 " +
-            "  WHEN LOWER(p.name) LIKE :keyword || '%' THEN 1 " +
-            "  ELSE 2 END, p.name")
+    @Query(value = """
+    SELECT DISTINCT p.* FROM product p
+    WHERE LOWER(p.name) LIKE :pattern 
+       OR LOWER(p.slug) LIKE :pattern
+    ORDER BY 
+        CASE 
+            WHEN LOWER(p.name) = :exact THEN 0
+            WHEN LOWER(p.name) LIKE :startsWith THEN 1
+            WHEN LOWER(p.slug) = :exact THEN 2
+            WHEN LOWER(p.slug) LIKE :startsWith THEN 3
+            ELSE 4 
+        END,
+        p.name
+    """,
+            countQuery = "SELECT COUNT(DISTINCT p.id) FROM product p WHERE LOWER(p.name) LIKE :pattern OR LOWER(p.slug) LIKE :pattern",
+            nativeQuery = true)
     List<Product> findProductNames(
-            @Param("keyword") String keyword,
+            @Param("pattern") String pattern,
+            @Param("exact") String exact,
+            @Param("startsWith") String startsWith,
             Pageable pageable
     );
 }

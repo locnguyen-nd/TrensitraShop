@@ -39,7 +39,9 @@ public class Product extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
     private Boolean status;
+    @Column(precision = 19, scale = 2)
     private BigDecimal originPrice;
+    @Column(precision = 19, scale = 2)
     private BigDecimal price;
     private Boolean isFreeShip;
     private Integer views;
@@ -51,7 +53,7 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private ProductTagEnum tag;
     @ElementCollection(targetClass = SizeEnum.class)
-    @Enumerated(EnumType.STRING) // Lưu enum dưới dạng chuỗi (S, M, L, ...)
+    @Enumerated(EnumType.STRING)
     @CollectionTable(name = "product_sizes", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "size")
     private List<SizeEnum> sizes;
@@ -93,7 +95,6 @@ public class Product extends BaseEntity {
             }
         }
     }
-
     public void removeSubTheme(SubTheme subTheme) {
         if (subThemes.contains(subTheme)) {
             subThemes.remove(subTheme);

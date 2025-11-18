@@ -22,14 +22,7 @@ import java.util.Set;
  * JWS with
  * Ký token: (phương thức generateToken) thông qua signWith.
  * Xác thực token: (phương thức getAllClaimsFromToken) thông qua parseClaimsJws.
- *
- * Các thành phần chính:
- * - `appName`: Tên của ứng dụng (lấy từ cấu hình).
- * - `secretKey`: Khóa bí mật dùng để ký và xác thực token.
- * - `expiresIn`: Thời gian sống của token (tính bằng giây).
- * - `header`: Tên header mặc định dùng để truyền token (mặc định là "Authorization").
- * - `startAuthHeader`: Chuỗi bắt đầu của token trong header (mặc định là "Bearer ").
-
+ * Thêm type vào claims để phân biệt các loại token
  */
 @Component
 @Slf4j
@@ -37,17 +30,20 @@ public class JWTTokenHelper {
     @Value("${jwt.auth.app}")
     private String appName;
     @Value("${jwt.auth.secret_key}")
-    private String secretKey; // key
+    private String secretKey;
     @Value("${jwt.auth.expires_in}")
-    private int expiresIn;// thời gian sống
+    private int expiresIn;
     @Value("${jwt.auth.refresh_token.expires_in}")
-    private int refreshTokenExpiresIn; // Thời gian sống của refresh token (nên dài hơn access token)
+    private int refreshTokenExpiresIn;
     @Value("${jwt.auth.verification.expires_in}")
     private int verificationTokenExpiresIn;
-    private String header = "Authorization";// Header mặc định chứa token
-    private String startAuthHeader = "Bearer ";// Prefix mặc định của token trong header
-    private Set<String> backListedToken = Collections.synchronizedSet(new HashSet<>()); // các token đã logout
-
+    private String header = "Authorization";
+    private String startAuthHeader = "Bearer ";
+    private Set<String> backListedToken = Collections.synchronizedSet(new HashSet<>());
+    private static final String TOKEN_TYPE_CLAIM = "type";
+    private static final String ACCESS_TOKEN_TYPE = "access";
+    private static final String REFRESH_TOKEN_TYPE = "refresh";
+    private static final String VERIFICATION_TOKEN_TYPE = "verification";
     /**
      * Sinh JWT token cho người dùng.
      *
@@ -56,22 +52,22 @@ public class JWTTokenHelper {
      */
     public String generateToken(String userName) {
         return Jwts.builder()
-                .issuer(appName)// tổ chức phát hành
-                .subject(userName) // chủ thể đc phát hành
-                .issuedAt(new Date()) // thời điểm phát hành
-                .expiration(generateExpirationDate()) // thời điểm hết hạn
-                .signWith(getSigningKey()) // chỉ máy chủ mới có thể ký và xác thực
-                .compact(); // hoàn tất
+                .issuer(appName)
+                .subject(userName)
+                .issuedAt(new Date())
+                .expiration(generateExpirationDate())
+                .claim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
+                .signWith(getSigningKey())
+                .compact();
     }
-
     /**
      * Lấy khóa bí mật dùng để ký JWT token.
      *
      * @return Key đối tượng khóa bí mật đã được mã hóa bằng thuật toán HMAC-SHA.
      */
     private Key getSigningKey() {
-        byte[] keysBytes = Decoders.BASE64.decode(secretKey); // giải mã một chuỗi khóa từ định dạng base64
-        return Keys.hmacShaKeyFor(keysBytes); // tạo một đối tượng Key được mã hóa bằng thuật toán HMAC-SHA
+        byte[] keysBytes = Decoders.BASE64.decode(secretKey);
+        return Keys.hmacShaKeyFor(keysBytes);
     }
 
     /**
@@ -80,7 +76,7 @@ public class JWTTokenHelper {
      * @return Ngày hết hạn của token.
      */
     private Date generateExpirationDate() {
-        return new Date(new Date().getTime() + expiresIn * 1000L); // thời điểm phát hành + với thời gian sống
+        return new Date(new Date().getTime() + expiresIn * 1000L);
     }
 
     /**
@@ -117,7 +113,6 @@ public class JWTTokenHelper {
         }
         try {
             final String userName = getUserNameFromToken(token).toLowerCase();
-            // Kiểm tra các điều kiện: không null, khớp với userDetails và token chưa hết hạn thì true
             return userName != null
                     && userName.equals(userDetails.getUsername())
                     && !isTokenExpired(token);
@@ -144,7 +139,7 @@ public class JWTTokenHelper {
     private boolean isTokenExpired(String token) {
         if (token == null || token.isEmpty()) {
             log.warn("Token đã hết hạn");
-            return true; // Nếu token null hoặc rỗng, coi như đã hết hạn
+            return true;
         }
         Date expireDate = getExpireDateToken(token);
         return expireDate.before(new Date());
@@ -197,29 +192,15 @@ public class JWTTokenHelper {
      * @return Tên người dùng được lưu trong token.
      */
     public String getUserNameFromToken(String authToken) {
-        String userName;
         try {
-            final Claims claims = this.getAllClaimsFromToken(authToken);
-            userName = claims.getSubject();
+            Claims claims = getAllClaimsFromToken(authToken);
+            return claims != null ? claims.getSubject() : null;
         } catch (ExpiredJwtException e) {
-            userName = null;
-            log.warn("Token has expired: " + e.getMessage());
-        } catch (MalformedJwtException e) {
-            userName = null;
-            log.warn("Token is malformed: " + e.getMessage());
-        } catch (SignatureException e) {
-            userName = null;
-            log.warn("Token signature is invalid: " + e.getMessage());
-        } catch (JwtException e) {
-            userName = null;
-            log.warn("JWT processing error: " + e.getMessage());
+            return e.getClaims().getSubject();
         } catch (Exception e) {
-            userName = null;
-            log.warn("Unexpected error during token username extraction: " + e.getMessage());
+            return null;
         }
-        return userName;
     }
-
     /**
      * Lấy tất cả các claims từ token.
      *
@@ -252,10 +233,29 @@ public class JWTTokenHelper {
                 .subject(userName)
                 .issuedAt(new Date())
                 .expiration(new Date(new Date().getTime() + refreshTokenExpiresIn * 1000L))
+                .claim(TOKEN_TYPE_CLAIM, REFRESH_TOKEN_TYPE)
                 .signWith(getSigningKey())
                 .compact();
     }
+    /**
+     * Kiểm tra token có phải là refresh token không
+     * CHỈ chấp nhận token mới có claim type=refresh
+     */
+    public boolean isRefreshToken(String token) {
+        if (token == null || token.isBlank()) return false;
 
+        try {
+            Claims claims = getAllClaimsFromToken(token);
+            if (claims == null) return false;
+
+            String type = claims.get(TOKEN_TYPE_CLAIM, String.class);
+            return REFRESH_TOKEN_TYPE.equals(type);
+
+        } catch (Exception e) {
+            log.error("Token is not a valid refresh token: {}", e.getMessage());
+            return false;
+        }
+    }
     /**
      * Xử lý logout bằng cách thêm token vào blacklist
      */
@@ -263,7 +263,7 @@ public class JWTTokenHelper {
         if (token != null && !token.isEmpty()) {
             backListedToken.add(token);
         }
-        log.info("logout with token" + token);
+        log.info("logout successfully");
     }
 
     /**
@@ -272,30 +272,41 @@ public class JWTTokenHelper {
      * @param refreshToken Refresh token hiện tại
      * @return Token mới hoặc null nếu refresh token không hợp lệ
      */
-    public String refreshToken(String refreshToken) {
+    public String createAccessTokenFromRefreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new IllegalArgumentException("Refresh token is required");
+        }
+
         try {
             Claims claims = getAllClaimsFromToken(refreshToken);
-            String userName = claims.getSubject();
-
-            // Kiểm tra xem refresh token có hợp lệ không
-            if (userName != null && !isTokenExpired(refreshToken)) {
-                log.info("refresh Token done !");
-                return generateRefreshToken(userName);
+            if (claims == null) {
+                throw new JwtException("Invalid refresh token claims");
             }
-        } catch (ExpiredJwtException e) {
-            log.warn("Refresh token has expired: " + e.getMessage());
-        } catch (MalformedJwtException e) {
-            log.warn("Refresh token is malformed: " + e.getMessage());
-        } catch (SignatureException e) {
-            log.warn("Refresh token signature is invalid: " + e.getMessage());
-        } catch (JwtException e) {
-            log.warn("JWT processing error during refresh token: " + e.getMessage());
-        } catch (Exception e) {
-            log.warn("Unexpected error during refresh token: " + e.getMessage());
-        }
-        return null;
-    }
+            String username = claims.getSubject();
+            if (username == null) {
+                throw new JwtException("Refresh token has no subject");
+            }
+            if (!isRefreshToken(refreshToken)) {
+                throw new JwtException("Token is not a valid refresh token");
+            }
+            if (isTokenExpired(refreshToken)) {
+                throw new ExpiredJwtException(null, claims, "Refresh token has expired");
+            }
+            if (isTokenBlacklisted(refreshToken)) {
+                throw new JwtException("Refresh token has been revoked");
+            }
 
+            log.info("Successfully refreshed token for user: {}", username);
+            return generateToken(username);
+
+        } catch (ExpiredJwtException e) {
+            log.warn("Refresh token expired for user: {}", e.getClaims().getSubject());
+            throw e;
+        } catch (Exception e) {
+            log.warn("Failed to refresh token: {}", e.getMessage());
+            throw new JwtException("Invalid or malformed refresh token", e);
+        }
+    }
     // Thêm phương thức định kỳ xóa các token hết hạn khỏi blacklist
     @Scheduled(fixedRate = 24 * 60 * 60 * 1000) // Chạy mỗi 24 giờ
     public void cleanupBlacklist() {
@@ -334,7 +345,7 @@ public class JWTTokenHelper {
                 .subject(userName)
                 .issuedAt(new Date())
                 .expiration(new Date(new Date().getTime() + verificationTokenExpiresIn * 1000L))
-                .claim("type", "verification") // Thêm claim để phân biệt loại token
+                .claim(TOKEN_TYPE_CLAIM, VERIFICATION_TOKEN_TYPE)
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -353,8 +364,7 @@ public class JWTTokenHelper {
 
         try {
             Claims claims = getAllClaimsFromToken(token);
-            return claims != null && 
-                   "verification".equals(claims.get("type", String.class)) &&
+            return claims != null && VERIFICATION_TOKEN_TYPE.equals(claims.get(TOKEN_TYPE_CLAIM, String.class)) &&
                    !isTokenExpired(token);
         } catch (Exception e) {
             log.warn("Invalid verification token: " + e.getMessage());

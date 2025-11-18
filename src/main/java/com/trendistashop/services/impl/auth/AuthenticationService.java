@@ -1,6 +1,7 @@
 package com.trendistashop.services.impl.auth;
 
 import com.trendistashop.constants.ResponseMessage;
+import com.trendistashop.utils.CookieUtils;
 import com.trendistashop.utils.ResponseHelper;
 import com.trendistashop.config.JWTTokenHelper;
 import com.trendistashop.dto.request.RegisterRequest;
@@ -22,6 +23,10 @@ import com.trendistashop.helper.VerificationCodeGenerator;
 import com.trendistashop.repositories.auth.UserDetailRepository;
 import com.trendistashop.repositories.auth.VerificationAttemptRepository;
 import com.trendistashop.services.IAuthenticationService;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,12 +37,14 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerErrorException;
 
 import java.math.BigDecimal;
+import java.security.SignatureException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -59,6 +66,8 @@ public class AuthenticationService implements IAuthenticationService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private AuthorizationService authorizationService;
+    @Autowired
+    private CookieUtils cookieUtils;
 
     @Value("${verification.max_attempts}")
     private int maxAttempts = 5;
@@ -66,7 +75,6 @@ public class AuthenticationService implements IAuthenticationService {
     private int expiresIn;
 
     public Optional<UserEntity> getUser(String userName) {
-
         return userDetailRepository.findByEmail(userName);
     }
 
@@ -81,7 +89,7 @@ public class AuthenticationService implements IAuthenticationService {
      * @throws AuthenticationFailedException Nếu xác thực thất bại.
      */
     @Override
-    public TypeResponse<LoginResponse> authenticateUser(String userName, CharSequence password, GuardType guard) {
+    public TypeResponse<LoginResponse> authenticateUser(String userName, CharSequence password, GuardType guard, HttpServletResponse response) {
         try {
             Authentication authentication = new UsernamePasswordAuthenticationToken(userName, password);
             Authentication authenticationResponse = this.authenticationManager.authenticate(authentication);
@@ -108,6 +116,8 @@ public class AuthenticationService implements IAuthenticationService {
                     userDetailRepository.save(user);
                 }
                 String token = jwtTokenHelper.generateToken(userName);
+                String refreshToken = jwtTokenHelper.generateRefreshToken(userName);
+                cookieUtils.setRefreshTokenCookie(response, refreshToken);
                 LoginResponse loginResponse = LoginResponse.builder()
                         .id(user.getId())
                         .firstName(user.getFirstName())
@@ -298,22 +308,46 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     @Override
-    public TypeResponse<Map<String, String>> refreshToken(String refreshToken) {
-        if (refreshToken == null) {
+    public TypeResponse<LoginResponse> refreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseHelper.badRequest(ResponseMessage.TOKEN_REFRESH_INVALID);
         }
-
         try {
-            String newToken = jwtTokenHelper.refreshToken(refreshToken);
-            Map<String, String> tokenData = new HashMap<>();
-            tokenData.put("token", newToken);
+            String newAccessToken = jwtTokenHelper.createAccessTokenFromRefreshToken(refreshToken);
+            String username = jwtTokenHelper.getUserNameFromToken(refreshToken);
+            UserEntity user = userDetailRepository.findByEmail(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+            if (user.isLocked()) {
+                return ResponseHelper.unauthorized(ResponseMessage.ACCOUNT_LOCKED);
+            }
+            if (!user.isEnabled()) {
+                return ResponseHelper.unauthorized(ResponseMessage.ACCOUNT_NOT_ACTIVATED);
+            }
 
-            return ResponseHelper.ok(tokenData, ResponseMessage.TOKEN_REFRESH_SUCCESS);
+            LoginResponse response = LoginResponse.builder()
+                    .id(user.getId())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .email(user.getEmail())
+                    .phoneNumber(user.getPhoneNumber())
+                    .authorityList(user.getRoles().stream()
+                            .map(role -> role.getName())
+                            .collect(Collectors.toList()))
+                    .isEnabled(user.isEnabled())
+                    .isLocked(user.isLocked())
+                    .token(newAccessToken)
+                    .expiresIn(expiresIn)
+                    .build();
+            return ResponseHelper.ok(response, ResponseMessage.TOKEN_REFRESH_SUCCESS);
+        } catch (ExpiredJwtException e) {
+            return ResponseHelper.unauthorized(ResponseMessage.TOKEN_REFRESH_FAILURE);
+        } catch (JwtException e) {
+            return ResponseHelper.unauthorized(ResponseMessage.TOKEN_INVALID);
         } catch (Exception e) {
+            log.error("Refresh token error: ", e);
             return ResponseHelper.serverError(ResponseMessage.TOKEN_REFRESH_FAILURE);
         }
     }
-
     @Override
     public TypeResponse<ErrorResponse> sendCodeResetPassword(String email) {
         try {
