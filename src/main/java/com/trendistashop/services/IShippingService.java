@@ -29,7 +29,7 @@ public interface IShippingService {
 
     /**
      * Tạo đơn vận chuyển trên GHN dựa trên đơn hàng
-     * @param order Đơn hàng cần tạo shipment
+     * @param request Đơn hàng cần tạo shipment
      * @return Shipment code từ GHN
      */
     TypeResponse<String> createShipment(CreateShipmentRequest request);

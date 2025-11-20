@@ -551,7 +551,9 @@ public class ProductService implements IProductService {
                         .map(variant -> convertVariantDTO(variant, product.getImages()))
                         .toList())
                 .discounts(product.getDiscounts()
-                        .stream().filter(Objects::nonNull)
+                        .stream()
+                        .filter(Objects::nonNull)
+                        .filter(Discount::getIsActive)
                         .map(this::convertDiscountToDTO)
                         .toList())
                 .build();

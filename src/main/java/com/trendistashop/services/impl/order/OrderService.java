@@ -63,6 +63,7 @@ import vn.payos.type.PaymentData;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.LocalDate;
@@ -301,39 +302,56 @@ public class OrderService implements IOrderService {
             DiscountResult discountResult = recalculateDiscountsFromOrder(order, subtotal);
             BigDecimal discountAmount = discountResult.getDiscountAmount();
             BigDecimal shippingFee = discountResult.getShippingFee();
-            List<ItemData> items = new ArrayList<>();
+            BigDecimal finalTotal = order.getTotalAmount();
+            int amount = finalTotal.setScale(0, RoundingMode.HALF_UP).intValueExact();
 
-            // 1. Sản phẩm
-            order.getOrderItems().forEach(oi -> {
+            List<ItemData> items = new ArrayList<>();
+            // 1. Chỉ thêm các sản phẩm thật
+            for (OrderItem oi : order.getOrderItems()) {
+                int unitPrice = oi.getItemPrice().setScale(0, RoundingMode.HALF_UP).intValueExact();
                 items.add(ItemData.builder()
                         .name(oi.getProduct().getName())
                         .quantity(oi.getQuantity())
-                        .price(oi.getItemPrice().intValue())
+                        .price(unitPrice)
                         .build());
-            });
+            }
 
-            // 2. Giảm giá
+            // 2. Nếu có giảm giá
             if (discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+                int discountInt = discountAmount.setScale(0, RoundingMode.HALF_UP).intValueExact();
                 items.add(ItemData.builder()
                         .name("Giảm giá")
                         .quantity(1)
-                        .price(-discountAmount.intValue())
+                        .price(-discountInt)
                         .build());
             }
 
-            // 3. Phí vận chuyển
+            // 3. Nếu có phí ship
             if (shippingFee.compareTo(BigDecimal.ZERO) > 0) {
+                int shipInt = shippingFee.setScale(0, RoundingMode.HALF_UP).intValueExact();
                 items.add(ItemData.builder()
                         .name("Phí vận chuyển")
                         .quantity(1)
-                        .price(shippingFee.intValue())
+                        .price(shipInt)
                         .build());
             }
 
+            // === KIỂM TRA BẮT BUỘC TRƯỚC KHI GỬI ===
+            long sumFromItems = items.stream()
+                    .mapToLong(item -> (long) item.getPrice() * item.getQuantity())
+                    .sum();
+
+            if (sumFromItems != amount) {
+                log.error("TỔNG TIỀN TỪ ITEMS KHÔNG KHỚP VỚI AMOUNT!");
+                log.error("sumFromItems = {}, amount = {}", sumFromItems, amount);
+                log.error("subtotal = {}, discount = {}, shipping = {}, finalTotal = {}",
+                        subtotal, discountAmount, shippingFee, finalTotal);
+                throw new IllegalStateException("Tổng tiền từ items không khớp với amount: " + sumFromItems + " != " + amount);
+            }
             // Tạo PaymentData
             PaymentData data = PaymentData.builder()
                     .orderCode(order.getOrderCode())
-                    .amount(order.getTotalAmount().intValue())
+                    .amount(amount)
                     .description("TT HOA DON " + order.getOrderCode())
                     .items(items)
                     .buyerEmail(order.getUser().getEmail())
@@ -342,9 +360,35 @@ public class OrderService implements IOrderService {
                     .build();
 
             PaymentMethod method = order.getPaymentMethod();
-
             if (method == PaymentMethod.QR) {
+                int finalAmount = order.getTotalAmount()
+                        .setScale(0, RoundingMode.HALF_UP)
+                        .intValueExact();
+
+                log.warn("=== DEBUG PAYOS AMOUNT CHECK ===");
+                log.warn("amount gửi lên PayOS          : {}", finalAmount);
+                log.warn("tổng tính lại từ items        : {}", sumFromItems);
+                log.warn("lệch bao nhiêu                : {}", Math.abs(sumFromItems - finalAmount));
+                items.forEach(item ->
+                        log.warn("Item: {} x {} = {} VND", item.getName(), item.getQuantity(),
+                                (long)item.getPrice() * item.getQuantity())
+                );
+                log.warn("=====================================");
+
+                if (sumFromItems != finalAmount) {
+                    throw new IllegalStateException(
+                            "PayOS sẽ reject! Tổng items = " + sumFromItems + " ≠ amount = " + finalAmount
+                    );
+                }
                 CheckoutResponseData resp = payOS.createPaymentLink(data);
+                log.info("=== PAYOS RESPONSE THÀNH CÔNG ===");
+                log.info("PayOS OrderCode: {}", resp.getOrderCode());
+                log.info("Status: {}", resp.getStatus());
+                log.info("Amount trả về: {}", resp.getAmount());
+                log.info("Checkout URL: {}", resp.getCheckoutUrl());
+                log.info("QR Code: {}", resp.getQrCode());
+                log.info("Payment Link ID: {}", resp.getPaymentLinkId());
+
                 return Payment.builder()
                         .order(order)
                         .amount(resp.getAmount())

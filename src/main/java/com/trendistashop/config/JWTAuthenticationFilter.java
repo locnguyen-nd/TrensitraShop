@@ -53,7 +53,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String requestURI = request.getRequestURI();
-        log.info("Processing request: {}", requestURI);
+//        log.info("Processing request: {}", requestURI);
         // Bỏ qua các endpoint OAuth2 và login
         if (requestURI.contains("/oauth2/")
                 || requestURI.contains("/error")

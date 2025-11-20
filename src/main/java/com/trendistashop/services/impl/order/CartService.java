@@ -18,6 +18,7 @@ import com.trendistashop.utils.ResponseHelper;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.hpsf.Variant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -52,7 +53,6 @@ public class CartService implements ICartService {
         try {
             UserEntity user = (UserEntity) userDetailsService.loadUserByUsername(principal.getName());
             Cart userCart = user.getUserCart();
-
             UUID variantId = cart.getVariantDTO().getId();
             int addQuantity = cart.getQuantity();
             int currentItemCount = userCart.getCartItems().size();
@@ -70,25 +70,33 @@ public class CartService implements ICartService {
                     .findFirst()
                     .orElseThrow(() -> new OrderCreationException("Variant not found"));
 
-            BigDecimal variantPrice = (variant.getPrice() != null && variant.getPrice().compareTo(BigDecimal.ZERO) > 0)
+            BigDecimal currentPrice = (variant.getPrice() != null && variant.getPrice().compareTo(BigDecimal.ZERO) > 0)
                     ? variant.getPrice()
                     : product.getPrice();
 
             int currentStock = variantService.getStockForVariant(variantId);
+            Optional<CartItem> existingItemOpt = userCart.getCartItems().stream()
+                    .filter(item -> item.getProductVariantId().equals(variantId))
+                    .findFirst();
 
             if (existingItem.isPresent()) {
-                CartItem item = existingItem.get();
-                int newQuantity = item.getCartItemQuantity() + addQuantity;
+                CartItem item = existingItemOpt.get();
+                int oldQuantity = item.getCartItemQuantity();
+                int newQuantity = oldQuantity + addQuantity;
 
                 if (currentStock < newQuantity) {
                     log.warn("Not enough stock for variant ID: {}", variantId);
                     return ResponseHelper.badRequest(ResponseMessage.STOCK_NOT_ENOUGH);
                 }
+                BigDecimal oldTotalForThisItem = currentPrice.multiply(new BigDecimal(oldQuantity));
+                BigDecimal newTotalForThisItem = currentPrice.multiply(new BigDecimal(newQuantity));
                 item.setCartItemQuantity(newQuantity);
-                item.setCreatedAt(LocalDateTime.now());
-                BigDecimal additionalAmount = variantPrice.multiply(new BigDecimal(addQuantity));
-                userCart.setCartTotal(userCart.getCartTotal().add(additionalAmount));
-
+                item.setUpdatedAt(LocalDateTime.now());
+                item.setUnitPrice(currentPrice);
+                userCart.setCartTotal(userCart.getCartTotal()
+                        .subtract(oldTotalForThisItem)
+                        .add(newTotalForThisItem));
+                log.info("Updated cart item quantity: {} → {} (price updated to latest)", oldQuantity, newQuantity);
             } else {
                 if (currentStock < addQuantity) {
                     log.warn("Not enough stock for variant ID: {}", variantId);
@@ -96,13 +104,16 @@ public class CartService implements ICartService {
                 }
 
                 CartItem newItem = cartItemService.createItemForCart(cart, userCart);
-                newItem.setUnitPrice(variantPrice);
+                newItem.setUnitPrice(currentPrice);
                 userCart.getCartItems().add(newItem);
 
-                BigDecimal itemTotal = variantPrice.multiply(new BigDecimal(addQuantity));
-                userCart.setCartTotal(userCart.getCartTotal().add(itemTotal));
+                BigDecimal newItemTotal = currentPrice.multiply(new BigDecimal(addQuantity));
+                userCart.setCartTotal(userCart.getCartTotal().add(newItemTotal));
+                log.info("Added new item to cart with latest price: {}", currentPrice);
             }
-
+            if (userCart.getCartTotal().compareTo(BigDecimal.ZERO) < 0) {
+                userCart.setCartTotal(BigDecimal.ZERO);
+            }
             Cart savedCart = cartRepository.save(userCart);
             return ResponseHelper.ok(CartResponseDTO.fromEntity(savedCart, productService),
                     ResponseMessage.UPDATE_SUCCESS);
@@ -123,6 +134,8 @@ public class CartService implements ICartService {
                 return ResponseHelper.notFound(ResponseMessage.CART_NOT_FOUND);
             }
             Cart cart = cartOpt.get();
+            recalculateCartTotalAndSyncPrice(cart);
+            log.info("Cart recalculated for user: {} | New total: {}", principal.getName(), cart.getCartTotal());
             log.info("Fetched cart for user: {}", principal.getName());
             return ResponseHelper.ok(CartResponseDTO.fromEntity(cart, productService, pageable), ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
@@ -130,7 +143,28 @@ public class CartService implements ICartService {
             return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
         }
     }
-
+    public void recalculateCartTotalAndSyncPrice(Cart cart) {
+        BigDecimal newTotal = BigDecimal.ZERO;
+        for (CartItem item : cart.getCartItems()) {
+            ProductVariant variant = variantService.getVariantById(item.getProductVariantId());
+            if (variant == null) {
+                log.warn("Variant not found: {}. Skipping item in cart.", item.getProductVariantId());
+                continue;
+            }
+            BigDecimal currentPrice = (variant.getPrice() != null && variant.getPrice().compareTo(BigDecimal.ZERO) > 0)
+                    ? variant.getPrice()
+                    : variant.getProduct().getPrice();
+            if (!currentPrice.equals(item.getUnitPrice())) {
+                item.setUnitPrice(currentPrice);
+                item.setUpdatedAt(LocalDateTime.now());
+            }
+            BigDecimal itemTotal = currentPrice.multiply(new BigDecimal(item.getCartItemQuantity()));
+            newTotal = newTotal.add(itemTotal);
+        }
+        cart.setCartTotal(newTotal);
+        cart.setUpdatedAt(LocalDateTime.now());
+        cartRepository.save(cart);
+    }
     @Override
     @Transactional
     public TypeResponse<CartResponseDTO> removeProductFromCart(CartDTO cartDTO, Principal principal) {

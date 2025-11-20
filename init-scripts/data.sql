@@ -129,7 +129,7 @@ CREATE TABLE `banner_images` (
   PRIMARY KEY (`id`),
   KEY `FK633x0a6l0tvcjj7xoeaivj92t` (`banner_id`),
   CONSTRAINT `FK633x0a6l0tvcjj7xoeaivj92t` FOREIGN KEY (`banner_id`) REFERENCES `banners` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -138,7 +138,7 @@ CREATE TABLE `banner_images` (
 
 LOCK TABLES `banner_images` WRITE;
 /*!40000 ALTER TABLE `banner_images` DISABLE KEYS */;
-INSERT INTO `banner_images` VALUES (1,'Discount up to 50% off!',1,'https://res.cloudinary.com/trendistashop/image/upload/v1234567890/banners/black-friday-1.jpg','',1),(2,'Discount up to 50% off!',1,'https://res.cloudinary.com/trendistashop/image/upload/v1234567890/banners/black-friday-1.jpg',NULL,2);
+INSERT INTO `banner_images` VALUES (2,'Discount up to 50% off!',1,'https://res.cloudinary.com/trendistashop/image/upload/v1234567890/banners/black-friday-1.jpg',NULL,2),(3,'Discount up to 50% off!',1,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521134/banners/BANNER%20COLLECTION%201800X600px%20CTA_6408471b.png','https://yody.vn/',1);
 /*!40000 ALTER TABLE `banner_images` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -197,7 +197,7 @@ CREATE TABLE `cart` (
 
 LOCK TABLES `cart` WRITE;
 /*!40000 ALTER TABLE `cart` DISABLE KEYS */;
-INSERT INTO `cart` VALUES (_binary '=Fw\rñQK€≤rØóq{˚','2025-11-04 21:19:14.954954',NULL,NULL,0.00,NULL),(_binary 'P&2®\ÂíJÙ±p˛≥◊Ø\ŒO','2025-11-02 15:04:47.433000',NULL,'2025-11-03 13:35:09.537340',6000.00,_binary '•¯h|®L\Zòr°c®'),(_binary 'Z[pØg\‰DoëQT\\C&pˆ','2025-11-04 21:20:14.815095',NULL,'2025-11-04 21:20:14.841095',0.00,_binary 'b¯\r	\–I°ã†|•t\ﬁ'),(_binary 'É4n\Á\·Høç6\÷2\Õ\–RÆ','2025-11-06 14:23:53.161150',NULL,NULL,0.00,NULL),(_binary '¥è\…\⁄ˆLB†≥W=¿t3\‚','2025-11-02 21:42:17.765101',NULL,'2025-11-02 21:42:17.779101',0.00,_binary '¨\œŸü˝AÑJì\·¯π?'),(_binary '–ßHgGßIƒâsoˆ\ ','2025-11-05 14:46:24.600458',NULL,'2025-11-05 14:46:24.617444',0.00,_binary '\Á®	HœÇf)3\»ˆaı');
+INSERT INTO `cart` VALUES (_binary '=Fw\rñQK€≤rØóq{˚','2025-11-04 21:19:14.954954',NULL,NULL,0.00,NULL),(_binary 'P&2®\ÂíJÙ±p˛≥◊Ø\ŒO','2025-11-02 15:04:47.433000',NULL,'2025-11-20 16:28:28.591465',280000.00,_binary '•¯h|®L\Zòr°c®'),(_binary 'Z[pØg\‰DoëQT\\C&pˆ','2025-11-04 21:20:14.815095',NULL,'2025-11-04 21:20:14.841095',0.00,_binary 'b¯\r	\–I°ã†|•t\ﬁ'),(_binary 'É4n\Á\·Høç6\÷2\Õ\–RÆ','2025-11-06 14:23:53.161150',NULL,NULL,0.00,NULL),(_binary '¥è\…\⁄ˆLB†≥W=¿t3\‚','2025-11-02 21:42:17.765101',NULL,'2025-11-02 21:42:17.779101',0.00,_binary '¨\œŸü˝AÑJì\·¯π?'),(_binary '–ßHgGßIƒâsoˆ\ ','2025-11-05 14:46:24.600458',NULL,'2025-11-05 14:46:24.617444',0.00,_binary '\Á®	HœÇf)3\»ˆaı');
 /*!40000 ALTER TABLE `cart` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -233,6 +233,7 @@ CREATE TABLE `cart-item` (
 
 LOCK TABLES `cart-item` WRITE;
 /*!40000 ALTER TABLE `cart-item` DISABLE KEYS */;
+INSERT INTO `cart-item` VALUES (_binary 'ÑµÖd\—FµÉÖ3\”dñ','2025-11-20 15:12:47.303228',NULL,'2025-11-20 15:42:02.738827',1,_binary 'ß˚ÅÛ]gB©´`\Âlèáfè',_binary ':E¸R\'RJc°\ÊˆVt\‚4',280000.00,_binary 'P&2®\ÂíJÙ±p˛≥◊Ø\ŒO',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ');
 /*!40000 ALTER TABLE `cart-item` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -296,7 +297,6 @@ CREATE TABLE `category_discount` (
 
 LOCK TABLES `category_discount` WRITE;
 /*!40000 ALTER TABLE `category_discount` DISABLE KEYS */;
-INSERT INTO `category_discount` VALUES (_binary '\ÁM¯¡≤gìVäµ£ß',_binary '\Ì\ƒj§ıñBé•PEæ¡5&');
 /*!40000 ALTER TABLE `category_discount` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -333,6 +333,7 @@ CREATE TABLE `chat_conversation` (
 
 LOCK TABLES `chat_conversation` WRITE;
 /*!40000 ALTER TABLE `chat_conversation` DISABLE KEYS */;
+INSERT INTO `chat_conversation` VALUES (_binary '√ï~\ŸZD@ä∂û\€\œ\01','2025-11-18 11:43:20.212485',NULL,NULL,NULL,'2025-11-18 11:43:20.212485','2025-11-18 11:43:20.212485','ACTIVE','Kh√°ch h√†ng: User Trendista',_binary '¨\œŸü˝AÑJì\·¯π?',_binary '•¯h|®L\Zòr°c®');
 /*!40000 ALTER TABLE `chat_conversation` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -405,7 +406,7 @@ CREATE TABLE `collection` (
 
 LOCK TABLES `collection` WRITE;
 /*!40000 ALTER TABLE `collection` DISABLE KEYS */;
-INSERT INTO `collection` VALUES (_binary '\\E\Ÿ±jGâîá&Ωïi†','2025-10-27 22:21:38.739000',NULL,'2025-10-27 22:22:07.440000','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761578492/collections/BANNER%20COLLECTION%201800X600px%20CTA_e3f6e6df-69a1-4ce3-9613-604158e44875.png','<p>M√πa l·∫°nh nƒÉm nay, Trendista mang ƒë·∫øn l√†n gi√≥ m·ªõi v·ªõi <strong>B·ªô s∆∞u t·∫≠p Thu ƒê√¥ng 2025</strong> ‚Äì n∆°i c√° t√≠nh v√† phong c√°ch giao h√≤a. T·ª´ √°o kho√°c oversized, boots cao c·ªï ƒë·∫øn nh·ªØng layer ƒë·∫ßy s√°ng t·∫°o, t·∫•t c·∫£ t·∫°o n√™n m·ªôt b·∫£n h√≤a ca th·ªùi trang v·ª´a ph√≥ng kho√°ng, v·ª´a tinh t·∫ø. ƒê√¢y kh√¥ng ch·ªâ l√† trang ph·ª•c ‚Äì m√† l√† c√°ch Trendista k·ªÉ c√¢u chuy·ªán c·ªßa ng∆∞·ªùi tr·∫ª: t·ª± do, kh√°c bi·ªát v√† lu√¥n d·∫´n ƒë·∫ßu xu h∆∞·ªõng.</p><hr><h3>‚ú® </h3><p><strong>Trendista FW25</strong> ‚Äì Khi phong c√°ch ch·∫°m ƒë·∫øn c·∫£m x√∫c.<br>S·∫Øc thu ‚Äì h∆°i l·∫°nh ‚Äì v√† b·∫°n, trong nh·ªØng thi·∫øt k·∫ø khi·∫øn c·∫£ m√πa ƒë√¥ng ph·∫£i ng∆∞·ªõc nh√¨n. ‚ùÑÔ∏è‚ú®</p>','B·ªô s∆∞u t·∫≠p Thu ƒê√¥ng 2025',0,'bo-suu-tap-thu-ong-2025',_binary '','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761578478/collections/BANNER%20COLLECTION%201000x1000CTA_43e6ef7e-6c9d-47b8-8aa2-471d27ddb1a9.webp'),(_binary 'àë	5£\ﬂOó]R∏–ö/Æ','2025-10-27 22:24:09.220000',NULL,NULL,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761578643/collections/aokhoac-horizontal-12_4b8bb789-8e35-4a49-aa5c-7925a3b92d69.webp','<p><strong>B·ªô s∆∞u t·∫≠p Thu ƒê√¥ng 2025 ‚Äì Trendista</strong> l√† h√†nh tr√¨nh t√¥n vinh v·∫ª ƒë·∫πp hi·ªán ƒë·∫°i trong t·ª´ng ƒë∆∞·ªùng c·∫Øt. L·∫•y c·∫£m h·ª©ng t·ª´ s·∫Øc thu tr·∫ßm ·∫•m v√† h∆°i th·ªü l·∫°nh l·∫Ωo c·ªßa m√πa ƒë√¥ng, b·ªô s∆∞u t·∫≠p mang ƒë·∫øn s·ª± h√≤a quy·ªán gi·ªØa ch·∫•t li·ªáu cao c·∫•p, phom d√°ng tinh t·∫ø v√† gam m√†u th·ªùi th∆∞·ª£ng. M·ªói thi·∫øt k·∫ø l√† tuy√™n ng√¥n v·ªÅ phong c√°ch ‚Äì m·∫°nh m·∫Ω, t·ª± tin v√† ƒë·∫ßy cu·ªën h√∫t, d√†nh cho ng∆∞·ªùi ph·ª• n·ªØ hi·ªán ƒë·∫°i kh√¥ng ng·∫°i kh·∫≥ng ƒë·ªãnh d·∫•u ·∫•n ri√™ng.</p>','B·ªô s∆∞u t·∫≠p Thu ƒê√¥ng 2025 ‚Äì Trendista',0,'bo-suu-tap-thu-ong-2025--trendista',_binary '','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761578635/collections/hang-ban-chay-1000x670_d386e355-7928-4b35-b12d-83f4523a3ff0.webp');
+INSERT INTO `collection` VALUES (_binary '\\E\Ÿ±jGâîá&Ωïi†','2025-10-27 22:21:38.739000',NULL,'2025-10-27 22:22:07.440000','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761578492/collections/BANNER%20COLLECTION%201800X600px%20CTA_e3f6e6df-69a1-4ce3-9613-604158e44875.png','<p>M√πa l·∫°nh nƒÉm nay, Trendista mang ƒë·∫øn l√†n gi√≥ m·ªõi v·ªõi <strong>B·ªô s∆∞u t·∫≠p Thu ƒê√¥ng 2025</strong> ‚Äì n∆°i c√° t√≠nh v√† phong c√°ch giao h√≤a. T·ª´ √°o kho√°c oversized, boots cao c·ªï ƒë·∫øn nh·ªØng layer ƒë·∫ßy s√°ng t·∫°o, t·∫•t c·∫£ t·∫°o n√™n m·ªôt b·∫£n h√≤a ca th·ªùi trang v·ª´a ph√≥ng kho√°ng, v·ª´a tinh t·∫ø. ƒê√¢y kh√¥ng ch·ªâ l√† trang ph·ª•c ‚Äì m√† l√† c√°ch Trendista k·ªÉ c√¢u chuy·ªán c·ªßa ng∆∞·ªùi tr·∫ª: t·ª± do, kh√°c bi·ªát v√† lu√¥n d·∫´n ƒë·∫ßu xu h∆∞·ªõng.</p><hr><h3>‚ú® </h3><p><strong>Trendista FW25</strong> ‚Äì Khi phong c√°ch ch·∫°m ƒë·∫øn c·∫£m x√∫c.<br>S·∫Øc thu ‚Äì h∆°i l·∫°nh ‚Äì v√† b·∫°n, trong nh·ªØng thi·∫øt k·∫ø khi·∫øn c·∫£ m√πa ƒë√¥ng ph·∫£i ng∆∞·ªõc nh√¨n. ‚ùÑÔ∏è‚ú®</p>','B·ªô s∆∞u t·∫≠p Thu ƒê√¥ng 2025',0,'bo-suu-tap-thu-ong-2025',_binary '','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761578478/collections/BANNER%20COLLECTION%201000x1000CTA_43e6ef7e-6c9d-47b8-8aa2-471d27ddb1a9.webp'),(_binary 'àë	5£\ﬂOó]R∏–ö/Æ','2025-10-27 22:24:09.220000',NULL,'2025-11-19 14:43:38.536259','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761578643/collections/aokhoac-horizontal-12_4b8bb789-8e35-4a49-aa5c-7925a3b92d69.webp','<p><strong>B·ªô s∆∞u t·∫≠p Thu ƒê√¥ng 2025 ‚Äì Trendista</strong> l√† h√†nh tr√¨nh t√¥n vinh v·∫ª ƒë·∫πp hi·ªán ƒë·∫°i trong t·ª´ng ƒë∆∞·ªùng c·∫Øt. L·∫•y c·∫£m h·ª©ng t·ª´ s·∫Øc thu tr·∫ßm ·∫•m v√† h∆°i th·ªü l·∫°nh l·∫Ωo c·ªßa m√πa ƒë√¥ng, b·ªô s∆∞u t·∫≠p mang ƒë·∫øn s·ª± h√≤a quy·ªán gi·ªØa ch·∫•t li·ªáu cao c·∫•p, phom d√°ng tinh t·∫ø v√† gam m√†u th·ªùi th∆∞·ª£ng. M·ªói thi·∫øt k·∫ø l√† tuy√™n ng√¥n v·ªÅ phong c√°ch ‚Äì m·∫°nh m·∫Ω, t·ª± tin v√† ƒë·∫ßy cu·ªën h√∫t, d√†nh cho ng∆∞·ªùi ph·ª• n·ªØ hi·ªán ƒë·∫°i kh√¥ng ng·∫°i kh·∫≥ng ƒë·ªãnh d·∫•u ·∫•n ri√™ng.</p>','B·ªô s∆∞u t·∫≠p Thu ƒê√¥ng 2025 ‚Äì Trendista',0,'bo-suu-tap-thu-dong-2025--trendista',_binary '','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761578635/collections/hang-ban-chay-1000x670_d386e355-7928-4b35-b12d-83f4523a3ff0.webp');
 /*!40000 ALTER TABLE `collection` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -508,7 +509,7 @@ CREATE TABLE `discount` (
 
 LOCK TABLES `discount` WRITE;
 /*!40000 ALTER TABLE `discount` DISABLE KEYS */;
-INSERT INTO `discount` VALUES (_binary 'y\œ’º$K±ÚŸ¶ÆÕ´','2025-10-26 12:56:49.202000',NULL,NULL,'TRENDISTATRIAN','<p>Khuy·∫øn m√£i  d√†nh cho kh√°ch h√†ng m·ªõi nh√† Trendista !</p>','ORDER','PERCENT',10.00,'2025-11-23 23:59:59.000000','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761483398/promotions/BANNER-FLASH-SALE-5-20_20f126ca-1b17-4edc-8167-4607f76263dc.jpg',_binary '',20000.00,NULL,200000.00,'2025-10-01 00:00:00.000000',NULL),(_binary '\Ì\ƒj§ıñBé•PEæ¡5&','2025-10-26 12:54:45.839000',NULL,NULL,'TRENDISTA_OPEN','<p>Khuy·∫øn m√£i m·ªü  b√°n</p>','PRODUCT','PERCENT',40.00,'2025-11-30 23:59:59.000000','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761483263/discounts/promotion-12-0_e19e182d-68b7-4186-9b61-93e6362500a3.webp',_binary '',100000.00,NULL,NULL,'2025-10-26 00:00:00.000000',NULL);
+INSERT INTO `discount` VALUES (_binary '\Ã\Îö\ÈCiÆØØñ\Zc','2025-11-19 10:00:07.077601',NULL,'2025-11-19 10:29:52.332525','TRENDISTA10','<p>Khuy·ªÖn m√£i 10% cho c√°c s·∫£n ph·∫©m ƒë∆∞·ª£c √°p m√£</p>','PRODUCT','AMOUNT',10000.00,'2025-11-30 23:59:59.000000','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521196/discounts/BANNER-FLASH-SALE-5-20_2f551670.jpg',_binary '',0.00,NULL,NULL,'2025-11-19 00:00:00.000000',NULL),(_binary '4\\•ﬂ±Bp∑\\\Í¡ÛÇ','2025-11-19 10:05:58.214029',NULL,'2025-11-19 10:43:39.220977','19THANG10','<p>Trendista ch√∫c m·ª´ng ng√†y qu·ªëc t·∫ø nam gi·ªõi. Gi·∫£m ngay 30% cho ƒë∆°n h√†ng t·ª´ 200k, t·ªëi ƒëa 30k.</p>','ORDER','PERCENT',30.00,'2025-11-25 23:59:59.000000','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521546/promotions/BANNER-FLASH-SALE_0b8fa1ec.webp',_binary '',30000.00,NULL,200000.00,'2025-11-19 00:00:00.000000',NULL),(_binary 'Z˝ \È\…iOL©3+7\√]c6','2025-11-19 17:31:53.568921',NULL,NULL,'FREESHIP15','Free 15K fee shipping for order','SHIPPING','AMOUNT',15000.00,'2025-12-31 23:59:59.000000','url image for discount',_binary '',0.00,3,0.00,'2025-09-07 00:00:00.000000',100),(_binary 'i1Hm@<JzÇ–πoy\Zë','2025-11-19 10:04:17.027909',NULL,NULL,'WELLCOME50','<p>Khuy·ªÖn m√£i ch√†o m·ª´ng kh√°ch h√†ng m·ªõi. Gi·∫£m 50k cho ƒë∆°n h√†ng t·ª´ 200k</p>','ORDER','AMOUNT',50000.00,'2025-11-30 23:59:59.000000','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521447/promotions/BANNER-FLASH-SALE_6b325dd3.webp',_binary '',0.00,NULL,200000.00,'2025-11-19 00:00:00.000000',NULL),(_binary '~DqX∂äIgÇ}V\Œ+]±','2025-11-19 10:02:00.482790',NULL,'2025-11-20 15:41:03.453511','TRENDISTA20','<p>Khuy·ªÖn m√£i 20% t·ªëi ƒëa 20k cho c√°c s·∫£n ph·∫©m ƒë∆∞·ª£c √°p d·ª•ng</p>','PRODUCT','PERCENT',20.00,'2025-11-25 23:59:59.000000','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521312/discounts/BANNER-FLASH-SALE-5-20_7cea9326.jpg',_binary '',0.00,NULL,NULL,'2025-11-19 00:00:00.000000',NULL);
 /*!40000 ALTER TABLE `discount` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -664,7 +665,7 @@ CREATE TABLE `order_item` (
 
 LOCK TABLES `order_item` WRITE;
 /*!40000 ALTER TABLE `order_item` DISABLE KEYS */;
-INSERT INTO `order_item` VALUES (_binary '/\Ê˙ü)GÀØ\À_\Áﬂö Ω','2025-11-03 13:35:09.522439',NULL,NULL,5000.00,_binary '\À:îvH\ÃL^É¶	bµä3\Ê',24,_binary '¥	5ÆK-IØñ¯¥¶T4Ò]',_binary '\·ù\\x@Bî∑!X	∑B˝'),(_binary 'ˆYã¨~CÑòr\Ãªq','2025-11-03 13:21:15.234715',NULL,NULL,5000.00,_binary '˜\ﬂï\œAô9åq86ª',1,_binary 'I±pPo\◊N¸Æ=\‡\»_\Ï@',_binary '\·ù\\x@Bî∑!X	∑B˝');
+INSERT INTO `order_item` VALUES (_binary 'Ñï\◊	˙NΩï\r\„’±∆¥','2025-11-20 11:12:00.213002',NULL,NULL,290000.00,_binary '*\€)\œ6O`ñMNWõGñø',1,_binary 'ê\·\∆œº=Ggäi\–ˆôÆô',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4');
 /*!40000 ALTER TABLE `order_item` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -705,7 +706,7 @@ CREATE TABLE `orders` (
 
 LOCK TABLES `orders` WRITE;
 /*!40000 ALTER TABLE `orders` DISABLE KEYS */;
-INSERT INTO `orders` VALUES (_binary 'I±pPo\◊N¸Æ=\‡\»_\Ï@','2025-11-03 13:21:15.234715',NULL,NULL,NULL,'2025-11-03 13:31:14.670301','Thanh to√°n QR',874670,'2025-11-03 13:21:14.670301','PENDING','QR',NULL,5000.00,_binary 'ˇÉ\ﬂˆ\ÊO=®∞-{¶˙aπ',_binary '•¯h|®L\Zòr°c®'),(_binary '¥	5ÆK-IØñ¯¥¶T4Ò]','2025-11-03 13:35:09.514962',NULL,'2025-11-03 13:59:53.204497',NULL,'2025-11-03 13:45:09.125782','Thanh to√°n QR',709125,'2025-11-03 13:35:09.125782','SHIPPED','QR','L4U8EM',120000.00,_binary 'ˇÉ\ﬂˆ\ÊO=®∞-{¶˙aπ',_binary '•¯h|®L\Zòr°c®');
+INSERT INTO `orders` VALUES (_binary 'I±pPo\◊N¸Æ=\‡\»_\Ï@','2025-11-03 13:21:15.234715',NULL,NULL,NULL,'2025-11-03 13:31:14.670301','Thanh to√°n QR',874670,'2025-11-03 13:21:14.670301','PENDING','QR',NULL,5000.00,_binary 'ˇÉ\ﬂˆ\ÊO=®∞-{¶˙aπ',_binary '•¯h|®L\Zòr°c®'),(_binary 'ê\·\∆œº=Ggäi\–ˆôÆô','2025-11-20 11:12:00.210001',NULL,'2025-11-20 11:13:02.043520',NULL,'2025-11-20 11:21:59.783724','Giao h·ªèa t·ªëc',919783,'2025-11-20 11:11:59.783724','DELIVERED','MOMO',NULL,290000.00,_binary 'ˇÉ\ﬂˆ\ÊO=®∞-{¶˙aπ',_binary '•¯h|®L\Zòr°c®'),(_binary '¥	5ÆK-IØñ¯¥¶T4Ò]','2025-11-03 13:35:09.514962',NULL,'2025-11-03 13:59:53.204497',NULL,'2025-11-03 13:45:09.125782','Thanh to√°n QR',709125,'2025-11-03 13:35:09.125782','DELIVERED','QR','L4U8EM',120000.00,_binary 'ˇÉ\ﬂˆ\ÊO=®∞-{¶˙aπ',_binary '•¯h|®L\Zòr°c®');
 /*!40000 ALTER TABLE `orders` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -742,7 +743,7 @@ CREATE TABLE `payment` (
 
 LOCK TABLES `payment` WRITE;
 /*!40000 ALTER TABLE `payment` DISABLE KEYS */;
-INSERT INTO `payment` VALUES (_binary 'ñ˜OP˝9H™ãªÜ\“—öı','2025-11-03 13:21:15.234715',NULL,NULL,5000,NULL,'https://pay.payos.vn/web/ef1a39a42db14350b4f426275ba49fa2',NULL,'QR','PENDING','00020101021238590010A000000727012900069704180115V3CAS51207789820208QRIBFTTA5303704540450005802VN62330829CSZTZL5P596 TT HOA DON 874670630433E2',874670,_binary 'I±pPo\◊N¸Æ=\‡\»_\Ï@'),(_binary '\Ô¸\‚\ŒL≠xRakfπ','2025-11-03 13:35:09.522439',NULL,'2025-11-03 13:36:07.421652',120000,'2025-11-03 13:36:03.995546','https://pay.payos.vn/web/0de6ee2c03ad4c3bb4559749181ef32e',NULL,'QR','CANCELLED','00020101021238590010A000000727012900069704180115V3CAS51207789820208QRIBFTTA530370454061200005802VN62330829CSQLXNS9GU8 TT HOA DON 7091256304D3FB',709125,_binary '¥	5ÆK-IØñ¯¥¶T4Ò]');
+INSERT INTO `payment` VALUES (_binary 's\∆\÷\ƒHD(•wQëIMS\Ó','2025-11-20 11:12:00.213002',NULL,'2025-11-20 11:13:02.043520',290000,'2025-11-20 11:12:58.922261','https://test-payment.momo.vn/v2/gateway/pay?t=TU9NT1ZKSkgyMDI1MDcyOF9URVNUfDkxOTc4Mw&s=5b4f7fb0b8e67ed8f4756825aa2a40d9a0b5b00a20fc16ec4c99115d87458983',NULL,'MOMO','CANCELLED',NULL,919783,_binary 'ê\·\∆œº=Ggäi\–ˆôÆô'),(_binary 'ñ˜OP˝9H™ãªÜ\“—öı','2025-11-03 13:21:15.234715',NULL,NULL,5000,NULL,'https://pay.payos.vn/web/ef1a39a42db14350b4f426275ba49fa2',NULL,'QR','PENDING','00020101021238590010A000000727012900069704180115V3CAS51207789820208QRIBFTTA5303704540450005802VN62330829CSZTZL5P596 TT HOA DON 874670630433E2',874670,_binary 'I±pPo\◊N¸Æ=\‡\»_\Ï@'),(_binary '\Ô¸\‚\ŒL≠xRakfπ','2025-11-03 13:35:09.522439',NULL,'2025-11-03 13:36:07.421652',120000,'2025-11-03 13:36:03.995546','https://pay.payos.vn/web/0de6ee2c03ad4c3bb4559749181ef32e',NULL,'QR','CANCELLED','00020101021238590010A000000727012900069704180115V3CAS51207789820208QRIBFTTA530370454061200005802VN62330829CSQLXNS9GU8 TT HOA DON 7091256304D3FB',709125,_binary '¥	5ÆK-IØñ¯¥¶T4Ò]');
 /*!40000 ALTER TABLE `payment` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -792,8 +793,8 @@ CREATE TABLE `product` (
   `featured_image` varchar(255) DEFAULT NULL,
   `is_free_ship` bit(1) DEFAULT NULL,
   `name` varchar(255) NOT NULL,
-  `origin_price` decimal(38,2) DEFAULT NULL,
-  `price` decimal(38,2) DEFAULT NULL,
+  `origin_price` decimal(19,2) DEFAULT NULL,
+  `price` decimal(19,2) DEFAULT NULL,
   `rating_average` int DEFAULT NULL,
   `rating_total` int DEFAULT NULL,
   `slug` varchar(255) DEFAULT NULL,
@@ -804,7 +805,6 @@ CREATE TABLE `product` (
   `views` int DEFAULT NULL,
   `category_id` binary(16) DEFAULT NULL,
   `collection_id` binary(16) DEFAULT NULL,
-  `order_index` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `FK1mtsbur82frn64de7balymq9s` (`category_id`),
   KEY `FK1m7avyryg7yow6ytttlt7qcun` (`collection_id`),
@@ -819,7 +819,7 @@ CREATE TABLE `product` (
 
 LOCK TABLES `product` WRITE;
 /*!40000 ALTER TABLE `product` DISABLE KEYS */;
-INSERT INTO `product` VALUES (_binary '\·ù\\x@Bî∑!X	∑B˝','2025-10-26 12:37:07.130000',NULL,'2025-11-04 14:42:30.697497','EOH135','<p>√Åo Kho√°c Nam M≈© Li·ªÅn L√≥t L√¥ng</p>','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482143/products/ao-khoac-nam-AKM7007-DEN_a7f8dd62-2f06-43d3-96ce-6bd8ca209aa2.webp',_binary '','√Åo Kho√°c Nam M≈© Li·ªÅn L√≥t L√¥ng',200000.00,120000.00,0,0,'ao-khoac-nam-mu-lien-lot-long',_binary '','√Åo Kho√°c Nam M≈© Li·ªÅn L√≥t L√¥ng','NEW_ARRIVALS',0,2,_binary '\ÁM¯¡≤gìVäµ£ß',_binary 'àë	5£\ﬂOó]R∏–ö/Æ',NULL);
+INSERT INTO `product` VALUES (_binary 'l\·kE-˝NnÄ\Êò5;1\nπ','2025-11-19 10:17:35.227916',NULL,'2025-11-20 15:41:03.453511','VGC981','<p>Qu·∫ßn kaki nam c√¥ng s·ªü ch·∫•t li·ªáu cao c·∫•p, form d√°ng c·ª±c ƒë·∫πp.</p><img src=\"https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522171/products/product-1763522170610/quan-kaki-nam-QKM6017-DEN-1_21f5c0da.webp\" alt=\"\">','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522101/products/quan-kaki-nam-QKM6017-DEN-1_fdbfbe1f.webp',_binary '','Qu·∫ßn kaki nam c√¥ng s·ªü',350000.00,280000.00,0,0,'quan-kaki-nam-cong-so',_binary '','Qu·∫ßn kaki nam c√¥ng s·ªü ch·∫•t li·ªáu cao c·∫•p','NEW_ARRIVALS',0,54,_binary '\ÁNâ≤gìVäµ£ß',NULL),(_binary 'öªæA£JråŒÖJB\‘b¡','2025-11-19 10:14:23.781261',NULL,'2025-11-19 14:43:38.536259','RDB405','<p>√Åo phao nam c·ªßa nh√† Trendista, v·ªõi ch·∫•t  li·ªáu cao c·∫•p form d√°ng ƒë·∫πp.</p><img src=\"https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522053/products/product-1763522053894/ao-phao-nam-PHM7009-REU-1_060320fc.webp\" alt=\"\">','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521890/products/ao-phao-nam-PHM7009-REU-1_041c4316.webp',_binary '','√Åo phao nam ch·∫•t li·ªáu cao c·∫•p',400000.00,390000.00,0,0,'ao-phao-nam-chat-lieu-cao-cap',_binary '','√Åo phao nam ch·∫•t li·ªáu cao c·∫•p Trendista','TRENDING',0,12,_binary '\ÁM˚≤gìVäµ£ß',_binary 'àë	5£\ﬂOó]R∏–ö/Æ'),(_binary '\œ(Ñ!ù9FÁäß\nGCm\€4','2025-11-19 10:09:39.027247',NULL,'2025-11-19 14:43:38.536259','QSR780','<p>√Åo Kho√°c Nam M≈© Li·ªÅn L√≥t L√¥ng, ch·∫•t li·ªáu cao c·∫•p. Xu h∆∞·ªõng nƒÉm 2025.</p><img src=\"https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521632/products/product-1763521632585/ao-khoac-nam-AKM7007-DEN_62ea6044.webp\" alt=\"\">','https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521691/products/ao-khoac-nam-AKM7007-GHI_958c9867.jpg',_binary '','√Åo Kho√°c Nam M≈© Li·ªÅn L√≥t L√¥ng',300000.00,290000.00,0,0,'ao-khoac-nam-mu-lien-lot-long',_binary '','√Åo Kho√°c Nam M≈© Li·ªÅn L√≥t L√¥ng','TRENDING',0,26,_binary '\ÁM¯¡≤gìVäµ£ß',_binary 'àë	5£\ﬂOó]R∏–ö/Æ');
 /*!40000 ALTER TABLE `product` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -846,7 +846,7 @@ CREATE TABLE `product_discount` (
 
 LOCK TABLES `product_discount` WRITE;
 /*!40000 ALTER TABLE `product_discount` DISABLE KEYS */;
-INSERT INTO `product_discount` VALUES (_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\Ì\ƒj§ıñBé•PEæ¡5&');
+INSERT INTO `product_discount` VALUES (_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\Ã\Îö\ÈCiÆØØñ\Zc'),(_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\Ã\Îö\ÈCiÆØØñ\Zc'),(_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '~DqX∂äIgÇ}V\Œ+]±');
 /*!40000 ALTER TABLE `product_discount` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -884,7 +884,7 @@ CREATE TABLE `product_image` (
 
 LOCK TABLES `product_image` WRITE;
 /*!40000 ALTER TABLE `product_image` DISABLE KEYS */;
-INSERT INTO `product_image` VALUES (_binary '\nøV=\ÍñHª§˝>ú±¶p','2025-10-26 12:37:07.262000',NULL,NULL,_binary '\0',5,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482145/products/ao-khoac-nam-AKM7007-DEN-5_d4dbb58d-e521-4135-bfcc-dc9e536eeb18.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary '&ÅèäQÒDÃò\≈Z˘\Ô˜§','2025-10-26 12:37:07.268000',NULL,NULL,_binary '\0',5,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482182/products/ao-khoac-nam-AKM7007-GHI-5_00a15a23-758c-4593-a978-b12832dd9331.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary '\'é¡cx•A¶4.Ò\¬xrf','2025-10-26 12:37:07.267000',NULL,NULL,_binary '\0',1,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482182/products/ao-khoac-nam-AKM7007-GHI-1_cfed2585-147a-45e8-b753-7ed93e9045ca.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary ';d\ÿ\∆H˙ã\n£∂1\nıå','2025-10-26 12:37:07.262000',NULL,NULL,_binary '\0',6,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482143/products/ao-khoac-nam-AKM7007-DEN-6_69053f57-1183-4541-8ba6-8c5ed2825c7e.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary '@\È9@kMjØ`<˙˜`','2025-10-26 12:37:07.262000',NULL,NULL,_binary '\0',4,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482143/products/ao-khoac-nam-AKM7007-DEN-4_560c636a-f915-464a-8f3c-faf630fd0b04.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary 'Cë~¿◊πBHè&H\Ÿ}º\'','2025-10-26 12:37:07.268000',NULL,NULL,_binary '\0',3,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482184/products/ao-khoac-nam-AKM7007-GHI-3_c0983442-a087-4c83-a543-1286b799e42a.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary 'P»É\‰\„\œIq©Údà$e†\À','2025-10-26 12:37:07.269000',NULL,NULL,_binary '\0',7,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482184/products/ao-khoac-nam-AKM7007-GHI-7_c76940bb-9131-47e0-b44c-f199a674301d.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary '{®\∆€ºkC≥ùs\\ıv´#','2025-10-26 12:37:07.261000',NULL,NULL,_binary '\0',1,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482142/products/ao-khoac-nam-AKM7007-DEN-1_ef05d1cf-c77c-45ae-9415-1cf5b8f19780.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary 'Ä(¯IÑ@-áπÉï\–±','2025-10-26 12:37:07.268000',NULL,NULL,_binary '\0',4,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482182/products/ao-khoac-nam-AKM7007-GHI-4_eec95fd7-2020-4ff4-b5a6-0dbde88b8524.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary 'èHh†\»\◊Aˆíó\0G','2025-10-26 12:37:07.267000',NULL,NULL,_binary '\0',2,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482182/products/ao-khoac-nam-AKM7007-GHI-2_5624cc72-37e7-4474-b650-4c357f9f44f3.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary 'îˇú\ÂÆ\Z@\Î®m\’\‘oqáC','2025-10-26 12:37:07.261000',NULL,NULL,_binary '\0',3,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482145/products/ao-khoac-nam-AKM7007-DEN-3_750f9fab-3545-47a4-b044-a023072a8eb6.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary 'ö\‰Gı\⁄DÃ∂\‚8À†ï\€','2025-10-26 12:37:07.263000',NULL,NULL,_binary '\0',7,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482145/products/ao-khoac-nam-AKM7007-DEN-7_c1ad1afc-0376-4905-8616-77d1e4b51642.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary 'ú;\„êM©¶H\«\Â˛3','2025-10-26 12:37:07.266000',NULL,NULL,_binary '',0,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482183/products/ao-khoac-nam-AKM7007-GHI_34f7cc11-1fc1-401c-b826-288b89fd77b6.jpg',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary 'ŸÉ\ÌqiJI\0é¡Cw˜~','2025-10-26 12:37:07.269000',NULL,NULL,_binary '\0',6,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482182/products/ao-khoac-nam-AKM7007-GHI-6_f6f25819-3fd5-44f7-83f5-c293e3f8b34e.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary '\„VO˝OCΩú1åó3D:˙','2025-10-26 12:37:07.261000',NULL,NULL,_binary '\0',2,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482142/products/ao-khoac-nam-AKM7007-DEN-2_207fdc76-7b7a-4534-bfb1-79947695b1a8.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary 'ÙR\Z∞\»E¶Ä\”\Ál£1æ','2025-10-26 12:37:07.234000',NULL,NULL,_binary '',0,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1761482143/products/ao-khoac-nam-AKM7007-DEN_a7f8dd62-2f06-43d3-96ce-6bd8ca209aa2.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß');
+INSERT INTO `product_image` VALUES (_binary '¨\Ê⁄áH@£êDrˇ','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',1,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521893/products/ao-phao-nam-PHM7009-REU-2_718e090a.webp',_binary '\¬\«¿(≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary '!æëúÚBEôÙiiÑÄ°','2025-11-19 10:17:35.249093',NULL,NULL,_binary '\0',0,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522101/products/quan-kaki-nam-QKM6017-XAM-1_fec0bf1d.webp',_binary '\¬\«≈•≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary 'N-¡FHÅæ¨\ÂîJ™!','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',4,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521893/products/ao-phao-nam-PHM7009-XDE-5_1396731f.webp',_binary '\¬«∫Q≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary '\"\ÿ\ÕiYÛ@J¥.∏k\Z#','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',3,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521892/products/ao-phao-nam-PHM7009-XDE-4_4d3155bd.webp',_binary '\¬«∫Q≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary '$\Á6Ç∑B7äÒÜπC\ŸXú','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',4,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521683/products/ao-khoac-nam-AKM7007-DEN-4_9154de45.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…M%≤gìVäµ£ß'),(_binary '/\Â\“CŸâA¿ú\·#<´S∞','2025-11-19 10:17:35.249093',NULL,NULL,_binary '\0',3,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522101/products/quan-kaki-nam-QKM6017-DEN-4_d0dcfc13.webp',_binary '\¬\«\≈€≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary '8°\0≥ïÆJvîc%*\0Aê','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',3,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521892/products/ao-phao-nam-PHM7009-REU-4_99d1ee08.webp',_binary '\¬\«¿(≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary '=ª\ﬂ5˘B3áZ+w$ó\⁄G','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',5,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521686/products/ao-khoac-nam-AKM7007-GHI-5_9ed0a255.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…B	≤gìVäµ£ß'),(_binary 'A\≈ãr@óàghªuÇOJ','2025-11-19 10:14:23.791912',NULL,NULL,_binary '',0,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521890/products/ao-phao-nam-PHM7009-REU-1_041c4316.webp',_binary '\¬\«¿(≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary 'AJæ\È\‘˝G∏ª7\ÁÖK%\Œ','2025-11-19 10:17:35.249093',NULL,NULL,_binary '\0',4,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522103/products/quan-kaki-nam-QKM6017-XAM-5_53079c2b.webp',_binary '\¬\«≈•≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary 'A–Ø/ˆÚN‘ôf´í∑•','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',6,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521679/products/ao-khoac-nam-AKM7007-DEN-6_c1c0ec89.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…M%≤gìVäµ£ß'),(_binary 'E5ÛJCùKTçdW$\Ít(ê','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',3,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521685/products/ao-khoac-nam-AKM7007-GHI-3_8ca79bac.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…B	≤gìVäµ£ß'),(_binary 'Kq∏¥GBÛß8nk\ﬂ-B','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',3,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521686/products/ao-khoac-nam-AKM7007-DEN-3_e11918fc.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…M%≤gìVäµ£ß'),(_binary 'Rñ\Ï\\±Kwåˇß“∏˚nΩ','2025-11-19 10:17:35.249093',NULL,NULL,_binary '\0',2,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522103/products/quan-kaki-nam-QKM6017-XAM-3_ac774a03.webp',_binary '\¬\«≈•≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary '\\åOÙ4K!•ìa<≤Ω@ñ','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',1,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521684/products/ao-khoac-nam-AKM7007-GHI-1_e4aaa4d4.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…B	≤gìVäµ£ß'),(_binary ']îq√ÑN\„çC\Ê:t\Óñ','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',2,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521892/products/ao-phao-nam-PHM7009-REU-3_e71a8072.webp',_binary '\¬\«¿(≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary 'b\√ÒàMNßõ3â3:|™å','2025-11-19 10:09:39.108595',NULL,NULL,_binary '',0,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521691/products/ao-khoac-nam-AKM7007-GHI_958c9867.jpg',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…B	≤gìVäµ£ß'),(_binary 'fª9Ú›äMñÉû\r\»\'¸','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',5,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521889/products/ao-phao-nam-PHM7009-REU-6_5989b61c.webp',_binary '\¬\«¿(≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary 'iª®©A˛≥\⁄	à4Æí','2025-11-19 10:17:35.248083',NULL,NULL,_binary '',0,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522101/products/quan-kaki-nam-QKM6017-DEN-1_fdbfbe1f.webp',_binary '\¬\«\≈€≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary 'ÖX}óù9Lqºıº\–5_äG','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',4,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521685/products/ao-khoac-nam-AKM7007-GHI-4_37d1b8bd.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…B	≤gìVäµ£ß'),(_binary 'ëÒí9wF◊¥ø\'}ä™Én','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',2,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521682/products/ao-khoac-nam-AKM7007-DEN-2_8161ea18.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…M%≤gìVäµ£ß'),(_binary 'ïÜG˘O\‡û,™Z®%;','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',5,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521893/products/ao-phao-nam-PHM7009-XDE-6_2af76a07.webp',_binary '\¬«∫Q≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary 'ï¿#â\Ó)JƒÉhbMòôf','2025-11-19 10:17:35.250086',NULL,NULL,_binary '\0',5,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522104/products/quan-kaki-nam-QKM6017-XAM-6_10a3e918.webp',_binary '\¬\«≈•≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary 'ú¢CYû∫Kd£äÛP\ÍÛC6','2025-11-19 10:17:35.249093',NULL,NULL,_binary '\0',2,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522103/products/quan-kaki-nam-QKM6017-DEN-3_ec8ce7e3.webp',_binary '\¬\«\≈€≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary '•iè`ÇKÉòSg\Ë\ÿG','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',1,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521892/products/ao-phao-nam-PHM7009-XDE-2_d6f1e9ec.webp',_binary '\¬«∫Q≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary 'ß˚ÅÛ]gB©´`\Âlèáfè','2025-11-19 10:17:35.249093',NULL,NULL,_binary '',3,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522103/products/quan-kaki-nam-QKM6017-XAM-4_298c8d5f.webp',_binary '\¬\«≈•≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary '®3Sø\«Hlôc\Õ\ÿˇô\»','2025-11-19 10:17:35.249093',NULL,NULL,_binary '\0',4,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522101/products/quan-kaki-nam-QKM6017-DEN-6_e0466db7.webp',_binary '\¬\«\≈€≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary '´3\„\“£L‹∞?-\Ã≤2\Ê','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',6,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521686/products/ao-khoac-nam-AKM7007-GHI-6_64244992.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…B	≤gìVäµ£ß'),(_binary 'µ5\ŒÿùD‘é˝\ﬁ7|P\–','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',6,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521891/products/ao-phao-nam-PHM7009-REU-7_92237abc.jpg',_binary '\¬\«¿(≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary '\≈\·l\Ë\‡I	ºE\∆¸\œ\√Q','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',1,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521683/products/ao-khoac-nam-AKM7007-DEN-1_7405f1f5.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…M%≤gìVäµ£ß'),(_binary '\œˇ\0o0Hß≥Åá^µjo∏','2025-11-19 10:17:35.249093',NULL,NULL,_binary '\0',1,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522101/products/quan-kaki-nam-QKM6017-DEN-2_a8630bb2.webp',_binary '\¬\«\≈€≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary '–©“´*{FıëîÉ/è_','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',5,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521683/products/ao-khoac-nam-AKM7007-DEN-5_2402d311.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…M%≤gìVäµ£ß'),(_binary '\’∆ç∏NM^ámP\œBª≠:','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',4,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521889/products/ao-phao-nam-PHM7009-REU-5_7d027d13.webp',_binary '\¬\«¿(≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary '\’Úﬁ≥∑\ZAÒñFí;ôº€ì','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',7,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521686/products/ao-khoac-nam-AKM7007-GHI-7_ef0b2612.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…B	≤gìVäµ£ß'),(_binary '\€ı9´WAëàD±¸πqx¸','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',7,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521683/products/ao-khoac-nam-AKM7007-DEN-7_133e0b0d.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…M%≤gìVäµ£ß'),(_binary '‹èî\◊=VL&îØ\‰h \∆','2025-11-19 10:09:39.108595',NULL,NULL,_binary '',0,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521682/products/ao-khoac-nam-AKM7007-DEN_f7cfcf97.webp',_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…M%≤gìVäµ£ß'),(_binary '\‡ˇR°D´H\◊.§O','2025-11-19 10:09:39.108595',NULL,NULL,_binary '\0',2,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521684/products/ao-khoac-nam-AKM7007-GHI-2_b9b32a43.webp',_binary '\¬\«\∆≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…B	≤gìVäµ£ß'),(_binary 'Û|†d\«:D\Zñ6IEí\–','2025-11-19 10:17:35.249093',NULL,NULL,_binary '\0',1,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763522103/products/quan-kaki-nam-QKM6017-XAM-2_b5a29331.webp',_binary '\¬\«≈•≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß'),(_binary 'ˆYrQçD_üvÑA\ÊÚª<','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',2,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521892/products/ao-phao-nam-PHM7009-XDE-3_7e20cacd.webp',_binary '\¬«∫Q≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary '˘]m0èHyèUdgò±ö<','2025-11-19 10:14:23.791912',NULL,NULL,_binary '\0',6,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521894/products/ao-phao-nam-PHM7009-XDE-7_1f28f3ca.webp',_binary '\¬«∫Q≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß'),(_binary '˚\ZM\„\ÊöK\nî“ß&	S]','2025-11-19 10:14:23.791912',NULL,NULL,_binary '',0,'https://res.cloudinary.com/dwyjwk0mf/image/upload/v1763521892/products/ao-phao-nam-PHM7009-XDE-1_d353d9e5.webp',_binary '\¬«∫Q≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß');
 /*!40000 ALTER TABLE `product_image` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -911,7 +911,7 @@ CREATE TABLE `product_product_variants` (
 
 LOCK TABLES `product_product_variants` WRITE;
 /*!40000 ALTER TABLE `product_product_variants` DISABLE KEYS */;
-INSERT INTO `product_product_variants` VALUES (_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\À:îvH\ÃL^É¶	bµä3\Ê'),(_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '˜\ﬂï\œAô9åq86ª');
+INSERT INTO `product_product_variants` VALUES (_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary ':E¸R\'RJc°\ÊˆVt\‚4'),(_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary 'ã@õ¥\ZUK.æ\ÎŸå\”p|Ñ'),(_binary 'öªæA£JråŒÖJB\‘b¡',_binary 'N¥\›náH\‡ã\œ\“)≤]\’'),(_binary 'öªæA£JråŒÖJB\‘b¡',_binary 'z3%\À3D˝òÑ∂pAØ≤\“'),(_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '*\€)\œ6O`ñMNWõGñø'),(_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '†¢¢¥AE@êí~£ìq\Í\Œ');
 /*!40000 ALTER TABLE `product_product_variants` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -976,11 +976,12 @@ CREATE TABLE `product_variant` (
   `id` binary(16) NOT NULL,
   `code_variant` varchar(255) NOT NULL,
   `variant_order` int NOT NULL,
-  `price` decimal(38,2) NOT NULL,
+  `price` decimal(19,2) DEFAULT NULL,
   `stock_quantity` int NOT NULL,
   `color_id` binary(16) NOT NULL,
   `product_id` binary(16) NOT NULL,
   `size_id` binary(16) NOT NULL,
+  `origin_price` decimal(19,2) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `FK7ic0arew3txgoctacehy5nal9` (`color_id`),
   KEY `FKgrbbs9t374m9gg43l6tq1xwdj` (`product_id`),
@@ -997,8 +998,72 @@ CREATE TABLE `product_variant` (
 
 LOCK TABLES `product_variant` WRITE;
 /*!40000 ALTER TABLE `product_variant` DISABLE KEYS */;
-INSERT INTO `product_variant` VALUES (_binary '\À:îvH\ÃL^É¶	bµä3\Ê','EOH135-TR·∫ÆNG-M',1,25920.00,24,_binary '\¬\«\∆≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß'),(_binary '˜\ﬂï\œAô9åq86ª','EOH135-ƒêEN-M',0,1728.00,18,_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\·ù\\x@Bî∑!X	∑B˝',_binary '\…B	≤gìVäµ£ß');
+INSERT INTO `product_variant` VALUES (_binary '*\€)\œ6O`ñMNWõGñø','QSR780-TR·∫ÆNG-M',0,280000.00,18,_binary '\¬\«\∆≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…B	≤gìVäµ£ß',290000.00),(_binary ':E¸R\'RJc°\ÊˆVt\‚4','VGC981-X√ÅM-L',1,280000.00,17,_binary '\¬\«≈•≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß',350000.00),(_binary 'N¥\›náH\‡ã\œ\“)≤]\’','RDB405-XANH ƒêEN-L',1,294000.00,20,_binary '\¬«∫Q≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß',304000.00),(_binary 'z3%\À3D˝òÑ∂pAØ≤\“','RDB405-N√ÇU ƒê·∫¨M-L',0,294000.00,20,_binary '\¬\«¿(≤fìVäµ£ß',_binary 'öªæA£JråŒÖJB\‘b¡',_binary '\…M%≤gìVäµ£ß',304000.00),(_binary 'ã@õ¥\ZUK.æ\ÎŸå\”p|Ñ','VGC981-X√ÅM ƒê·∫¨M-L',0,280000.00,10,_binary '\¬\«\≈€≤fìVäµ£ß',_binary 'l\·kE-˝NnÄ\Êò5;1\nπ',_binary '\…M%≤gìVäµ£ß',350000.00),(_binary '†¢¢¥AE@êí~£ìq\Í\Œ','QSR780-ƒêEN-L',1,280000.00,20,_binary '\¬\«\ƒ»≤fìVäµ£ß',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '\…M%≤gìVäµ£ß',290000.00);
 /*!40000 ALTER TABLE `product_variant` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `review`
+--
+
+DROP TABLE IF EXISTS `review`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `review` (
+  `id` binary(16) NOT NULL,
+  `created_at` datetime(6) NOT NULL,
+  `deleted_at` datetime(6) DEFAULT NULL,
+  `updated_at` datetime(6) DEFAULT NULL,
+  `content` text,
+  `is_approved` bit(1) DEFAULT NULL,
+  `is_recommended` bit(1) DEFAULT NULL,
+  `rating` int NOT NULL,
+  `order_id` binary(16) NOT NULL,
+  `product_id` binary(16) NOT NULL,
+  `user_id` binary(16) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FKnkc5s3da46cbx8oeqrfhnm7es` (`order_id`),
+  KEY `FKiyof1sindb9qiqr9o8npj8klt` (`product_id`),
+  KEY `FKiyf57dy48lyiftdrf7y87rnxi` (`user_id`),
+  CONSTRAINT `FKiyf57dy48lyiftdrf7y87rnxi` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
+  CONSTRAINT `FKiyof1sindb9qiqr9o8npj8klt` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`),
+  CONSTRAINT `FKnkc5s3da46cbx8oeqrfhnm7es` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `review`
+--
+
+LOCK TABLES `review` WRITE;
+/*!40000 ALTER TABLE `review` DISABLE KEYS */;
+INSERT INTO `review` VALUES (_binary 'cÚ~OnºHsµ8q≤˛¡,','2025-11-20 11:44:12.489120',NULL,NULL,'S·∫£n ph·∫©m ƒë√∫ng m√¥ t·∫£, shop giao nhanh !',_binary '',_binary '',4,_binary 'ê\·\∆œº=Ggäi\–ˆôÆô',_binary '\œ(Ñ!ù9FÁäß\nGCm\€4',_binary '•¯h|®L\Zòr°c®');
+/*!40000 ALTER TABLE `review` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `review_media`
+--
+
+DROP TABLE IF EXISTS `review_media`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `review_media` (
+  `review_id` binary(16) NOT NULL,
+  `media_url` varchar(255) DEFAULT NULL,
+  KEY `FKerxk5xtek33im3r3nd8qoprik` (`review_id`),
+  CONSTRAINT `FKerxk5xtek33im3r3nd8qoprik` FOREIGN KEY (`review_id`) REFERENCES `review` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `review_media`
+--
+
+LOCK TABLES `review_media` WRITE;
+/*!40000 ALTER TABLE `review_media` DISABLE KEYS */;
+INSERT INTO `review_media` VALUES (_binary 'cÚ~OnºHsµ8q≤˛¡,','https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.thietkeshopee.net%2F2023%2F06%2Fchuan-bi-hang-dong-goi-hang'),(_binary 'cÚ~OnºHsµ8q≤˛¡,','https://www.google.com/url?sa=i&url=https%3A%2F%2Fmaydonggoi.com.vn%2Fcach-dong-goi-hang');
+/*!40000 ALTER TABLE `review_media` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1239,4 +1304,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-15 20:41:30
+-- Dump completed on 2025-11-20 17:26:24
