@@ -88,7 +88,10 @@ public class WebConfig {
     }
     @Bean
     public PayOS payOS() {
-        return new PayOS(payOsConfig.getClientId(), payOsConfig.getApiKey(), payOsConfig.getChecksumKey());
+        return new PayOS(payOsConfig.getClientId(),
+                payOsConfig.getApiKey(),
+                payOsConfig.getChecksumKey()
+        );
     }
 
 }

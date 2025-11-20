@@ -55,6 +55,11 @@ public class DiscountController {
                                             name = "Create Product Discount",
                                             summary = "Create discount applied to product",
                                             value = DiscountRequestExamples.CREATE_DISCOUNT_PRODUCT_REQUEST
+                                    ),
+                                    @ExampleObject(
+                                            name = "Create Shipping Discount",
+                                            summary = "Create discount applied to shipping",
+                                            value = DiscountRequestExamples.CREATE_DISCOUNT_SHIPPING_REQUEST
                                     )
                             }
                     )

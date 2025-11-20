@@ -80,34 +80,37 @@ public class VariantService {
                 Size size = sizeRepository.findById(variantRequest.getSizeId())
                         .orElseThrow(() -> new ResourceNotFoundEx("Size not found"));
                 String codeName = managedProduct.getCode() + "-" + color.getName() + "-" + size.getValue();
-                BigDecimal price = (variantRequest.getPrice() != null
-                        && variantRequest.getPrice().compareTo(BigDecimal.ZERO) > 0)
-                        ? variantRequest.getPrice()
-                        : managedProduct.getOriginPrice();
-                // Kiểm tra xem ProductVariant đã tồn tại chưa
                 String variantKey = variantRequest.getColorId() + "-" + variantRequest.getSizeId();
                 ProductVariant existingVariant = existingVariantMap.get(variantKey);
                 if (existingVariant != null) {
-                    // Cập nhật ProductVariant hiện có
                     existingVariant.setColor(color);
                     existingVariant.setSize(size);
                     existingVariant.setCodeVariant(codeName.toUpperCase());
-                    existingVariant.setOriginPrice(price);
-                    existingVariant.setPrice(price);
+                    if (variantRequest.getPrice() != null
+                            && variantRequest.getPrice().compareTo(BigDecimal.ZERO) > 0
+                            && variantRequest.getPrice().compareTo(managedProduct.getPrice()) != 0) {
+                        existingVariant.setOriginPrice(variantRequest.getPrice());
+                        existingVariant.setPrice(variantRequest.getPrice());
+                    } else {
+                        existingVariant.setOriginPrice(managedProduct.getOriginPrice());
+                        existingVariant.setPrice(managedProduct.getOriginPrice());
+                    }
                     existingVariant.setOrder(variantRequest.getOrder());
                     existingVariant.setStockQuantity(variantRequest.getStockQuantity());
                     variantsToSave.add(existingVariant);
-                    variantsToDelete.remove(existingVariant); // Không xóa variant này
+                    variantsToDelete.remove(existingVariant);
                     log.info("Cập nhật variant colorId: {}, sizeId: {}", variantRequest.getColorId(), variantRequest.getSizeId());
                 } else {
-                    // Tạo ProductVariant mới
+                    BigDecimal originPrice = (variantRequest.getPrice() != null && variantRequest.getPrice().compareTo(BigDecimal.ZERO) > 0)
+                            ? variantRequest.getPrice()
+                            : managedProduct.getOriginPrice();
                     ProductVariant newVariant = ProductVariant.builder()
                             .product(managedProduct)
                             .color(color)
                             .size(size)
                             .codeVariant(codeName.toUpperCase())
-                            .originPrice(price)
-                            .price(price)
+                            .originPrice(originPrice)
+                            .price(originPrice)
                             .stockQuantity(variantRequest.getStockQuantity())
                             .order(variantRequest.getOrder())
                             .build();

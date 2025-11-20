@@ -71,6 +71,9 @@ public class ResponseMessage {
     public static final String PAYMENT_NOT_FOUND = "payment_not_found";
     public static final String MAX_CART = "max_cart_items_exceeded_20_items";
     public static final String SEND_SUCCESS = "send_message_successes";
+    // Review
+    public static final String ORDER_UNFINISHED = "order_unfinished";
+    public static final String PRODUCT_NOT_ORDER  = "product_not_in_order";
     private ResponseMessage() {
     }
 }

@@ -134,7 +134,7 @@ vietqr:
 # PayOS Configuration
 PAYOS_CLIENT_ID: fc00707d-3953-4e8a-a19c-60ebd83eed12
 PAYOS_API_KEY: c6d8df43-e013-4c8d-a5ec-13e8687604b8
-PAYOS_CHECKSUM_KEY: 24d89af6fc72ea51844703911f9993fa211955d61f78baa98ad5250534b87c1c
+PAYOS_CHECKSUM_KEY: 63dc6511855ace359d5bb70ae4f34e476109b34f30623b92367529e0fe5183d6
 PAYOS_RETURN_URL: http://localhost:8080/api/v1/order/payment/callback
 PAYOS_CANCEL_URL: http://localhost:8080/api/v1/order/payment/callback
 PAYOS_PAY_RETRY: http://localhost:8080/api/v1/order/payment/retry

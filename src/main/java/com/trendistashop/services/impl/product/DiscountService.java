@@ -192,11 +192,13 @@ public class DiscountService {
     public BigDecimal calculateFinalPriceAndUpdateProduct(UUID productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundEx("Product not found"));
-
         BigDecimal finalPrice = calculateFinalPriceForProduct(product);
         product.setPrice(finalPrice.max(BigDecimal.ZERO));
         if(product.getProductVariants() != null) {
             for (ProductVariant variant : product.getProductVariants()) {
+                if (variant.getOriginPrice() == null || variant.getOriginPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                    variant.setOriginPrice(product.getOriginPrice());
+                }
                 BigDecimal variantFinalPrice = calculateFinalPriceForVariant(variant, product);
                 variant.setPrice(variantFinalPrice.max(BigDecimal.ZERO));
             }
@@ -212,14 +214,16 @@ public class DiscountService {
                 : applyDiscount(product.getOriginPrice(), getBestDiscount(applicable));
     }
     private BigDecimal calculateFinalPriceForVariant(ProductVariant variant, Product product) {
-        BigDecimal basePrice;
-        if (variant.getOriginPrice() != null && variant.getOriginPrice().compareTo(BigDecimal.ZERO) > 0) {
-            basePrice = variant.getOriginPrice(); // Giá gốc của variant
-        } else {
-            basePrice = product.getOriginPrice(); // Giá gốc của product
+        BigDecimal basePrice = variant.getOriginPrice();
+        if (basePrice == null || basePrice.compareTo(BigDecimal.ZERO) <= 0) {
+            basePrice = product.getOriginPrice();
         }
         List<Discount> discounts = getApplicableProductDiscounts(product);
-        return discounts.isEmpty() ? basePrice : applyDiscount(basePrice, getBestDiscount(discounts));
+        BigDecimal finalPrice = discounts.isEmpty()
+                ? basePrice
+                : applyDiscount(basePrice, getBestDiscount(discounts));
+
+        return finalPrice;
     }
     private List<Discount> getApplicableProductDiscounts(Product product) {
         LocalDateTime now = LocalDateTime.now();
@@ -265,14 +269,13 @@ public class DiscountService {
             case AMOUNT -> basePrice.subtract(discount.getDiscountValue());
             default -> basePrice;
         };
-
-        if (discount.getMaxDiscountValue() != null) {
-            BigDecimal actualDiscount = basePrice.subtract(priceAfter);
-            if (actualDiscount.compareTo(discount.getMaxDiscountValue()) > 0) {
-                priceAfter = basePrice.subtract(discount.getMaxDiscountValue());
+        BigDecimal maxDiscountValue = discount.getMaxDiscountValue();
+        if (maxDiscountValue != null && maxDiscountValue.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal actualDiscountApplied = basePrice.subtract(priceAfter);
+            if (actualDiscountApplied.compareTo(maxDiscountValue) > 0) {
+                priceAfter = basePrice.subtract(maxDiscountValue);
             }
         }
-
         return priceAfter.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
     }
 
