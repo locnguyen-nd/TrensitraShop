@@ -17,10 +17,10 @@ public class CookieUtils {
     public void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
         Cookie cookie = new Cookie("refreshToken", refreshToken);
         cookie.setHttpOnly(true);
-        cookie.setSecure(false);             // Nếu production thì set là true
+        cookie.setSecure(true);             // Nếu production thì set là true
         cookie.setPath("/");                // Gửi kèm mọi request
         cookie.setMaxAge(refreshTokenExpiresIn);
-        cookie.setAttribute("SameSite", "Strict"); // Chống CSRF
+        cookie.setAttribute("SameSite", "None"); // Chống CSRF đổi qua Strict
         response.addCookie(cookie);
     }
     public void clearRefreshTokenCookie(HttpServletResponse response) {

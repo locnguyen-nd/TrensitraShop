@@ -35,7 +35,7 @@ public class ProductDTO {
     private ProductTagEnum tag;
     private Integer availableQuantities;
     private Integer views;
-    private Integer ratingAverage;
+    private Double ratingAverage;
     private Integer ratingTotal;
     private Integer unitsSold;
     @NotNull(message = "Category ID is required")

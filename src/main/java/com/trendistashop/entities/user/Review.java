@@ -42,7 +42,7 @@ public class Review extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String content;
 
-    private Boolean isRecommended = true;
+    private Boolean isRecommended = false;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "review_media", joinColumns = @JoinColumn(name = "review_id"))

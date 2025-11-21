@@ -1,8 +1,11 @@
 package com.trendistashop.utils;
 
+import com.trendistashop.dto.response.PageDTO;
 import com.trendistashop.dto.response.TypeResponse;
+import org.springframework.data.domain.Page;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ResponseHelper {
@@ -69,5 +72,11 @@ public class ResponseHelper {
     }
     public static <T> TypeResponse<T> partialSuccess (T data, String message) {
         return success(data, message, 207);
+    }
+    public static   <T> TypeResponse<PageDTO<T>> okPage(Page<?> page, List<T> content, String message) {
+        return ResponseHelper.ok(PageDTO.fromPage(page, content), message);
+    }
+    public static <T> TypeResponse<PageDTO<T>> okPage(Page<T> page, String message) {
+        return ResponseHelper.ok(PageDTO.fromPage(page), message);
     }
 }

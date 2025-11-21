@@ -45,7 +45,7 @@ public class Product extends BaseEntity {
     private BigDecimal price;
     private Boolean isFreeShip;
     private Integer views;
-    private Integer ratingAverage;
+    private Double ratingAverage;
     private Integer ratingTotal;
     private String featuredImage;
     private Integer unitsSold ;
@@ -103,5 +103,4 @@ public class Product extends BaseEntity {
             }
         }
     }
-
 }
