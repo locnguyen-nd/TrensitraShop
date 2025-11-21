@@ -10,7 +10,7 @@ import java.util.UUID;
  */
 public record ReviewResponse(
         UUID id,
-        UUID reviewId,
+        UUID userId,
         String fullName,
         String avatar,
         UUID productId,
@@ -19,8 +19,8 @@ public record ReviewResponse(
         String productImage,
         Integer rating,
         String content,
-        Boolean isRecommended,
         List<String> mediaUrls,
+        Boolean isRecommended,
         Boolean isApproved,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,

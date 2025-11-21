@@ -1,6 +1,7 @@
 package com.trendistashop.services.impl.order;
 
 import com.trendistashop.constants.ResponseMessage;
+import com.trendistashop.dto.response.PageDTO;
 import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.dto.review.CreateReviewRequest;
 import com.trendistashop.dto.review.ReviewResponse;
@@ -17,6 +18,7 @@ import com.trendistashop.repositories.order.ReviewRepository;
 import com.trendistashop.repositories.product.ProductRepository;
 import com.trendistashop.services.CloudinaryService;
 import com.trendistashop.utils.ResponseHelper;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -50,7 +53,8 @@ public class ReviewService {
     private final UserDetailsService userDetailsService;
     @Autowired
     private CloudinaryService cloudinaryService;
-
+    @Autowired
+    private EntityManager entityManager;
     @Transactional
     public TypeResponse<List<ReviewResponse>> createReview(CreateReviewRequest req, Principal principal) {
         try {
@@ -124,6 +128,7 @@ public class ReviewService {
             return ResponseHelper.badRequest(ResponseMessage.CREATE_FAILED);
         }
     }
+    @Transactional
     public TypeResponse<ReviewResponse> updateReview (UUID reviewId, UpdateReviewRequest req, Principal principal) {
         try {
             UserEntity user = getUser(principal);
@@ -167,6 +172,7 @@ public class ReviewService {
             return ResponseHelper.badRequest(ResponseMessage.UPDATE_FAILED);
         }
     }
+    @Transactional
     public TypeResponse<Void> deleteReview (UUID reviewId, Principal principal) {
         try{
             UserEntity user = getUser(principal);
@@ -196,59 +202,59 @@ public class ReviewService {
         }
     }
     public void updateProductRating(UUID productId) {
-        Object[] result = reviewRepository.calculateAverageRatingAndCount(productId);
-
-        Double avg = 0.0;
-        Long count = 0L;
-
-        if (result != null && result.length == 2) {
-            avg = result[0] instanceof Number ? ((Number) result[0]).doubleValue() : 0.0;
-            count = result[1] instanceof Number ? ((Number) result[1]).longValue() : 0L;
-        }
-
-        Product product = productRepository.findById(productId).orElseThrow();
-        product.setRatingAverage(avg > 0 ? (int) Math.round(avg) : 0);
-        product.setRatingTotal(count.intValue());
-        productRepository.save(product);
+        productRepository.updateRatingByProductId(productId);
     }
-    public TypeResponse<Page<ReviewResponse>> getProductReviews(UUID productId, Boolean approved, List<Integer> ratings, int page, int size) {
+    public TypeResponse<PageDTO<ReviewResponse>> getProductReviews(UUID productId, Boolean recomment, Boolean approved, Integer ratings, int page, int size) {
         try {
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-            Page<Review> reviews;
-            if (approved == null && (ratings == null || ratings.isEmpty())) {
-                reviews = reviewRepository.findByProductIdAndIsApprovedTrue(productId, pageable);
-            } else {
-                reviews = reviewRepository.findByProductIdAndIsApprovedAndRatingIn(
-                        productId, approved, ratings, pageable);
+            Double minRating = null;
+            Double maxRating = null;
+
+            if (ratings != null) {
+                if (ratings == 5) {
+                    minRating = 5.0;
+                } else if (ratings >= 1 && ratings <= 4) {
+                    minRating = ratings.doubleValue();
+                    maxRating = ratings + 1.0;
+                }
             }
-            return ResponseHelper.ok(reviews.map(this::toResponse), ResponseMessage.FETCH_SUCCESS);
+            Page<Review> reviews = reviewRepository.findReviewsWithFilter(
+                    productId,recomment, approved, minRating, maxRating, pageable);
+            List<ReviewResponse> content = reviews.stream()
+                    .map(this::toResponse)
+                    .toList();
+            return ResponseHelper.okPage(reviews, content, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
             log.error("Exception getProductReviews : ", e);
             return ResponseHelper.badRequest(ResponseMessage.FETCH_FAILED);
         }
     }
-    public TypeResponse<Page<ReviewResponse>> getMyReviews(int page, int size, Principal principal) {
+    public TypeResponse<PageDTO<ReviewResponse>> getMyReviews(int page, int size, Principal principal) {
         try {
             UserEntity user = getUser(principal);
             if (user == null)  return ResponseHelper.unauthorized(ResponseMessage.UNAUTHORIZED);
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             Page<Review> reviews = reviewRepository.findByUserId(user.getId(), pageable);
-            return ResponseHelper.ok(reviews.map(this::toResponse), ResponseMessage.FETCH_SUCCESS);
+            List<ReviewResponse> content = reviews.stream()
+                    .map(this::toResponse)
+                    .toList();
+            return ResponseHelper.okPage(reviews, content, ResponseMessage.FETCH_SUCCESS);
         } catch (Exception e) {
             log.error("Exception getMyReviews : ", e);
             return ResponseHelper.badRequest(ResponseMessage.FETCH_FAILED);
         }
     }
-    public TypeResponse<ReviewResponse> approveReview(UUID reviewId, Boolean approved, Principal principal) {
+    public TypeResponse<ReviewResponse> approveReview(UUID reviewId, Boolean approved, Boolean recomment, Principal principal) {
         try{
-            if (approved == null) {
-                return ResponseHelper.validationError("approved", "Trường approved là bắt buộc");
+            if (approved == null || recomment == null) {
+                return ResponseHelper.validationError("params", "Trường approved / recomment là bắt buộc");
             }
             UserEntity user = getUser(principal);
             if (user == null) return ResponseHelper.unauthorized(ResponseMessage.UNAUTHORIZED);
             Optional<Review> reviewOpt = reviewRepository.findById(reviewId);
             if (reviewOpt.isEmpty()) return ResponseHelper.badRequest(ResponseMessage.NOT_FOUND);
             reviewOpt.get().setIsApproved(approved);
+            reviewOpt.get().setIsRecommended(recomment);
             Review review = reviewRepository.save(reviewOpt.get());
             return ResponseHelper.ok(this.toResponse(review), ResponseMessage.UPDATE_FAILED);
         } catch (Exception e) {
@@ -295,8 +301,8 @@ public class ReviewService {
                 r.getProduct().getFeaturedImage(),
                 r.getRating(),
                 r.getContent(),
-                r.getIsRecommended(),
                 r.getMediaUrls(),
+                r.getIsRecommended(),
                 r.getIsApproved(),
                 r.getCreatedAt(),
                 r.getUpdatedAt(),

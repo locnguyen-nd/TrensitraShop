@@ -6,9 +6,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -41,4 +43,22 @@ public interface ProductRepository extends JpaSpecificationExecutor<Product>, Jp
             @Param("startsWith") String startsWith,
             Pageable pageable
     );
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+    UPDATE product SET 
+        rating_average = (
+            SELECT COALESCE(ROUND(AVG(r.rating), 1), 0.0)
+            FROM review r 
+            WHERE r.product_id = :productId AND r.is_approved = true
+        ),
+        rating_total = (
+            SELECT COUNT(*)
+            FROM review r 
+            WHERE r.product_id = :productId AND r.is_approved = true
+        )
+    WHERE id = :productId
+    """, nativeQuery = true)
+    void updateRatingByProductId(@Param("productId") UUID productId);
 }

@@ -9,6 +9,8 @@ import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Map;
+
 
 /**
  * Class nay duoc danh dau la Configuration cau hinh swagger (them phu thuoc trong pom.xml)
@@ -17,27 +19,37 @@ import org.springframework.context.annotation.Configuration;
 public class OpenAPIConfig {
     @Bean
     public OpenAPI openAPI() {
-        return new OpenAPI()
+        OpenAPI openAPI = new OpenAPI()
                 .info(new Info()
                         .title("TRENDISTA API")
                         .description("Trendista API Description")
                         .version("1.0")
-                        .contact(new Contact()
-                                .name("Loc Nguyen")
-                                .email("locnguyen4.0@gmail.com")))
-                .addServersItem(new Server()
-                        .url("http://localhost:8080/")
-                        .description("TRENDISTA API Server"))
+                        .contact(new Contact().name("Lộc Nguyễn").email("locnguyen4.0@gmail.com")))
+                .addServersItem(new Server().url("http://localhost:8080").description("Local Server"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
-                        .addSecuritySchemes("bearerAuth",
-                                new SecurityScheme()
-                                        .type(SecurityScheme.Type.HTTP)
-                                        .scheme("bearer")
-                                        .bearerFormat("JWT")
-                                        .in(SecurityScheme.In.HEADER)
-                                        .name("Authorization")));
+                        .addSecuritySchemes("bearerAuth", new SecurityScheme()
+                                .type(SecurityScheme.Type.HTTP)
+                                .scheme("bearer")
+                                .bearerFormat("JWT")));
+
+        // Thêm auto refresh token
+        openAPI.addExtension("x-springdoc-interceptor",
+                Map.of("responseInterceptor",
+                        Map.of("apply", """
+                                function(response) {
+                                  if (response.status === 401 && !response.request.url.includes('/refresh-token')) {
+                                    return fetch('/api/v1/auth/refresh-token', {
+                                      method: 'POST',
+                                      credentials: 'include'
+                                    }).then(res => res.ok 
+                                      ? fetch(response.request.url, response.request)
+                                      : (alert('Hết phiên đăng nhập!'), response)
+                                    );
+                                  }
+                                  return response;
+                                }
+                                """)));
+        return openAPI;
     }
-
-
 }

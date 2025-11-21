@@ -358,7 +358,7 @@ public class ProductService implements IProductService {
                 .status(dto.getStatus() != null ? dto.getStatus() : true)
                 .isFreeShip(dto.getIsFreeShip())
                 .views(0)
-                .ratingAverage(0)
+                .ratingAverage(0.0)
                 .ratingTotal(0)
                 .unitsSold(0)
                 .tag(dto.getTag())
