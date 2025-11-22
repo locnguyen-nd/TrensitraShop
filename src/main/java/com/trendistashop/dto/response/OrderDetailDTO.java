@@ -23,8 +23,10 @@ public class OrderDetailDTO {
     private LocalDateTime orderDate;
     @JsonProperty("address")
     private AddressDTO address;
-    private DiscountApply discountApply;
     private BigDecimal totalAmount;
+    private BigDecimal shippingFee;
+    private BigDecimal discountAmount;
+    private BigDecimal savedAmount;
     private OrderStatus orderStatus;
     private String shipmentNumber;
     private LocalDateTime expectedDeliveryDate;

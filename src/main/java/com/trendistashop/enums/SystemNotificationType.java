@@ -17,7 +17,10 @@ public enum SystemNotificationType {
     ORDER_CANCELLED("Đơn hàng đã hủy", "Đơn hàng #{orderId} đã bị hủy."),
     USER_LOGIN("Đăng nhập thành công", "Chào mừng bạn quay lại!"),
     CHAT_NEW_MESSAGE("Tin nhắn mới", "Từ {senderName}: {message}"),
-    PROMOTION("Khuyến mãi mới", "{promoTitle}");
-    private final String titleTemplate;
+    PROMOTION("Khuyến mãi mới", "{promoTitle}"),
+    NEW_REVIEW_REPLY(
+            "Có phản hồi mới cho đánh giá của bạn",
+            "{replierName} đã trả lời đánh giá của bạn về sản phẩm \"{productName}\""
+    );    private final String titleTemplate;
     private final String contentTemplate;
 }

@@ -1,20 +1,14 @@
 package com.trendistashop.controllers.user;
 
-import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.dto.response.PageDTO;
 import com.trendistashop.dto.response.TypeResponse;
-import com.trendistashop.dto.review.CreateReviewRequest;
-import com.trendistashop.dto.review.ReviewResponse;
-import com.trendistashop.dto.review.UpdateReviewRequest;
-import com.trendistashop.entities.user.Review;
+import com.trendistashop.dto.review.*;
 import com.trendistashop.services.impl.order.ReviewService;
-import com.trendistashop.utils.ResponseHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -112,5 +106,29 @@ public class ReviewController {
             Principal principal ) {
         TypeResponse<ReviewResponse> response = reviewService.approveReview(reviewId, approved, recomment, principal);
         return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+    @PostMapping("/replies")
+    @Operation(description = "Tạo trả lời cho đánh giá")
+    public TypeResponse<ReplyResponse> createReply(
+            @RequestBody CreateReplyRequest req,
+            Principal principal) {
+        return reviewService.createReply(req, principal);
+    }
+
+    @PutMapping("/replies/{replyId}")
+    @Operation(description = "Cập nhật trả lời đánh giá")
+    public TypeResponse<ReplyResponse> updateReply(
+            @PathVariable UUID replyId,
+            @RequestBody UpdateReplyRequest req,
+            Principal principal) {
+        return reviewService.updateReply(replyId, req, principal);
+    }
+
+    @DeleteMapping("/replies/{replyId}")
+    @Operation(description = "Xóa trả lời đánh giá")
+    public TypeResponse<Void> deleteReply(
+            @PathVariable UUID replyId,
+            Principal principal) {
+        return reviewService.deleteReply(replyId, principal);
     }
 }

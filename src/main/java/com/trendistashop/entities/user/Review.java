@@ -57,4 +57,10 @@ public class Review extends BaseEntity {
             this.mediaUrls.add(url.trim());
         }
     }
+    @OneToMany(
+            mappedBy = "review",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<ReviewReply> replies = new ArrayList<>();
 }

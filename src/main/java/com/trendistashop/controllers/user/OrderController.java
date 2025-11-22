@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -26,6 +27,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.List;
@@ -41,6 +43,11 @@ import java.util.UUID;
 public class OrderController {
 
     private final IOrderService orderService;
+    @Value("${frontend.dev.url}")
+    private String frontendDevUrl;
+    @Value("${frontend.prod.url}")
+    private String frontendProdUrl;
+
     @Autowired
     private MoMoConfig moMoConfig;
     @PostMapping("/preview")
@@ -104,12 +111,27 @@ public class OrderController {
     }
 
     @GetMapping("/payment/callback")
-    public ResponseEntity<TypeResponse<Void>> paymentCallback(
+    public RedirectView paymentCallback(
             @RequestParam("orderCode") Long orderCode,
             @RequestParam("status") String status,
             @RequestParam(name = "cancel", defaultValue = "false") boolean cancel) {
-            TypeResponse<Void> response = orderService.updateOrderStatusFromPayment(orderCode, status, cancel);
-           return ResponseEntity.status(response.getStatusCode()).body(response);
+        try {
+             orderService.updateOrderStatusFromPayment(orderCode, status, cancel);
+            String redirectType;
+            if (cancel || "CANCELLED".equalsIgnoreCase(status) || "EXPIRED".equalsIgnoreCase(status)) {
+                redirectType = "cancelled";
+            } else if ("PAID".equalsIgnoreCase(status)) {
+                redirectType = "processing";
+            } else {
+                redirectType = "pending";
+            }
+        String redirectUrl = frontendDevUrl + "/user/orders?type=" + redirectType;
+        log.info("PayOS callback thành công → Redirect về: {}", redirectUrl);
+        return new RedirectView(redirectUrl);
+    } catch (Exception e) {
+        log.error("Lỗi xử lý callback từ PayOS", e);}
+        String errorUrl = frontendDevUrl + "/user/orders?type=error&msg=" + URLEncoder.encode("Thanh toán thất bại", StandardCharsets.UTF_8);
+        return new RedirectView(errorUrl);
     }
     /**
      * IPN - Server to Server callback từ MoMo
@@ -183,58 +205,23 @@ public class OrderController {
         }
     }
     @GetMapping("/payment/callback/momo/ipn")
-    public ResponseEntity<Map<String, Object>> momoIpnReturn(@RequestParam Map<String, String> params) {
+    public RedirectView momoIpnReturn(@RequestParam Map<String, String> params) {
         try {
-            log.info("MoMo IPN received (GET): {}", params);
+                String resultCode = params.get("resultCode");
+                boolean success = "0".equals(resultCode);
+                if (params.containsKey("orderId")) {
+                    Long orderId = Long.parseLong(params.get("orderId"));
+                    orderService.updateOrderStatusFromPayment(orderId, success ? "PAID" : "CANCELLED", !success);
+                }
+                String type = success ? "processing" : "cancelled";
+                String redirectUrl = frontendDevUrl + "/user/orders?type=" + type;
+                return new RedirectView(redirectUrl);
 
-            // === 1. Tính chữ ký - ĐÚNG THỨ TỰ ===
-//            String rawHash =
-//                    "partnerCode=" + params.get("partnerCode") +
-//                            "&accessKey=" + moMoConfig.getAccessKey() +
-//                            "&requestId=" + params.get("requestId") +
-//                            "&amount=" + params.get("amount") +
-//                            "&orderId=" + params.get("orderId") +
-//                            "&transId=" + params.get("transId") +
-//                            "&orderInfo=" + params.get("orderInfo") +
-//                            "&orderType=" + params.get("orderType") +
-//                            "&payType=" + params.getOrDefault("payType", "") +
-//                            "&responseTime=" + params.get("responseTime") +
-//                            "&message=" + params.get("message") +
-//                            "&resultCode=" + params.get("resultCode") +
-//                            "&extraData=" + params.getOrDefault("extraData", "");
-//
-//            String calculatedSignature = hmacSHA256(moMoConfig.getSecretKey(), rawHash);
-//            String receivedSignature = params.get("signature");
-//
-//            log.info("Calculated signature: {}", calculatedSignature);
-//            log.info("Received signature: {}", receivedSignature);
-//
-//            if (!calculatedSignature.equals(receivedSignature)) {
-//                log.warn("MoMo IPN: Invalid signature! Calculated: {}, Received: {}",
-//                        calculatedSignature, receivedSignature);
-//                return ResponseEntity.badRequest().body(Map.of(
-//                        "resultCode", "97",
-//                        "message", "Invalid signature"
-//                ));
-//            }
-
-            // === 2. Xử lý thanh toán ===
-            String resultCode = params.get("resultCode");
-            String orderIdStr = params.get("orderId");
-            boolean success = "0".equals(resultCode);
-
-            if (orderIdStr != null && !orderIdStr.isEmpty()) {
-                Long orderId = Long.parseLong(orderIdStr);
-                orderService.updateOrderStatusFromPayment(orderId, success ? "PAID" : "CANCELLED", !success);
+            } catch (Exception e) {
+                log.error("MoMo callback error", e);
+                return new RedirectView(frontendDevUrl + "/user/orders?type=error");
             }
-
-            return ResponseEntity.ok(Map.of("resultCode", "0", "message", "Success"));
-
-        } catch (Exception e) {
-            log.error("MoMo IPN error", e);
-            return ResponseEntity.status(500).body(Map.of("resultCode", "99", "message", "System error"));
         }
-    }
     private String hmacSHA256(String key, String data) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA256");
         SecretKeySpec spec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
