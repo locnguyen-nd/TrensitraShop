@@ -24,5 +24,6 @@ public record ReviewResponse(
         Boolean isApproved,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
+        List<ReplyResponse> reply,
         boolean canEdit
 ) {}
