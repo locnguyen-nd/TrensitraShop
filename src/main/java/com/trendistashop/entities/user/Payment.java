@@ -6,6 +6,7 @@ import com.trendistashop.enums.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -27,7 +28,10 @@ public class Payment extends BaseEntity {
     @JsonBackReference("order-payment")
     private Order order;
     @Column(nullable = false)
-    private int amount;
+    private long amount;
+    private long discountAmount;
+    private long shippingFee;
+    private BigDecimal savedAmount;
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;

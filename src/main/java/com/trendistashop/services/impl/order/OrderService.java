@@ -1,4 +1,3 @@
-// src/main/java/com/trendistashop/services/impl/order/OrderService.java
 package com.trendistashop.services.impl.order;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,6 +9,7 @@ import com.trendistashop.config.UploadConfig;
 import com.trendistashop.config.VietQRConfig;
 import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.dto.payos.MoMoPaymentResponse;
+import com.trendistashop.dto.payos.PaymentData;
 import com.trendistashop.dto.request.CheckoutRequest;
 import com.trendistashop.dto.request.CreateOrder;
 import com.trendistashop.dto.response.*;
@@ -56,9 +56,10 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 import vn.payos.PayOS;
-import vn.payos.CheckoutResponseData;
-import vn.payos.type.ItemData;
-import vn.payos.type.PaymentData;
+
+import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
+import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
+import vn.payos.model.v2.paymentRequests.PaymentLinkItem;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -68,6 +69,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -203,9 +205,9 @@ public class OrderService implements IOrderService {
 
     private DiscountResult applyDiscounts(BigDecimal subtotal, List<UUID> discountIds, List<CartItem> items) {
         BigDecimal discountAmount = BigDecimal.ZERO;
-        BigDecimal shippingFee = BigDecimal.valueOf(0);
+        BigDecimal originalShippingFee = BigDecimal.valueOf(30000); // phí ship gốc
+        BigDecimal shippingFeeAfterDiscount = originalShippingFee;
         List<DiscountApply> appliedDiscounts = new ArrayList<>();
-
         if (discountIds != null && !discountIds.isEmpty()) {
             for (UUID discountId : discountIds) {
                 DiscountApply apply = discountService.previewDiscountForOrder(discountId, subtotal, items);
@@ -213,17 +215,16 @@ public class OrderService implements IOrderService {
                     if (apply.getApplyType() == DiscountApplyFor.ORDER) {
                         discountAmount = discountAmount.add(apply.getValueApply());
                     } else if (apply.getApplyType() == DiscountApplyFor.SHIPPING) {
-                        shippingFee = shippingFee.subtract(apply.getValueApply());
-                        if (shippingFee.compareTo(BigDecimal.ZERO) < 0) {
-                            shippingFee = BigDecimal.ZERO;
+                        shippingFeeAfterDiscount = shippingFeeAfterDiscount.subtract(apply.getValueApply());
+                        if (shippingFeeAfterDiscount.compareTo(BigDecimal.ZERO) < 0) {
+                            shippingFeeAfterDiscount = BigDecimal.ZERO;
                         }
                     }
                     appliedDiscounts.add(apply);
                 }
             }
         }
-
-        return new DiscountResult(discountAmount, shippingFee, appliedDiscounts);
+        return new DiscountResult(discountAmount, shippingFeeAfterDiscount, appliedDiscounts);
     }
 
     private UserEntity getUser(Principal principal) {
@@ -293,23 +294,23 @@ public class OrderService implements IOrderService {
                 .build();
     }
 
-    private Payment createPayment(Order order) throws Exception {
+    private Payment createPayment(Order order) {
         try {
             BigDecimal subtotal = order.getOrderItems().stream()
                     .map(oi -> oi.getItemPrice().multiply(BigDecimal.valueOf(oi.getQuantity())))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-
             DiscountResult discountResult = recalculateDiscountsFromOrder(order, subtotal);
             BigDecimal discountAmount = discountResult.getDiscountAmount();
             BigDecimal shippingFee = discountResult.getShippingFee();
             BigDecimal finalTotal = order.getTotalAmount();
-            int amount = finalTotal.setScale(0, RoundingMode.HALF_UP).intValueExact();
+            BigDecimal savedAmount = subtotal.add(shippingFee).subtract(finalTotal);
+            long amount = finalTotal.setScale(0, RoundingMode.HALF_UP).intValueExact();
 
-            List<ItemData> items = new ArrayList<>();
+            List<PaymentLinkItem> items = new ArrayList<>();
             // 1. Chỉ thêm các sản phẩm thật
             for (OrderItem oi : order.getOrderItems()) {
-                int unitPrice = oi.getItemPrice().setScale(0, RoundingMode.HALF_UP).intValueExact();
-                items.add(ItemData.builder()
+                long unitPrice = oi.getItemPrice().setScale(0, RoundingMode.HALF_UP).intValueExact();
+                items.add(PaymentLinkItem.builder()
                         .name(oi.getProduct().getName())
                         .quantity(oi.getQuantity())
                         .price(unitPrice)
@@ -318,8 +319,8 @@ public class OrderService implements IOrderService {
 
             // 2. Nếu có giảm giá
             if (discountAmount.compareTo(BigDecimal.ZERO) > 0) {
-                int discountInt = discountAmount.setScale(0, RoundingMode.HALF_UP).intValueExact();
-                items.add(ItemData.builder()
+                long discountInt = discountAmount.setScale(0, RoundingMode.HALF_UP).intValueExact();
+                items.add(PaymentLinkItem.builder()
                         .name("Giảm giá")
                         .quantity(1)
                         .price(-discountInt)
@@ -327,36 +328,27 @@ public class OrderService implements IOrderService {
             }
 
             // 3. Nếu có phí ship
-            if (shippingFee.compareTo(BigDecimal.ZERO) > 0) {
-                int shipInt = shippingFee.setScale(0, RoundingMode.HALF_UP).intValueExact();
-                items.add(ItemData.builder()
-                        .name("Phí vận chuyển")
-                        .quantity(1)
-                        .price(shipInt)
-                        .build());
-            }
+            long shipInt = shippingFee.setScale(0, RoundingMode.HALF_UP).intValueExact();
+            items.add(PaymentLinkItem.builder()
+                    .name(shipInt == 0 ? "Miễn phí vận chuyển" : "Phí vận chuyển")
+                    .quantity(1)
+                    .price(shipInt)
+                    .build());
 
-            // === KIỂM TRA BẮT BUỘC TRƯỚC KHI GỬI ===
-            long sumFromItems = items.stream()
-                    .mapToLong(item -> (long) item.getPrice() * item.getQuantity())
-                    .sum();
-
-            if (sumFromItems != amount) {
-                log.error("TỔNG TIỀN TỪ ITEMS KHÔNG KHỚP VỚI AMOUNT!");
-                log.error("sumFromItems = {}, amount = {}", sumFromItems, amount);
-                log.error("subtotal = {}, discount = {}, shipping = {}, finalTotal = {}",
-                        subtotal, discountAmount, shippingFee, finalTotal);
-                throw new IllegalStateException("Tổng tiền từ items không khớp với amount: " + sumFromItems + " != " + amount);
-            }
             // Tạo PaymentData
-            PaymentData data = PaymentData.builder()
+            CreatePaymentLinkRequest data = CreatePaymentLinkRequest.builder()
                     .orderCode(order.getOrderCode())
                     .amount(amount)
                     .description("TT HOA DON " + order.getOrderCode())
                     .items(items)
+                    .buyerName(order.getUser().getFullName())
                     .buyerEmail(order.getUser().getEmail())
                     .cancelUrl(payOsConfig.getCancelUrl())
                     .returnUrl(payOsConfig.getReturnUrl())
+                    .expiredAt(LocalDateTime.now()
+                            .plusMinutes(VietQRConfig.ORDER_TIMEOUT_MINUTES)
+                            .atZone(ZoneId.systemDefault())
+                            .toEpochSecond())
                     .build();
 
             PaymentMethod method = order.getPaymentMethod();
@@ -364,45 +356,31 @@ public class OrderService implements IOrderService {
                 int finalAmount = order.getTotalAmount()
                         .setScale(0, RoundingMode.HALF_UP)
                         .intValueExact();
-
-                log.warn("=== DEBUG PAYOS AMOUNT CHECK ===");
-                log.warn("amount gửi lên PayOS          : {}", finalAmount);
-                log.warn("tổng tính lại từ items        : {}", sumFromItems);
-                log.warn("lệch bao nhiêu                : {}", Math.abs(sumFromItems - finalAmount));
-                items.forEach(item ->
-                        log.warn("Item: {} x {} = {} VND", item.getName(), item.getQuantity(),
-                                (long)item.getPrice() * item.getQuantity())
-                );
-                log.warn("=====================================");
-
-                if (sumFromItems != finalAmount) {
-                    throw new IllegalStateException(
-                            "PayOS sẽ reject! Tổng items = " + sumFromItems + " ≠ amount = " + finalAmount
-                    );
-                }
-                CheckoutResponseData resp = payOS.createPaymentLink(data);
-                log.info("=== PAYOS RESPONSE THÀNH CÔNG ===");
-                log.info("PayOS OrderCode: {}", resp.getOrderCode());
-                log.info("Status: {}", resp.getStatus());
-                log.info("Amount trả về: {}", resp.getAmount());
-                log.info("Checkout URL: {}", resp.getCheckoutUrl());
-                log.info("QR Code: {}", resp.getQrCode());
-                log.info("Payment Link ID: {}", resp.getPaymentLinkId());
-
+                CreatePaymentLinkResponse resp = payOS.paymentRequests().create(data);
                 return Payment.builder()
                         .order(order)
                         .amount(resp.getAmount())
+                        .shippingFee(shipInt)
+                        .discountAmount(discountAmount.setScale(0, RoundingMode.HALF_UP).intValueExact())
+                        .savedAmount(savedAmount)
                         .paymentMethod(order.getPaymentMethod())
-                        .paymentStatus(resp.getStatus())
+                        .paymentStatus(resp.getStatus().getValue())
                         .transactionId(resp.getOrderCode())
                         .qrCode(resp.getQrCode())
                         .deepLink(resp.getCheckoutUrl())
                         .build();
             } else if (method == PaymentMethod.MOMO) {
-                MoMoPaymentResponse resp = createMoMoPaymentLink(data);
+                PaymentData dataMomo = PaymentData.builder()
+                        .orderCode(order.getOrderCode())
+                        .amount((int) amount)
+                        .description("TT HOA DON " + order.getOrderCode())
+                        .build();
+                MoMoPaymentResponse resp = createMoMoPaymentLink(dataMomo);
                 return Payment.builder()
                         .order(order)
                         .amount(resp.getAmount())
+                        .shippingFee(shipInt)
+                        .discountAmount(discountAmount.setScale(0, RoundingMode.HALF_UP).intValueExact())
                         .paymentMethod(order.getPaymentMethod())
                         .paymentStatus(resp.getStatus())
                         .transactionId(resp.getOrderCode())
@@ -436,7 +414,7 @@ public class OrderService implements IOrderService {
 
     // ============= MOMO PAYMENT =============
 
-    private MoMoPaymentResponse createMoMoPaymentLink(PaymentData data)  throws Exception {
+    private MoMoPaymentResponse createMoMoPaymentLink(PaymentData data) {
         String orderId = String.valueOf(data.getOrderCode());
         String amount = String.valueOf(data.getAmount());
         String requestId = UUID.randomUUID().toString().replace("-", "");
@@ -579,7 +557,7 @@ public class OrderService implements IOrderService {
             if (order == null) {
                 return ResponseHelper.notFound(ResponseMessage.ORDER_NOT_FOUND);
             }
-            if (!order.getOrderStatus().equals(OrderStatus.CANCELLED)) {
+            if (!order.getOrderStatus().equals(OrderStatus.CANCELLED) && !order.getOrderStatus().equals(OrderStatus.PENDING)) {
                 return ResponseHelper.validationError("orderStatus", "Chỉ có thể thanh toán lại cho đơn hàng đã hủy");
             }
             if (paymentMethod == null || paymentMethod.isEmpty()) {
@@ -956,9 +934,13 @@ public class OrderService implements IOrderService {
                 .orderDate(order.getCreatedAt())
                 .orderStatus(order.getOrderStatus())
                 .totalAmount(order.getTotalAmount())
+                .discountAmount(BigDecimal.valueOf(order.getPayment().getDiscountAmount()))
+                .shippingFee(BigDecimal.valueOf(order.getPayment().getShippingFee()))
+                .savedAmount(order.getPayment().getSavedAmount())
                 .payment(order.getPayment())
                 .orderItemList(order.getOrderItems().stream().map(this::toOrderItemDTO).toList())
-                .expectedDeliveryDate(order.getExpectedDeliveryDate())
+                .expectedDeliveryDate(order.getExpectedDeliveryDate() != null ?
+                        order.getExpectedDeliveryDate() : order.getCreatedAt().plusDays(3))
                 .shipmentNumber(order.getShipmentTrackingNumber())
                 .address(order.getAddress() != null ? modelMapper.map(order.getAddress(), AddressDTO.class) : null)
                 .build();
