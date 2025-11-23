@@ -20,12 +20,10 @@ public interface IShippingService {
     /**
      * Tính phí vận chuyển dựa trên địa chỉ, trọng lượng, kích thước, v.v.
      * @param toAddress Địa chỉ người nhận
-     * @param weight Trọng lượng đơn hàng (gram)
-     * @param dimensions Kích thước (length, width, height - cm)
      * @param serviceType Loại dịch vụ (standard, express,...)
      * @return Phí vận chuyển
      */
-    TypeResponse<BigDecimal> calculateShippingCost( Address toAddress, double weight, Map<String, Integer> dimensions, String serviceType);
+    TypeResponse<BigDecimal> calculateShippingCost( Address toAddress, int totalItems, String serviceType);
 
     /**
      * Tạo đơn vận chuyển trên GHN dựa trên đơn hàng
