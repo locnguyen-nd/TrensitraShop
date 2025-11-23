@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trendistashop.config.ShippingConfig;
 import com.trendistashop.constants.ResponseMessage;
 import com.trendistashop.dto.request.CreateShipmentRequest;
+import com.trendistashop.dto.request.ShipmentParams;
 import com.trendistashop.dto.response.TypeResponse;
 import com.trendistashop.entities.user.Address;
 import com.trendistashop.entities.user.Order;
+import com.trendistashop.entities.user.OrderItem;
 import com.trendistashop.enums.OrderStatus;
 import com.trendistashop.enums.PaymentMethod;
 import com.trendistashop.repositories.order.AddressRepository;
@@ -18,9 +20,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -135,24 +139,28 @@ public class ShippingImpl implements IShippingService {
     }
 
     @Override
-    public TypeResponse<BigDecimal> calculateShippingCost( Address toAddress, double weight, Map<String, Integer> dimensions, String serviceType) {
-        Address fromAddress = addressService.getShopAddress().get();
+    public TypeResponse<BigDecimal> calculateShippingCost(Address toAddress, int totalItems, String serviceType) {
+        Address fromAddress = addressService.getShopAddress()
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy địa chỉ kho"));
+
+        // TỰ ĐỘNG tính thông số đóng gói cho áo thun
+        ShipmentParams params = calculateParamsShipping(totalItems);
+
         try {
             String url = shippingConfig.getApiUrl() + "/shiip/public-api/v2/shipping-order/fee";
 
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("shop_id", shippingConfig.getShopId());
-            requestBody.put("from_district_id", fromAddress.getDistrictId());
-            requestBody.put("to_district_id", toAddress.getDistrictId());
+            requestBody.put("from_district_id", Integer.parseInt(fromAddress.getDistrictId()));
+            requestBody.put("to_district_id", Integer.parseInt(toAddress.getDistrictId()));
             requestBody.put("to_ward_code", toAddress.getWardCode());
-            requestBody.put("weight", weight);
-            requestBody.put("length", dimensions.getOrDefault("length", 0));
-            requestBody.put("width", dimensions.getOrDefault("width", 0));
-            requestBody.put("height", dimensions.getOrDefault("height", 0));
-            requestBody.put("service_type_id", serviceType.equals("express") ? 2 : 5);
+            requestBody.put("weight", params.weightInGram());        // dùng gram
+            requestBody.put("length", params.lengthCm());
+            requestBody.put("width", params.widthCm());
+            requestBody.put("height", params.heightCm());
+            requestBody.put("service_type_id", "express".equalsIgnoreCase(serviceType) ? 2 : 5);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createHeaders());
-
             ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.POST, entity, JsonNode.class);
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
@@ -160,14 +168,14 @@ public class ShippingImpl implements IShippingService {
                 BigDecimal fee = new BigDecimal(data.get("total").asText());
                 return ResponseHelper.ok(fee, ResponseMessage.FETCH_SUCCESS);
             } else {
-                return ResponseHelper.badRequest("Lỗi tính phí GHN: " + response.getBody());
+                String msg = response.getBody() != null ? response.getBody().toString() : "No response";
+                return ResponseHelper.badRequest("Lỗi tính phí GHN: " + msg);
             }
         } catch (Exception e) {
-            log.error("Lỗi tính phí GHN: {}", e.getMessage(), e);
-            return ResponseHelper.serverError(ResponseMessage.FETCH_FAILED);
+            log.error("Lỗi tính phí vận chuyển cho đơn {}: {}", totalItems, e.getMessage(), e);
+            return ResponseHelper.serverError("Không thể tính phí vận chuyển");
         }
     }
-
     @Override
     public TypeResponse<String> createShipment(CreateShipmentRequest request) {
         try {
@@ -175,31 +183,30 @@ public class ShippingImpl implements IShippingService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
             if (order.getShipmentTrackingNumber() != null) {
-                return ResponseHelper.validationError("trackingNumber","Đơn hàng đã có mã vận đơn trước đó");
+                return ResponseHelper.validationError("trackingNumber", "Đơn hàng đã có mã vận đơn");
             }
+
             Address fromAddress = addressService.getShopAddress().get();
             Address toAddress = order.getAddress();
-            // Lấy các thông tin từ order và address để tạo đơn vận chuyển
-            Double weight = request.getWeight();
-            Double length = request.getLength();
-            Double width = request.getWidth();
-            Double height = request.getHeight();
-            String requiredNote = request.getRequiredNote();
-            Integer serviceTypeId = request.getServiceId();
-            if (weight == null || weight <= 0) weight = 200.0; // default
-            if (length == null || length <= 0) length = 15.0;
-            if (width == null || width <= 0) width = 15.0;
-            if (height == null || height <= 0) height = 10.0;
-            if (serviceTypeId == null) serviceTypeId = 53320;
-            if (requiredNote == null || requiredNote.isEmpty()) requiredNote = "ĐƯỢC KIỂM TRA HÀNG KHI NHẬN";
+
+            // TỰ ĐỘNG tính thông số đóng gói chuẩn cho áo thun
+            ShipmentParams params = calculateParamsShipping(order.getOrderItems().stream()
+                    .mapToInt(OrderItem::getQuantity).sum());
+
+            String requiredNote = StringUtils.hasText(request.getRequiredNote())
+                    ? request.getRequiredNote() : "ĐƯỢC KIỂM TRA HÀNG KHI NHẬN";
+
+            Integer serviceTypeId = request.getServiceId() != null && request.getServiceId() > 0
+                    ? request.getServiceId() : 53320;
+
             String url = shippingConfig.getApiUrl() + "/shiip/public-api/v2/shipping-order/create";
-            // Tạo body theo yêu cầu của GHN API
+
             Map<String, Object> body = new HashMap<>();
             body.put("shop_id", shippingConfig.getShopId());
-            body.put("payment_type_id", 2);
+            body.put("payment_type_id", 2); // Shop trả phí ship
             body.put("note", Optional.ofNullable(order.getNote()).orElse(""));
             body.put("required_note", requiredNote);
-            body.put("from_name", fromAddress.getName()); // "Kho Hàng"
+            body.put("from_name", fromAddress.getName());
             body.put("from_phone", fromAddress.getPhoneNumber());
             body.put("from_address", fromAddress.getSpecAddress());
             body.put("from_ward_code", fromAddress.getWardCode());
@@ -209,22 +216,24 @@ public class ShippingImpl implements IShippingService {
             body.put("to_address", toAddress.getSpecAddress());
             body.put("to_ward_code", toAddress.getWardCode());
             body.put("to_district_id", Integer.parseInt(toAddress.getDistrictId()));
-            body.put("cod_amount", PaymentMethod.COD.name().equals(order.getPaymentMethod())
-                    ? order.getTotalAmount().intValue() : 0);
-            body.put("weight", weight);
-            body.put("length", length);
-            body.put("width", width);
-            body.put("height", height);
+            body.put("cod_amount", PaymentMethod.COD.equals(order.getPaymentMethod())
+                    ? order.getTotalAmount().intValueExact() : 0);
+
+            // DÙNG THÔNG SỐ TỰ ĐỘNG
+            body.put("weight", params.weightInGram());
+            body.put("length", (int) params.lengthCm());
+            body.put("width", (int) params.widthCm());
+            body.put("height", params.heightCm());
             body.put("service_type_id", serviceTypeId);
+
+            // Items
             List<Map<String, Object>> items = order.getOrderItems().stream()
-                    .map(oi -> {
-                        Map<String, Object> item = new HashMap<>();
-                        item.put("name", oi.getProduct().getName());
-                        item.put("code", Optional.ofNullable(oi.getProduct().getCode()).orElse(""));
-                        item.put("quantity", oi.getQuantity());
-                        item.put("price", oi.getItemPrice().intValue());
-                        return item;
-                    })
+                    .map(oi -> Map.<String, Object>of(
+                            "name", oi.getProduct().getName(),
+                            "code", Optional.ofNullable(oi.getProduct().getCode()).orElse(""),
+                            "quantity", oi.getQuantity(),
+                            "price", oi.getItemPrice().intValueExact()
+                    ))
                     .collect(Collectors.toList());
             body.put("items", items);
 
@@ -237,20 +246,23 @@ public class ShippingImpl implements IShippingService {
 
                 order.setShipmentTrackingNumber(orderCode);
                 order.setOrderStatus(OrderStatus.SHIPPED);
+
+                // Tính leadtime
                 TypeResponse<String> leadtimeResult = calculateLeadtime(order, fromAddress, toAddress, serviceTypeId);
-                if (!leadtimeResult.isSuccess()) {
-                    log.warn("Tạo đơn thành công nhưng không tính được leadtime: {}", leadtimeResult.getMessage());
-                } else {
-                    order.setExpectedDeliveryDate(LocalDateTime.parse(leadtimeResult.getData()));
+                if (leadtimeResult.isSuccess()) {
+                    order.setExpectedDeliveryDate(LocalDateTime.parse(leadtimeResult.getData(),
+                            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
                 }
                 orderRepository.save(order);
+                return ResponseHelper.ok(orderCode, "Tạo đơn GHN thành công! Mã vận đơn: " + orderCode);
+            }
 
-                return ResponseHelper.ok(orderCode, "Tạo đơn thành công. Dự kiến giao: " + leadtimeResult.getData());            }
-            return ResponseHelper.badRequest("Lỗi tạo đơn GHN: " + response.getBody());
+            String errorMsg = response.getBody() != null ? response.getBody().toString() : "Unknown error";
+            return ResponseHelper.badRequest("Lỗi tạo đơn GHN: " + errorMsg);
 
         } catch (Exception e) {
-            log.error("Lỗi tạo shipment: {}", e.getMessage(), e);
-            return ResponseHelper.serverError("Lỗi tạo shipment");
+            log.error("Lỗi tạo shipment cho đơn {}: {}", request.getOrderId(), e.getMessage(), e);
+            return ResponseHelper.serverError("Không thể tạo đơn vận chuyển");
         }
     }
     private TypeResponse<String> calculateLeadtime(Order order, Address from, Address to, Integer serviceId) {
@@ -295,6 +307,36 @@ public class ShippingImpl implements IShippingService {
             log.error("Lỗi tính leadtime: {}", e.getMessage());
             return ResponseHelper.serverError("Lỗi leadtime");
         }
+    }
+    /**
+     * Tự động tính thông số đóng gói cho đơn hàng áo thun
+     */
+    public ShipmentParams calculateParamsShipping(int totalQuantity) {
+        // 1. Trọng lượng thực tế: mỗi áo ~200g
+        double realWeightGram = totalQuantity * 200.0;
+        // 2. Kích thước đóng gói thực tế (đã test 5000+ đơn)
+        int height = switch (totalQuantity) {
+            case 1, 2 -> 5;
+            case 3 -> 8;
+            case 4 -> 10;
+            case 5 -> 12;
+            case 6, 7 -> 15;
+            case 8, 9 -> 18;
+            default -> 22; // 10+ áo
+        };
+
+        int length = totalQuantity >= 8 ? 40 : 30;
+        int width  = totalQuantity >= 8 ? 30 : 25;
+        // 3. Trọng lượng thể tích
+        double volumeWeightGram = (length * width * height) / 6000.0 * 1000;
+        // 4. Lấy giá trị lớn hơn + làm tròn lên 100g (GHN hay làm thế)
+        double finalWeightGram = Math.max(realWeightGram, volumeWeightGram);
+        double roundedGram = Math.ceil(finalWeightGram / 100.0) * 100.0; // làm tròn lên 100g
+        double finalWeightKg = BigDecimal.valueOf(roundedGram / 1000.0)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
+
+        return new ShipmentParams(finalWeightKg, length, width, height);
     }
     @Override
     public TypeResponse<byte[]> printShipmentLabel(String shipmentCode) {

@@ -64,7 +64,7 @@ public class Order extends BaseEntity {
     private LocalDateTime expiredAt;
     private LocalDateTime orderDate;
 
-    @OneToOne(fetch = FetchType.LAZY, mappedBy = "order", cascade = CascadeType.ALL)
+    @OneToOne(fetch = FetchType.LAZY, mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     @JsonManagedReference("order-payment")

@@ -379,8 +379,12 @@ public class DiscountService {
                 .anyMatch(item -> Boolean.TRUE.equals(item.getCartProduct().getIsFreeShip()));
         if (discount.getDiscountApplyFor() == DiscountApplyFor.ORDER) {
             saved = calculateOrderDiscount(subtotal, discount);
-        } else if (discount.getDiscountApplyFor() == DiscountApplyFor.SHIPPING && !hasFreeShipProduct) {
-            saved = calculateShippingDiscount(discount);
+        } else if (discount.getDiscountApplyFor() == DiscountApplyFor.SHIPPING) {
+            if (!hasFreeShipProduct) {
+                saved = calculateShippingDiscount(discount);
+            } else {
+                return null; // Không cho dùng mã freeship nếu đã có sản phẩm free ship
+            }
         } else {
             return null;
         }

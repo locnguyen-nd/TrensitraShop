@@ -1,4 +1,4 @@
-package com.trendistashop.dto.payos;
+package com.trendistashop.dto.momo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

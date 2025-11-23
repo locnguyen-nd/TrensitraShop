@@ -8,8 +8,8 @@ import com.trendistashop.config.PayOsConfig;
 import com.trendistashop.config.UploadConfig;
 import com.trendistashop.config.VietQRConfig;
 import com.trendistashop.constants.ResponseMessage;
-import com.trendistashop.dto.payos.MoMoPaymentResponse;
-import com.trendistashop.dto.payos.PaymentData;
+import com.trendistashop.dto.momo.MoMoPaymentResponse;
+import com.trendistashop.dto.momo.PaymentData;
 import com.trendistashop.dto.request.CheckoutRequest;
 import com.trendistashop.dto.request.CreateOrder;
 import com.trendistashop.dto.response.*;
@@ -29,11 +29,13 @@ import com.trendistashop.repositories.order.*;
 import com.trendistashop.repositories.product.DiscountRepository;
 import com.trendistashop.repositories.product.ProductVariantRepository;
 import com.trendistashop.services.IOrderService;
+import com.trendistashop.services.IShippingService;
 import com.trendistashop.services.impl.auth.EmailService;
 import com.trendistashop.services.impl.product.DiscountService;
 import com.trendistashop.utils.ResponseHelper;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.math3.analysis.function.Add;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -93,6 +95,8 @@ public class OrderService implements IOrderService {
     private UploadConfig uploadConfig;
     @Autowired
     private SpringTemplateEngine templateEngine;
+    @Autowired
+    private  IShippingService shippingService;
     private final PayOS payOS;
     private final ObjectMapper objectMapper = new ObjectMapper();
     public OrderService(PayOS payOS) {
@@ -103,9 +107,14 @@ public class OrderService implements IOrderService {
     public TypeResponse<OrderReview> previewOrderReview(CreateOrder request, Principal principal) {
         try {
             UserEntity user = getUser(principal);
+
             List<CartItem> items = getSelectedCartItems(user, request.getOrderItems());
             BigDecimal subtotal = calculateSubtotal(items);
-            DiscountResult result = applyDiscounts(subtotal, request.getDiscountId(), items);
+            Address address = user.getAddressList().stream()
+                    .filter(a -> a.getId().equals(request.getAddressId()))
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundEx("Địa chỉ không hợp lệ"));
+            DiscountResult result = applyDiscounts(subtotal, request.getDiscountId(), items, address);
             BigDecimal totalAfterDiscount = subtotal.subtract(result.getDiscountAmount());
             BigDecimal finalTotal = totalAfterDiscount.add(result.getShippingFee());
             List<VariantDTO> variantList = items.stream().map(this::toVariantDTO).toList();
@@ -132,8 +141,12 @@ public class OrderService implements IOrderService {
         try {
             UserEntity user = getUser(principal);
             List<CartItem> items = getSelectedCartItems(user, request.getCartItemIds());
+            Address address = user.getAddressList().stream()
+                    .filter(a -> a.getId().equals(request.getAddressId()))
+                    .findFirst()
+                    .orElseThrow(() -> new OrderCreationException("Địa chỉ không hợp lệ"));
             BigDecimal subtotal = calculateSubtotal(items);
-            DiscountResult result = applyDiscounts(subtotal, request.getDiscountId(), items);
+            DiscountResult result = applyDiscounts(subtotal, request.getDiscountId(), items,address);
             BigDecimal totalAfterDiscount = subtotal.subtract(result.getDiscountAmount());
             BigDecimal finalTotal = totalAfterDiscount.add(result.getShippingFee());
 
@@ -179,11 +192,6 @@ public class OrderService implements IOrderService {
                 orderItems.add(oi);
             }
             order.setOrderItems(orderItems);
-
-            Address address = user.getAddressList().stream()
-                    .filter(a -> a.getId().equals(request.getAddressId()))
-                    .findFirst()
-                    .orElseThrow(() -> new OrderCreationException("Địa chỉ không hợp lệ"));
             order.setAddress(address);
 
             try {
@@ -203,24 +211,49 @@ public class OrderService implements IOrderService {
         }
     }
 
-    private DiscountResult applyDiscounts(BigDecimal subtotal, List<UUID> discountIds, List<CartItem> items) {
+    private DiscountResult applyDiscounts(BigDecimal subtotal, List<UUID> discountIds, List<CartItem> items, Address address) {
+        boolean hasFreeShipProduct = items.stream()
+                .anyMatch(item -> Boolean.TRUE.equals(item.getCartProduct().getIsFreeShip()));
+
+        BigDecimal shippingFeeAfterDiscount;
+
+        if (hasFreeShipProduct) {
+            // Nếu có sản phẩm free ship → phí ship = 0 (không cần gọi API GHN)
+            shippingFeeAfterDiscount = BigDecimal.ZERO;
+        } else {
+            // Chỉ tính phí ship khi KHÔNG có sản phẩm free ship
+            TypeResponse<BigDecimal> shipResponse = shippingService.calculateShippingCost(
+                    address,
+                    items.stream().mapToInt(CartItem::getCartItemQuantity).sum(),
+                    "express"
+            );
+            shippingFeeAfterDiscount = shipResponse.isSuccess()
+                    ? shipResponse.getData()
+                    : BigDecimal.ZERO;
+        }
+
         BigDecimal discountAmount = BigDecimal.ZERO;
-        BigDecimal originalShippingFee = BigDecimal.valueOf(30000); // phí ship gốc
-        BigDecimal shippingFeeAfterDiscount = originalShippingFee;
         List<DiscountApply> appliedDiscounts = new ArrayList<>();
+        // 2. Chỉ áp dụng mã giảm giá nếu có
         if (discountIds != null && !discountIds.isEmpty()) {
             for (UUID discountId : discountIds) {
                 DiscountApply apply = discountService.previewDiscountForOrder(discountId, subtotal, items);
                 if (apply != null) {
                     if (apply.getApplyType() == DiscountApplyFor.ORDER) {
                         discountAmount = discountAmount.add(apply.getValueApply());
-                    } else if (apply.getApplyType() == DiscountApplyFor.SHIPPING) {
-                        shippingFeeAfterDiscount = shippingFeeAfterDiscount.subtract(apply.getValueApply());
-                        if (shippingFeeAfterDiscount.compareTo(BigDecimal.ZERO) < 0) {
-                            shippingFeeAfterDiscount = BigDecimal.ZERO;
-                        }
+                        appliedDiscounts.add(apply);
                     }
-                    appliedDiscounts.add(apply);
+                    else if (apply.getApplyType() == DiscountApplyFor.SHIPPING) {
+                        // Chỉ áp dụng giảm phí ship nếu KHÔNG có sản phẩm free ship
+                        if (!hasFreeShipProduct) {
+                            shippingFeeAfterDiscount = shippingFeeAfterDiscount.subtract(apply.getValueApply());
+                            if (shippingFeeAfterDiscount.compareTo(BigDecimal.ZERO) < 0) {
+                                shippingFeeAfterDiscount = BigDecimal.ZERO;
+                            }
+                            appliedDiscounts.add(apply);
+                        }
+                        // Nếu có free ship → bỏ qua mã freeship, không thêm vào danh sách
+                    }
                 }
             }
         }
@@ -244,16 +277,18 @@ public class OrderService implements IOrderService {
     }
 
     private Long generateOrderCode() {
-        return System.currentTimeMillis() % 1000000;
+        Random random = new Random();
+        String prefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
+        int seq = 1000 + random.nextInt(9000);
+        String code = prefix + String.format("%04d", seq);
+        Long orderCode = Long.parseLong(code);
+
+        return orderRepository.findByOrderCode(orderCode).isPresent()
+                ? generateOrderCode()
+                : orderCode;
     }
     private Long generateNewOrderCode(Order order) {
-        long base = order.getOrderCode();
-        Random random = new Random();
-        Long newCode;
-        do {
-            newCode = base * 10000 + random.nextInt(1000, 9999);
-        } while (orderRepository.findByOrderCode(newCode).isPresent());
-        return newCode;
+        return generateOrderCode();
     }
     private void removeItemsFromCart(Cart cart, List<CartItem> items) {
         BigDecimal totalRemove = items.stream()
@@ -303,7 +338,7 @@ public class OrderService implements IOrderService {
             BigDecimal discountAmount = discountResult.getDiscountAmount();
             BigDecimal shippingFee = discountResult.getShippingFee();
             BigDecimal finalTotal = order.getTotalAmount();
-            BigDecimal savedAmount = subtotal.add(shippingFee).subtract(finalTotal);
+            BigDecimal savedAmount = shippingFee.add(discountAmount);
             long amount = finalTotal.setScale(0, RoundingMode.HALF_UP).intValueExact();
 
             List<PaymentLinkItem> items = new ArrayList<>();
@@ -381,12 +416,27 @@ public class OrderService implements IOrderService {
                         .amount(resp.getAmount())
                         .shippingFee(shipInt)
                         .discountAmount(discountAmount.setScale(0, RoundingMode.HALF_UP).intValueExact())
+                        .savedAmount(savedAmount)
                         .paymentMethod(order.getPaymentMethod())
                         .paymentStatus(resp.getStatus())
                         .transactionId(resp.getOrderCode())
                         .qrCode(resp.getQrCode())
                         .deepLink(resp.getCheckoutUrl())
                         .build();
+            } else if( method.equals(PaymentMethod.COD)) {
+                return Payment.builder()
+                        .order(order)
+                        .amount(amount)
+                        .shippingFee(shipInt)
+                        .discountAmount(discountAmount.setScale(0, RoundingMode.HALF_UP).intValueExact())
+                        .savedAmount(savedAmount)
+                        .paymentMethod(order.getPaymentMethod())
+                        .paidAt(LocalDateTime.now())
+                        .qrCode("Pay with COD")
+                        .transactionId(order.getOrderCode())
+                        .paymentStatus(PaymentStatus.PENDING.name())
+                        .build();
+
             } else {
                 throw new OrderCreationException("Phương thức thanh toán chưa hỗ trợ: " + method.name());
             }
@@ -406,10 +456,10 @@ public class OrderService implements IOrderService {
                     return ci;
                 })
                 .toList();
-
+        Address address = order.getAddress();
         return applyDiscounts(subtotal,
                 order.getDiscounts().stream().map(Discount::getId).toList(),
-                tempItems);
+                tempItems, address);
     }
 
     // ============= MOMO PAYMENT =============
@@ -557,8 +607,10 @@ public class OrderService implements IOrderService {
             if (order == null) {
                 return ResponseHelper.notFound(ResponseMessage.ORDER_NOT_FOUND);
             }
-            if (!order.getOrderStatus().equals(OrderStatus.CANCELLED) && !order.getOrderStatus().equals(OrderStatus.PENDING)) {
-                return ResponseHelper.validationError("orderStatus", "Chỉ có thể thanh toán lại cho đơn hàng đã hủy");
+            if (!OrderStatus.CANCELLED.equals(order.getOrderStatus())
+                    && !OrderStatus.PENDING.equals(order.getOrderStatus())) {
+                return ResponseHelper.validationError("orderStatus",
+                        "Chỉ có thể thanh toán lại cho đơn hàng ở trạng thái PENDING hoặc CANCELLED");
             }
             if (paymentMethod == null || paymentMethod.isEmpty()) {
                 log.warn("paymentMethod is null or empty");
@@ -567,6 +619,7 @@ public class OrderService implements IOrderService {
             }
             order.setPaymentMethod(PaymentMethod.valueOf(paymentMethod));
             order.setOrderCode(generateNewOrderCode(order));
+            order.setPayment(null);
             order = orderRepository.save(order);
 
             Payment newPayment = createPayment(order);

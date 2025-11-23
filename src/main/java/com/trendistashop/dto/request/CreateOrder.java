@@ -21,4 +21,6 @@ public class CreateOrder {
     private List<UUID> orderItems;
     @Size(max = 2, message = "Chỉ được áp dụng tối đa 2 mã giảm giá")
     private List<UUID> discountId;
+    @NotNull(message = "Address is required")
+    private UUID addressId;
 }
